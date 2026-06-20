@@ -1,0 +1,30 @@
+# Docker files
+.git
+.gitignore
+README.md
+.dockerignore
+
+# Volumes (مهم)
+socket/
+socket_mongodata/
+rabbitmq-isolated.conf
+
+# Logs
+*.log
+storage/
+bootstrap/cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+*~
+*.tmp
+#ib_*
+ib_*

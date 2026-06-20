@@ -1,0 +1,207 @@
+#version: '3'
+
+services:
+
+  #PHP Service
+  medikal-laravel:
+    build:
+      context: .
+      dockerfile: app.dockerfile
+    container_name: medikal-laravel
+    tty: true
+    env_file: './src/.env'
+    working_dir: /var/www
+    ports:
+      - "9000:9000"
+      - "8082:8082"  # اضافه کردن پورت Reverb
+    volumes:
+      - ./src:/var/www
+      - ./supervisor/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
+      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    command: /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
+    networks:
+      - medikal-main-network
+    depends_on:
+      - medikal-mysql
+      - medikal-redis
+  #      - medikal-mongodb
+  #    command: /bin/bash -c "php-fpm | /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf"
+
+  #Nginx Service
+  medikal-webserver:
+    image: nginx
+    #    image: docker.arvancloud.ir/nginx
+    container_name: medikal-webserver
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "8210:80"
+    volumes:
+      - ./src:/var/www
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+    depends_on:
+      - medikal-laravel
+    networks:
+      - medikal-main-network
+
+  #MySQL Service
+  medikal-mysql:
+    #    image: docker.arvancloud.ir/mysql
+    image: mysql
+    container_name: medikal-mysql
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3321:3306"
+    volumes:
+      - ./medikal:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: cms
+      MYSQL_PASSWORD: bV7c5smN2T8h4hlMzF90Bpum
+      MYSQL_ROOT_PASSWORD: bV7c5smN2T8h4hlMzF90Bpum
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    networks:
+      - medikal-main-network
+
+  # phpmyadmin
+  medikal-phpmyadmin:
+    #    image: docker.arvancloud.ir/phpmyadmin
+    image: phpmyadmin
+    container_name: medikal-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: medikal-mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+      UPLOAD_LIMIT: 20g
+    depends_on:
+      - medikal-mysql
+    networks:
+      - medikal-main-network
+    ports:
+      - "8310:80"
+
+  #redis service
+  medikal-redis:
+    #    image: docker.arvancloud.ir/redis
+    image: redis
+    container_name: medikal-redis
+    restart: unless-stopped
+#    environment:
+#      - REDIS_PASSWORD=password
+    ports:
+      - 6390:6379
+    networks:
+      - medikal-main-network
+
+  # Frontend (React/Vue)
+  front:
+    image: node:23-alpine
+    working_dir: /app
+    volumes:
+      - ./front:/app
+    #    command: sh -c "npm run dev"
+    command: sh -c "npm run dev"
+    ports:
+      - "3000:3000"
+    networks:
+      - medikal-main-network
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    stdin_open: true
+    tty: true
+
+  # Admin panel (React/Vue)
+  admin:
+    image: node:23-alpine
+    working_dir: /app
+    volumes:
+      - ./admin:/app
+    #    command: sh -c "npm run dev"
+    command: sh -c "npm run dev"
+    ports:
+      - "3001:3001"
+    networks:
+      - medikal-main-network
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    stdin_open: true
+    tty: true
+
+  #mongodb service
+  medikal-mongodb:
+    container_name: medikal-mongodb
+    image: docker.arvancloud.ir/mongo:latest
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    restart: unless-stopped
+    ports:
+      - "28010:27017"
+    volumes:
+      - ./medikal_mongodata:/data/db
+      - ./mongodb/scripts:/docker-entrypoint-initdb.d
+    networks:
+      - medikal-main-network
+
+  # اضافه کن به انتهای services بخش
+  # Mailpit - Email Testing Tool
+  medikal-mailpit:
+    image: axllent/mailpit:latest
+    container_name: medikal-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP port
+      - "8025:8025"   # Web UI
+    environment:
+      - MP_SMTP_AUTH_ACCEPT_ANY=true
+      - MP_SMTP_AUTH_ALLOW_INSECURE=true
+    networks:
+      - medikal-main-network
+
+
+#  echo:
+#    image: docker.arvancloud.ir/oanhnn/laravel-echo-server
+#    ports:
+#      - 8080:6001
+#    environment:
+#      - "LARAVEL_ECHO_SERVER_DB=medikal-redis"
+#      - "LARAVEL_ECHO_SERVER_AUTH_HOST=http://nginx:8210"
+#      - "LARAVEL_ECHO_SERVER_DEBUG=true"
+#      - "REDIS_HOST=medikal-redis"
+#      - "REDIS_PORT=6379"
+#      - "REDIS_PASSWORD=null"
+#      - "REDIS_KEY_PREFIX=echo_"
+#      - "REDIS_DB=1"
+#    links:
+#      - medikal-redis
+#      - medikal-webserver
+
+#  rabbitmq:
+#    image: "rabbitmq:3-management"
+#    hostname: "rabbit"
+#    ports:
+#      - "15672:15672"
+#      - "5672:5672"
+#    labels:
+#      NAME: "rabbitmq"
+#    volumes:
+#      - ./rabbitmq-isolated.conf:/etc/rabbitmq/rabbitmq.config
+#    networks:
+#      - medikal-main-network
+
+#Docker Networks
+networks:
+  medikal-main-network:
+#    driver: bridge
+    external: true
+
+#Volumes
+volumes:
+  db_medikal_mysql:
+    driver: local
