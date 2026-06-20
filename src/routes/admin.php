@@ -51,13 +51,6 @@ Route::name('admin.')->group(function () {
             Route::resource('users', UserController::class)->names('users');
             Route::post('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
 
-            // 🛍️ مدیریت محصولات
-//            Route::resource('products', ProductController::class)->names('products');
-//            Route::post('products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle-status');
-
-            // 📦 مدیریت سفارشات
-//            Route::resource('orders', OrderController::class)->names('orders');
-//            Route::post('orders/{order}/update-status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
 
             // 🎯 مدیریت نقش‌ها و مجوزها
             Route::resource('roles', RoleController::class)->names('roles');
@@ -68,13 +61,12 @@ Route::name('admin.')->group(function () {
             // ⚙️ تنظیمات
             Route::get('/settings', [SettingController::class, 'index'])->name('settings');
             Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
-            Route::post('/settings/clear-cache', [SettingController::class, 'clearCache'])->name('settings.clear-cache');
+            Route::match(['get', 'post'], '/settings/clear-cache', [SettingController::class, 'clearCache'])->name('settings.clear-cache');
+
         });
 
         // ============================================
         // روت‌های اختصاصی کاربران عادی (بدون نیاز به نقش خاص)
         // ============================================
-//        Route::get('/my-orders', [OrderController::class, 'myOrders'])->name('my-orders');
-//        Route::get('/my-orders/{order}', [OrderController::class, 'showMyOrder'])->name('my-orders.show');
     });
 });
