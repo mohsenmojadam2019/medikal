@@ -336,3 +336,10 @@ tests/coverage/
 /medikal_mongodata/diagnostic.data/metrics.2026-06-19T20-33-53Z-00000
 /medikal_mongodata/diagnostic.data/metrics.2026-06-19T20-41-54Z-00000
 /medikal_mongodata/journal/WiredTigerLog.0000000007
+/medikal_mongodata/.mongodb/mongosh/6a36e15b437860d4749df8a2_log
+/medikal_mongodata/.mongodb/mongosh/6a36e15bfcd6a34f9d9df8a2_log
+/medikal/7f2aa08f94db.err
+/medikal_mongodata/collection-6d4c9ac1-9d66-4511-b26a-ee33384fdb9e.wt
+/medikal_mongodata/collection-8f387eca-c85b-4a5b-b43a-1d3dd5c58c06.wt
+/medikal_mongodata/collection-662cd84a-a0ab-4f31-95ec-6d4a81bb347a.wt
+/medikal_mongodata/collection-cfe19b44-fcba-4605-aa8c-eb332c4b477a.wt
