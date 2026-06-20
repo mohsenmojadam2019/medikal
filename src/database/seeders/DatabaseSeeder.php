@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,19 +15,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // اجرای سیدر roles و permissions
-        $this->call(RolesAndPermissionsSeeder::class);
+        // User::factory(10)->create();
 
-        // ایجاد کاربر ادمین
-        $admin = User::create([
-            'name' => 'Admin',
-            'email' => 'admin@medikal.com',
-            'password' => bcrypt('password123'),
+        User::factory()->create([
+            'name' => 'Test User',
+            'email' => 'test@example.com',
         ]);
-
-        // اختصاص نقش super-admin به کاربر
-        $admin->assignRole('super-admin');
-
-
     }
 }
