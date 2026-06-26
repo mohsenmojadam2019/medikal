@@ -635,3 +635,220 @@ Slug: clinic-sample
 
 خطاها با فرمت {"success":false,"message":"..."} برمی‌گردند
 
+۲۲. سیستم Webhook (ویپ کلینیک)
+۲۲.۱ دریافت وضعیت Webhook (ادمین)
+bash
+curl -X GET http://localhost:8210/api/admin/webhook/status \
+  -H "Authorization: Bearer $TOKEN"
+
+  ۲۲.۲ فعال/غیرفعال کردن Webhook (ادمین)
+  bash
+  # فعال کردن
+  curl -X POST http://localhost:8210/api/admin/webhook/toggle \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "enabled": true,
+      "secret": "my-secret-key-12345678"
+    }'
+
+  # غیرفعال کردن
+  curl -X POST http://localhost:8210/api/admin/webhook/toggle \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "enabled": false
+    }'
+
+   ۲۲.۳ دریافت لاگ‌های Webhook (ادمین)
+   bash
+   curl -X GET http://localhost:8210/api/admin/webhook/logs \
+     -H "Authorization: Bearer $TOKEN"
+
+
+     ۲۲.۴ دریافت نوبت از ویپ کلینیک (عمومی - بدون احراز هویت)
+     bash
+     curl -X POST http://localhost:8210/api/webhook/appointment \
+       -H "Content-Type: application/json" \
+       -d '{
+         "patient_national_code": "1234567890",
+         "patient_name": "رضا کریمی",
+         "patient_mobile": "09123456787",
+         "patient_email": "reza@example.com",
+         "doctor_name": "دکتر علی محمدی",
+         "appointment_date": "2026-07-01",
+         "appointment_time": "10:00",
+         "appointment_type": "in_person",
+         "notes": "ویزیت از طریق ویپ کلینیک"
+       }'
+
+
+       بریا غیرفعال سازی ویپ
+
+       راه اول: از طریق API (سریع‌ترین)
+       bash
+       TOKEN="11|3fPLnO3lewQBR6ylxWXG8VL9qzYYwmAlaWqYqRga632fa4f7"
+
+       curl -X POST http://localhost:8210/api/admin/webhook/toggle \
+         -H "Authorization: Bearer $TOKEN" \
+         -H "Content-Type: application/json" \
+         -d '{
+           "enabled": false
+           }'
+
+
+۲۳. سیستم کیف پول (Wallet System)
+۲۳.۱ دریافت موجودی کیف پول (کاربر)
+bash
+curl -X GET http://localhost:8210/api/wallet/balance \
+  -H "Authorization: Bearer $TOKEN"
+
+
+
+۲۳.۲ دریافت تاریخچه تراکنش‌ها (کاربر)
+bash
+curl -X GET http://localhost:8210/api/wallet/transactions \
+  -H "Authorization: Bearer $TOKEN"
+
+
+
+۲۳.۳ دریافت خلاصه تراکنش‌ها (کاربر)
+bash
+curl -X GET http://localhost:8210/api/wallet/summary \
+  -H "Authorization: Bearer $TOKEN"
+
+
+
+۲۳.۴ شارژ کیف پول (کاربر)
+bash
+curl -X POST http://localhost:8210/api/wallet/deposit \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 500000,
+    "gateway": "local"
+  }'
+
+
+
+۲۳.۵ تایید پرداخت شارژ (Callback - عمومی)
+bash
+curl -X POST "http://localhost:8210/api/wallet/deposit/callback?transaction_id=DEP-20260627-SW87GMTH&status=success"
+
+
+۲۳.۶ پرداخت نوبت با کیف پول (کاربر)
+bash
+curl -X POST http://localhost:8210/api/wallet/pay-appointment \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "appointment_id": 4
+  }'
+
+
+
+۲۴.۱ لیست کیف‌پول‌ها (ادمین)
+bash
+curl -X GET http://localhost:8210/api/admin/wallet \
+  -H "Authorization: Bearer $TOKEN"
+
+
+۲۴.۲ آمار کیف‌پول‌ها (ادمین)
+bash
+curl -X GET http://localhost:8210/api/admin/wallet/stats \
+  -H "Authorization: Bearer $TOKEN"
+
+
+
+۲۴.۳ نمایش کیف پول کاربر (ادمین)
+bash
+curl -X GET http://localhost:8210/api/admin/wallet/{userId} \
+  -H "Authorization: Bearer $TOKEN"
+
+
+
+۲۴.۴ تغییر وضعیت کیف پول (ادمین)
+bash
+curl -X POST http://localhost:8210/api/admin/wallet/{userId}/toggle-status \
+  -H "Authorization: Bearer $TOKEN"
+
+
+
+۲۴.۵ اضافه کردن پاداش به کیف پول (ادمین)
+bash
+curl -X POST http://localhost:8210/api/admin/wallet/{userId}/add-bonus \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100000,
+    "description": "پاداش ویژه نوروز"
+  }'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
