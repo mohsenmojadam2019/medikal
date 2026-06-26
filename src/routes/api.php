@@ -431,3 +431,72 @@ Route::middleware('auth:sanctum')->prefix('referrals')->group(function () {
     Route::post('/{id}/reject', [App\Http\Controllers\Api\ReferralController::class, 'reject']);
     Route::post('/{id}/complete', [App\Http\Controllers\Api\ReferralController::class, 'complete']);
 });
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
+    Route::get('/', [App\Http\Controllers\Api\NotificationController::class, 'index']);
+    Route::get('/unread', [App\Http\Controllers\Api\NotificationController::class, 'unread']);
+    Route::get('/unread-count', [App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+    Route::get('/{id}', [App\Http\Controllers\Api\NotificationController::class, 'show']);
+    Route::put('/{id}/read', [App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+    Route::put('/read-all', [App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
+    Route::delete('/{id}', [App\Http\Controllers\Api\NotificationController::class, 'destroy']);
+    Route::delete('/read/all', [App\Http\Controllers\Api\NotificationController::class, 'deleteRead']);
+});
+
+// ADMIN NOTIFICATION ROUTES
+Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('admin/notifications')->group(function () {
+    // ارسال به کاربر خاص
+    Route::post('/send-to-user', [App\Http\Controllers\Api\NotificationController::class, 'sendToUser']);
+    Route::post('/send-to-users', [App\Http\Controllers\Api\NotificationController::class, 'sendToUsers']);
+    
+    // ارسال به نقش
+    Route::post('/send-to-role', [App\Http\Controllers\Api\NotificationController::class, 'sendToRole']);
+    
+    // ارسال به همه
+    Route::post('/send-to-all', [App\Http\Controllers\Api\NotificationController::class, 'sendToAll']);
+    Route::post('/send-to-doctors', [App\Http\Controllers\Api\NotificationController::class, 'sendToAllDoctors']);
+    Route::post('/send-to-patients', [App\Http\Controllers\Api\NotificationController::class, 'sendToAllPatients']);
+    
+    // ارسال به بیماران یک پزشک
+    Route::post('/send-to-doctor-patients/{doctorId}', [App\Http\Controllers\Api\NotificationController::class, 'sendToDoctorPatients']);
+    
+    // ارسال با فیلتر
+    Route::post('/send-filtered', [App\Http\Controllers\Api\NotificationController::class, 'sendFiltered']);
+    
+    // مشاهده اعلان‌های کاربران
+    Route::get('/user/{userId}', [App\Http\Controllers\Api\NotificationController::class, 'userNotifications']);
+});
+
+// ============================================
+// DRUG MANAGEMENT (ADMIN)
+// ============================================
+
+Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('admin')->group(function () {
+    Route::apiResource('drugs', App\Http\Controllers\Admin\DrugController::class);
+    Route::post('drugs/{id}/toggle-status', [App\Http\Controllers\Admin\DrugController::class, 'toggleStatus']);
+    Route::post('drugs/{id}/increase-stock', [App\Http\Controllers\Admin\DrugController::class, 'increaseStock']);
+    Route::post('drugs/{id}/decrease-stock', [App\Http\Controllers\Admin\DrugController::class, 'decreaseStock']);
+    Route::get('drugs/categories', [App\Http\Controllers\Admin\DrugController::class, 'categories']);
+});
+
+// PUBLIC DRUG SEARCH
+Route::get('/drugs/search', [App\Http\Controllers\Admin\DrugController::class, 'search']);
+Route::get('/drugs/active', [App\Http\Controllers\Admin\DrugController::class, 'activeDrugs']);
+
+
+// ============================================
+// CLINIC MANAGEMENT
+// ============================================
+
+Route::get('/clinic/settings', [App\Http\Controllers\Admin\ClinicController::class, 'publicSettings']);
+
+Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('admin')->group(function () {
+    Route::get('/clinic', [App\Http\Controllers\Admin\ClinicController::class, 'show']);
+    Route::put('/clinic', [App\Http\Controllers\Admin\ClinicController::class, 'update']);
+    Route::post('/clinic/upload-logo', [App\Http\Controllers\Admin\ClinicController::class, 'uploadLogo']);
+    Route::post('/clinic/toggle-status', [App\Http\Controllers\Admin\ClinicController::class, 'toggleStatus']);
+});
