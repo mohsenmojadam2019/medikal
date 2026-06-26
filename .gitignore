@@ -45,14 +45,14 @@ front/.env.*.local
 front/package-lock.json
 
 # ==========================================
-# Docker & Socket (Database files)
+# Docker & medikal (Database files)
 # ==========================================
-socket/
-socket-mysql/
-socket-redis/
-socket-laravel/
+medikal/
+medikal-mysql/
+medikal-redis/
+medikal-laravel/
 mongodb/
-socket_mongodata/
+medikal_mongodata/
 *.pid
 *.pid.lock
 docker-compose.override.yml
@@ -280,9 +280,9 @@ tests/coverage/
 /medikal/mysql/slow_log.CSM
 /medikal/mysql/slow_log.CSV
 /medikal/mysql/slow_log_225.sdi
-/medikal/performance_schema/socket_instances_155.sdi
-/medikal/performance_schema/socket_summary_b_156.sdi
-/medikal/performance_schema/socket_summary_b_157.sdi
+/medikal/performance_schema/medikal_instances_155.sdi
+/medikal/performance_schema/medikal_summary_b_156.sdi
+/medikal/performance_schema/medikal_summary_b_157.sdi
 /medikal/performance_schema/status_by_accoun_186.sdi
 /medikal/performance_schema/status_by_host_187.sdi
 /medikal/performance_schema/status_by_thread_188.sdi

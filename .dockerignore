@@ -5,8 +5,8 @@ README.md
 .dockerignore
 
 # Volumes (مهم)
-socket/
-socket_mongodata/
+medikal/
+medikal_mongodata/
 rabbitmq-isolated.conf
 
 # Logs
