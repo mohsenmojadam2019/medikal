@@ -452,21 +452,21 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('admin/not
     // ارسال به کاربر خاص
     Route::post('/send-to-user', [App\Http\Controllers\Api\NotificationController::class, 'sendToUser']);
     Route::post('/send-to-users', [App\Http\Controllers\Api\NotificationController::class, 'sendToUsers']);
-    
+
     // ارسال به نقش
     Route::post('/send-to-role', [App\Http\Controllers\Api\NotificationController::class, 'sendToRole']);
-    
+
     // ارسال به همه
     Route::post('/send-to-all', [App\Http\Controllers\Api\NotificationController::class, 'sendToAll']);
     Route::post('/send-to-doctors', [App\Http\Controllers\Api\NotificationController::class, 'sendToAllDoctors']);
     Route::post('/send-to-patients', [App\Http\Controllers\Api\NotificationController::class, 'sendToAllPatients']);
-    
+
     // ارسال به بیماران یک پزشک
     Route::post('/send-to-doctor-patients/{doctorId}', [App\Http\Controllers\Api\NotificationController::class, 'sendToDoctorPatients']);
-    
+
     // ارسال با فیلتر
     Route::post('/send-filtered', [App\Http\Controllers\Api\NotificationController::class, 'sendFiltered']);
-    
+
     // مشاهده اعلان‌های کاربران
     Route::get('/user/{userId}', [App\Http\Controllers\Api\NotificationController::class, 'userNotifications']);
 });
@@ -967,21 +967,6 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('campaigns
     Route::get('/stats/overall', [App\Http\Controllers\Api\CampaignController::class, 'overallStats']);
 });
 
-// ============================================================
-// MEDICAL NOTES
-// ============================================================
-Route::middleware(['auth:sanctum'])->prefix('medical-notes')->group(function () {
-    Route::get('/', [App\Http\Controllers\Api\MedicalNoteController::class, 'index']);
-    Route::post('/', [App\Http\Controllers\Api\MedicalNoteController::class, 'store']);
-    Route::get('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'show']);
-    Route::put('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'update']);
-    Route::delete('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'destroy']);
-    Route::post('/{id}/share', [App\Http\Controllers\Api\MedicalNoteController::class, 'share']);
-    Route::post('/{id}/unshare', [App\Http\Controllers\Api\MedicalNoteController::class, 'unshare']);
-    Route::get('/patients/{patientId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'patientNotes']);
-    Route::get('/doctors/{doctorId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'doctorNotes']);
-    Route::get('/patients/{patientId}/summary', [App\Http\Controllers\Api\MedicalNoteController::class, 'summary']);
-});
 
 // ============================================================
 // MEDICAL NOTES
@@ -1369,22 +1354,22 @@ Route::middleware(['auth:sanctum'])->prefix('forms')->group(function () {
 // ============================================================
 
 Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('dashboard/management')->group(function () {
-    
+
     // آمار کلی
     Route::get('/stats', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'stats']);
-    
+
     // داده‌های نمودارها
     Route::get('/charts', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'charts']);
-    
+
     // آمار سریع (ویجت‌ها)
     Route::get('/quick-stats', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'quickStats']);
-    
+
     // فعالیت‌های اخیر
     Route::get('/recent-activities', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'recentActivities']);
-    
+
     // پزشکان برتر
     Route::get('/top-doctors', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'topDoctors']);
-    
+
     // خلاصه عملکرد
     Route::get('/summary', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'summary']);
 });
@@ -1394,22 +1379,22 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('dashboard
 // ============================================================
 
 Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('dashboard/management')->group(function () {
-    
+
     // آمار کلی
     Route::get('/stats', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'stats']);
-    
+
     // داده‌های نمودارها
     Route::get('/charts', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'charts']);
-    
+
     // آمار سریع (ویجت‌ها)
     Route::get('/quick-stats', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'quickStats']);
-    
+
     // فعالیت‌های اخیر
     Route::get('/recent-activities', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'recentActivities']);
-    
+
     // پزشکان برتر
     Route::get('/top-doctors', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'topDoctors']);
-    
+
     // خلاصه عملکرد
     Route::get('/summary', [App\Http\Controllers\Api\Dashboard\ManagementDashboardController::class, 'summary']);
 });
@@ -1657,4 +1642,36 @@ Route::middleware(['auth:sanctum'])->prefix('emergency')->group(function () {
     Route::get('/patients/{id}', [App\Http\Controllers\Api\Emergency\EmergencyController::class, 'show']);
     Route::post('/patients/{id}/status', [App\Http\Controllers\Api\Emergency\EmergencyController::class, 'updateStatus']);
     Route::post('/patients/{id}/disposition', [App\Http\Controllers\Api\Emergency\EmergencyController::class, 'setDisposition']);
+});
+
+// ============================================================
+// INSTALLMENT SYSTEM
+// ============================================================
+
+Route::middleware(['auth:sanctum'])->prefix('installments')->group(function () {
+
+    // ===== Settings =====
+    Route::get('/settings', [App\Http\Controllers\Api\InstallmentController::class, 'getSettings']);
+    Route::put('/settings', [App\Http\Controllers\Api\InstallmentController::class, 'updateSettings']);
+    Route::post('/settings/toggle', [App\Http\Controllers\Api\InstallmentController::class, 'toggleInstallments']);
+
+    // ===== Contracts =====
+    Route::post('/contracts', [App\Http\Controllers\Api\InstallmentController::class, 'createContract']);
+    Route::get('/contracts', [App\Http\Controllers\Api\InstallmentController::class, 'getContracts']);
+    Route::get('/contracts/{id}', [App\Http\Controllers\Api\InstallmentController::class, 'getContract']);
+    Route::get('/patients/{patientId}/contracts', [App\Http\Controllers\Api\InstallmentController::class, 'patientContracts']);
+    Route::post('/contracts/{id}/activate', [App\Http\Controllers\Api\InstallmentController::class, 'activateContract']);
+    Route::post('/contracts/{id}/cancel', [App\Http\Controllers\Api\InstallmentController::class, 'cancelContract']);
+    Route::get('/contracts/{id}/summary', [App\Http\Controllers\Api\InstallmentController::class, 'contractSummary']);
+
+    // ===== Installments =====
+    Route::get('/installments', [App\Http\Controllers\Api\InstallmentController::class, 'getInstallments']);
+    Route::get('/patients/{patientId}/installments', [App\Http\Controllers\Api\InstallmentController::class, 'patientInstallments']);
+    Route::get('/patients/{patientId}/upcoming', [App\Http\Controllers\Api\InstallmentController::class, 'upcomingInstallments']);
+    Route::get('/patients/{patientId}/overdue', [App\Http\Controllers\Api\InstallmentController::class, 'overdueInstallments']);
+    Route::post('/installments/{id}/pay', [App\Http\Controllers\Api\InstallmentController::class, 'payInstallment']);
+    Route::post('/installments/{id}/waive', [App\Http\Controllers\Api\InstallmentController::class, 'waiveInstallment']);
+
+    // ===== Stats =====
+    Route::get('/stats', [App\Http\Controllers\Api\InstallmentController::class, 'stats']);
 });
