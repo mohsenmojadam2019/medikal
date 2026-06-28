@@ -13,13 +13,17 @@ use Illuminate\Support\Str;
 
 class FormService
 {
-    // ============================================================
-    // FORM MANAGEMENT
-    // ============================================================
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
 
     public function getForms(array $filters = [], int $perPage = 20)
     {
-        $query = DigitalForm::with(['creator']);
+        $query = DigitalForm::where('tenant_id', $this->tenantId)
+            ->with(['creator']);
 
         if (isset($filters['search'])) {
             $query->where('title', 'LIKE', "%{$filters['search']}%")
@@ -49,13 +53,15 @@ class FormService
 
     public function getForm(int $id): DigitalForm
     {
-        return DigitalForm::with(['creator', 'responses'])
+        return DigitalForm::where('tenant_id', $this->tenantId)
+            ->with(['creator', 'responses'])
             ->findOrFail($id);
     }
 
     public function getFormBySlug(string $slug): DigitalForm
     {
-        return DigitalForm::where('slug', $slug)
+        return DigitalForm::where('tenant_id', $this->tenantId)
+            ->where('slug', $slug)
             ->where('status', FormStatusEnum::PUBLISHED)
             ->where('is_active', true)
             ->firstOrFail();
@@ -68,6 +74,7 @@ class FormService
             $settings = $this->processSettings($data['settings'] ?? []);
 
             $form = DigitalForm::create([
+                'tenant_id' => $this->tenantId,
                 'title' => $data['title'],
                 'slug' => $data['slug'] ?? null,
                 'description' => $data['description'] ?? null,
@@ -125,17 +132,14 @@ class FormService
     private function processFields(array $fields): array
     {
         foreach ($fields as &$field) {
-            // اطمینان از وجود id برای هر فیلد
             if (empty($field['id'])) {
                 $field['id'] = 'field_' . Str::random(8);
             }
 
-            // اطمینان از وجود type
             if (empty($field['type'])) {
                 $field['type'] = 'text';
             }
 
-            // پردازش options برای فیلدهای انتخابی
             if (in_array($field['type'], ['select', 'multi_select', 'radio', 'checkbox'])) {
                 if (isset($field['options']) && is_string($field['options'])) {
                     $field['options'] = explode(',', $field['options']);
@@ -164,13 +168,10 @@ class FormService
         return array_merge($defaults, $settings);
     }
 
-    // ============================================================
-    // RESPONSE MANAGEMENT
-    // ============================================================
-
     public function getResponses(array $filters = [], int $perPage = 20)
     {
-        $query = FormResponse::with(['digitalForm', 'patient.user', 'user']);
+        $query = FormResponse::where('tenant_id', $this->tenantId)
+            ->with(['digitalForm', 'patient.user', 'user']);
 
         if (isset($filters['form_id'])) {
             $query->byForm($filters['form_id']);
@@ -210,16 +211,16 @@ class FormService
     public function submitResponse(array $data): FormResponse
     {
         return DB::transaction(function () use ($data) {
-            $form = DigitalForm::findOrFail($data['digital_form_id']);
+            $form = DigitalForm::where('tenant_id', $this->tenantId)
+                ->findOrFail($data['digital_form_id']);
 
-            // اعتبارسنجی پاسخ
             $validation = $form->validateResponse($data['response_data'] ?? []);
             if (!$validation['valid']) {
                 throw new \Exception(implode("\n", $validation['errors']));
             }
 
-            // ذخیره پاسخ
             $response = FormResponse::create([
+                'tenant_id' => $this->tenantId,
                 'digital_form_id' => $data['digital_form_id'],
                 'patient_id' => $data['patient_id'] ?? null,
                 'appointment_id' => $data['appointment_id'] ?? null,
@@ -232,12 +233,10 @@ class FormService
                 'metadata' => $data['metadata'] ?? null,
             ]);
 
-            // اگر امضا نیاز باشد
             if (isset($data['signature'])) {
                 $this->addSignature($response->id, $data['signature']);
             }
 
-            // تکمیل خودکار (اگر همه فیلدها پر شده باشد)
             $this->autoCompleteResponse($response);
 
             return $response->fresh(['digitalForm', 'patient', 'user']);
@@ -257,8 +256,6 @@ class FormService
             }
 
             $response->update($data);
-
-            // تکمیل خودکار
             $this->autoCompleteResponse($response);
 
             return $response->fresh();
@@ -267,7 +264,6 @@ class FormService
 
     public function deleteResponse(FormResponse $response): void
     {
-        // حذف امضاهای مرتبط
         $response->signatures()->delete();
         $response->delete();
     }
@@ -299,13 +295,9 @@ class FormService
         }
     }
 
-    // ============================================================
-    // SIGNATURE MANAGEMENT
-    // ============================================================
-
     public function addSignature(int $responseId, array $signatureData): DigitalSignature
     {
-        $response = FormResponse::findOrFail($responseId);
+        $response = FormResponse::where('tenant_id', $this->tenantId)->findOrFail($responseId);
 
         return DB::transaction(function () use ($response, $signatureData) {
             $base64 = $signatureData['signature_image'] ?? null;
@@ -315,6 +307,7 @@ class FormService
             }
 
             $signature = DigitalSignature::createFromBase64($base64, [
+                'tenant_id' => $this->tenantId,
                 'digital_form_id' => $response->digital_form_id,
                 'form_response_id' => $response->id,
                 'patient_id' => $response->patient_id,
@@ -331,7 +324,8 @@ class FormService
 
     public function getSignatures(int $formId, array $filters = [], int $perPage = 20)
     {
-        $query = DigitalSignature::with(['patient.user', 'user']);
+        $query = DigitalSignature::where('tenant_id', $this->tenantId)
+            ->with(['patient.user', 'user']);
 
         if (isset($filters['patient_id'])) {
             $query->where('patient_id', $filters['patient_id']);
@@ -356,13 +350,9 @@ class FormService
         $signature->delete();
     }
 
-    // ============================================================
-    // STATISTICS
-    // ============================================================
-
     public function getStats(array $filters = []): array
     {
-        $query = DigitalForm::query();
+        $query = DigitalForm::where('tenant_id', $this->tenantId);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('created_at', '>=', $filters['from_date']);
@@ -376,18 +366,19 @@ class FormService
             'total_forms' => $query->count(),
             'published_forms' => (clone $query)->where('status', FormStatusEnum::PUBLISHED)->count(),
             'draft_forms' => (clone $query)->where('status', FormStatusEnum::DRAFT)->count(),
-            'total_responses' => FormResponse::count(),
-            'completed_responses' => FormResponse::completed()->count(),
-            'submitted_responses' => FormResponse::submitted()->count(),
-            'total_signatures' => DigitalSignature::count(),
+            'total_responses' => FormResponse::where('tenant_id', $this->tenantId)->count(),
+            'completed_responses' => FormResponse::where('tenant_id', $this->tenantId)->completed()->count(),
+            'submitted_responses' => FormResponse::where('tenant_id', $this->tenantId)->submitted()->count(),
+            'total_signatures' => DigitalSignature::where('tenant_id', $this->tenantId)->count(),
             'by_category' => $this->getStatsByCategory($filters),
-            'responses_today' => FormResponse::whereDate('submitted_at', today())->count(),
+            'responses_today' => FormResponse::where('tenant_id', $this->tenantId)->whereDate('submitted_at', today())->count(),
         ];
     }
 
     private function getStatsByCategory(array $filters): array
     {
-        $query = DigitalForm::selectRaw('category, count(*) as total')
+        $query = DigitalForm::where('tenant_id', $this->tenantId)
+            ->selectRaw('category, count(*) as total')
             ->groupBy('category');
 
         if (isset($filters['from_date'])) {
@@ -407,10 +398,6 @@ class FormService
             })
             ->toArray();
     }
-
-    // ============================================================
-    // CATEGORIES (Helper)
-    // ============================================================
 
     public function getCategories(): array
     {

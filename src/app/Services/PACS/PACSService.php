@@ -8,11 +8,20 @@ use Illuminate\Support\Facades\Log;
 
 class PACSService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function uploadImage(array $data, $file): MedicalImage
     {
         $path = $file->store('pacs/' . $data['patient_id'], 'public');
 
+        $data['tenant_id'] = $this->tenantId;
         return MedicalImage::create([
+            'tenant_id' => $this->tenantId,
             'patient_id' => $data['patient_id'],
             'doctor_id' => $data['doctor_id'] ?? null,
             'admission_id' => $data['admission_id'] ?? null,
@@ -38,7 +47,8 @@ class PACSService
 
     public function getPatientImages(int $patientId, array $filters = [], int $perPage = 20)
     {
-        $query = MedicalImage::where('patient_id', $patientId);
+        $query = MedicalImage::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId);
 
         if (isset($filters['image_type'])) {
             $query->where('image_type', $filters['image_type']);
@@ -61,7 +71,7 @@ class PACSService
 
     public function deleteImage(int $imageId): void
     {
-        $image = MedicalImage::findOrFail($imageId);
+        $image = MedicalImage::where('tenant_id', $this->tenantId)->findOrFail($imageId);
         Storage::disk('public')->delete($image->file_path);
         $image->delete();
     }
@@ -69,14 +79,18 @@ class PACSService
     public function getImageStats(int $patientId): array
     {
         return [
-            'total' => MedicalImage::where('patient_id', $patientId)->count(),
-            'by_type' => MedicalImage::where('patient_id', $patientId)
+            'total' => MedicalImage::where('tenant_id', $this->tenantId)
+                ->where('patient_id', $patientId)
+                ->count(),
+            'by_type' => MedicalImage::where('tenant_id', $this->tenantId)
+                ->where('patient_id', $patientId)
                 ->selectRaw('image_type, count(*) as count')
                 ->groupBy('image_type')
                 ->get()
                 ->pluck('count', 'image_type')
                 ->toArray(),
-            'by_modality' => MedicalImage::where('patient_id', $patientId)
+            'by_modality' => MedicalImage::where('tenant_id', $this->tenantId)
+                ->where('patient_id', $patientId)
                 ->selectRaw('modality, count(*) as count')
                 ->groupBy('modality')
                 ->get()

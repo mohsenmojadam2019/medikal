@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Services\Sms\SmsManager;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class AuthService
 {
@@ -17,36 +16,29 @@ class AuthService
         $this->smsManager = $smsManager;
     }
 
-    /**
-     * ورود با موبایل (ارسال OTP)
-     */
     public function loginWithMobile(string $mobile): array
     {
-        // پیدا کردن یا ایجاد کاربر
         $user = User::where('mobile', $mobile)->first();
 
-        if (!$user) {
+        if (is_null($user)) {
             $user = User::create([
                 'mobile' => $mobile,
                 'is_active' => true,
             ]);
         }
 
-        if (!$user->is_active) {
+        if ($user->is_active == false) {
             throw new \Exception('حساب کاربری شما غیرفعال است');
         }
 
-        // تولید کد OTP
         $otp = $this->generateOtp();
 
-        // ذخیره در کش (با timeout 5 دقیقه)
         cache()->put("otp_{$mobile}", [
             'code' => $otp,
             'user_id' => $user->id,
             'attempts' => 0,
         ], 300);
 
-        // ارسال پیامک
         $this->sendOtpSms($mobile, $otp);
 
         return [
@@ -57,14 +49,11 @@ class AuthService
         ];
     }
 
-    /**
-     * تایید OTP
-     */
     public function verifyOtp(string $mobile, string $code): array
     {
         $cached = cache()->get("otp_{$mobile}");
 
-        if (!$cached) {
+        if (is_null($cached)) {
             throw new \Exception('کد تایید منقضی شده است');
         }
 
@@ -80,7 +69,7 @@ class AuthService
         }
 
         $user = User::find($cached['user_id']);
-        if (!$user) {
+        if (is_null($user)) {
             throw new \Exception('کاربر یافت نشد');
         }
 
@@ -94,6 +83,10 @@ class AuthService
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        if ($user->current_tenant_id) {
+            session(['tenant_id' => $user->current_tenant_id]);
+        }
+
         return [
             'user' => $user,
             'token' => $token,
@@ -103,18 +96,15 @@ class AuthService
         ];
     }
 
-    /**
-     * ورود با ایمیل و رمز عبور
-     */
     public function loginWithEmail(string $email, string $password): array
     {
         $user = User::where('email', $email)->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (is_null($user) || Hash::check($password, $user->password) == false) {
             throw new \Exception('ایمیل یا رمز عبور اشتباه است');
         }
 
-        if (!$user->is_active) {
+        if ($user->is_active == false) {
             throw new \Exception('حساب کاربری شما غیرفعال است');
         }
 
@@ -125,6 +115,10 @@ class AuthService
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        if ($user->current_tenant_id) {
+            session(['tenant_id' => $user->current_tenant_id]);
+        }
+
         return [
             'user' => $user,
             'token' => $token,
@@ -134,28 +128,20 @@ class AuthService
         ];
     }
 
-    /**
-     * خروج از سیستم
-     */
     public function logout(User $user): void
     {
         $user->currentAccessToken()?->delete();
+        session()->forget('tenant_id');
     }
 
-    /**
-     * تولید OTP
-     */
     protected function generateOtp(): string
     {
         if (app()->environment('production')) {
             return str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
         }
-        return '1234'; // برای محیط توسعه
+        return '1234';
     }
 
-    /**
-     * ارسال پیامک OTP
-     */
     protected function sendOtpSms(string $mobile, string $code): void
     {
         try {
@@ -166,7 +152,6 @@ class AuthService
                 'mobile' => $mobile,
                 'error' => $e->getMessage(),
             ]);
-            // در محیط توسعه خطا نادیده گرفته میشود
         }
     }
 }

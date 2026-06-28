@@ -12,16 +12,26 @@ use Illuminate\Support\Facades\Log;
 
 class TelemedicineService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function createSession(array $data): TelemedicineSession
     {
         return DB::transaction(function () use ($data) {
-            $appointment = Appointment::findOrFail($data['appointment_id']);
+            $appointment = Appointment::where('tenant_id', $this->tenantId)
+                ->findOrFail($data['appointment_id']);
 
             if ($appointment->type !== 'online') {
                 throw new \Exception('این نوبت برای ویزیت آنلاین نیست');
             }
 
+            $data['tenant_id'] = $this->tenantId;
             $session = TelemedicineSession::create([
+                'tenant_id' => $this->tenantId,
                 'appointment_id' => $appointment->id,
                 'patient_id' => $appointment->patient_id,
                 'doctor_id' => $appointment->doctor_id,
@@ -38,20 +48,23 @@ class TelemedicineService
 
     public function getSession($id): TelemedicineSession
     {
-        return TelemedicineSession::with(['patient', 'doctor', 'appointment'])
+        return TelemedicineSession::where('tenant_id', $this->tenantId)
+            ->with(['patient', 'doctor', 'appointment'])
             ->findOrFail($id);
     }
 
     public function getSessionByRoom(string $roomName): TelemedicineSession
     {
-        return TelemedicineSession::with(['patient', 'doctor'])
+        return TelemedicineSession::where('tenant_id', $this->tenantId)
             ->where('room_name', $roomName)
+            ->with(['patient', 'doctor'])
             ->firstOrFail();
     }
 
     public function getSessions(array $filters = [], int $perPage = 15)
     {
-        $query = TelemedicineSession::with(['patient', 'doctor']);
+        $query = TelemedicineSession::where('tenant_id', $this->tenantId)
+            ->with(['patient', 'doctor']);
 
         if (isset($filters['doctor_id'])) {
             $query->byDoctor($filters['doctor_id']);
@@ -86,7 +99,8 @@ class TelemedicineService
 
     public function getActiveSessions(int $doctorId)
     {
-        return TelemedicineSession::byDoctor($doctorId)
+        return TelemedicineSession::where('tenant_id', $this->tenantId)
+            ->byDoctor($doctorId)
             ->active()
             ->with(['patient'])
             ->get();
@@ -94,7 +108,8 @@ class TelemedicineService
 
     public function startSession(int $sessionId): TelemedicineSession
     {
-        $session = TelemedicineSession::findOrFail($sessionId);
+        $session = TelemedicineSession::where('tenant_id', $this->tenantId)
+            ->findOrFail($sessionId);
 
         if ($session->status !== 'scheduled' && $session->status !== 'waiting') {
             throw new \Exception('این جلسه قابل شروع نیست');
@@ -106,7 +121,8 @@ class TelemedicineService
 
     public function completeSession(int $sessionId): TelemedicineSession
     {
-        $session = TelemedicineSession::findOrFail($sessionId);
+        $session = TelemedicineSession::where('tenant_id', $this->tenantId)
+            ->findOrFail($sessionId);
 
         if ($session->status !== 'in_progress') {
             throw new \Exception('این جلسه در حال برگزاری نیست');
@@ -118,14 +134,17 @@ class TelemedicineService
 
     public function cancelSession(int $sessionId): TelemedicineSession
     {
-        $session = TelemedicineSession::findOrFail($sessionId);
+        $session = TelemedicineSession::where('tenant_id', $this->tenantId)
+            ->findOrFail($sessionId);
+
         $session->cancel();
         return $session->fresh();
     }
 
     public function joinSession(int $sessionId, int $userId): array
     {
-        $session = TelemedicineSession::findOrFail($sessionId);
+        $session = TelemedicineSession::where('tenant_id', $this->tenantId)
+            ->findOrFail($sessionId);
 
         $user = \App\Models\User::findOrFail($userId);
         $isPatient = $session->patient->user_id === $userId;
@@ -150,9 +169,12 @@ class TelemedicineService
     public function sendMessage(array $data): TelemedicineMessage
     {
         return DB::transaction(function () use ($data) {
-            $session = TelemedicineSession::findOrFail($data['session_id']);
+            $session = TelemedicineSession::where('tenant_id', $this->tenantId)
+                ->findOrFail($data['session_id']);
 
+            $data['tenant_id'] = $this->tenantId;
             $message = TelemedicineMessage::create([
+                'tenant_id' => $this->tenantId,
                 'session_id' => $data['session_id'],
                 'user_id' => $data['user_id'],
                 'message' => $data['message'],
@@ -168,7 +190,8 @@ class TelemedicineService
 
     public function getMessages(int $sessionId, int $perPage = 50)
     {
-        return TelemedicineMessage::bySession($sessionId)
+        return TelemedicineMessage::where('tenant_id', $this->tenantId)
+            ->where('session_id', $sessionId)
             ->with(['user'])
             ->orderBy('created_at', 'asc')
             ->paginate($perPage);
@@ -176,7 +199,8 @@ class TelemedicineService
 
     public function markMessagesAsRead(int $sessionId, int $userId): void
     {
-        TelemedicineMessage::where('session_id', $sessionId)
+        TelemedicineMessage::where('tenant_id', $this->tenantId)
+            ->where('session_id', $sessionId)
             ->where('user_id', '!=', $userId)
             ->where('is_read', false)
             ->update([
@@ -187,7 +211,8 @@ class TelemedicineService
 
     public function getUnreadCount(int $sessionId, int $userId): int
     {
-        return TelemedicineMessage::where('session_id', $sessionId)
+        return TelemedicineMessage::where('tenant_id', $this->tenantId)
+            ->where('session_id', $sessionId)
             ->where('user_id', '!=', $userId)
             ->where('is_read', false)
             ->count();
@@ -196,11 +221,14 @@ class TelemedicineService
     public function uploadFile(array $data, $file): TelemedicineFile
     {
         return DB::transaction(function () use ($data, $file) {
-            $session = TelemedicineSession::findOrFail($data['session_id']);
+            $session = TelemedicineSession::where('tenant_id', $this->tenantId)
+                ->findOrFail($data['session_id']);
 
             $path = $file->store('telemedicine/' . $session->id, 'public');
 
+            $data['tenant_id'] = $this->tenantId;
             $teleFile = TelemedicineFile::create([
+                'tenant_id' => $this->tenantId,
                 'session_id' => $data['session_id'],
                 'user_id' => $data['user_id'],
                 'file_name' => $file->getClientOriginalName(),
@@ -216,21 +244,24 @@ class TelemedicineService
 
     public function getFiles(int $sessionId)
     {
-        return TelemedicineFile::where('session_id', $sessionId)
+        return TelemedicineFile::where('tenant_id', $this->tenantId)
+            ->where('session_id', $sessionId)
             ->orderBy('created_at', 'desc')
             ->get();
     }
 
     public function deleteFile(int $fileId): void
     {
-        $file = TelemedicineFile::findOrFail($fileId);
+        $file = TelemedicineFile::where('tenant_id', $this->tenantId)
+            ->findOrFail($fileId);
+
         Storage::disk('public')->delete($file->file_path);
         $file->delete();
     }
 
     public function getStats(array $filters = []): array
     {
-        $query = TelemedicineSession::query();
+        $query = TelemedicineSession::where('tenant_id', $this->tenantId);
 
         if (isset($filters['doctor_id'])) {
             $query->byDoctor($filters['doctor_id']);
@@ -263,12 +294,15 @@ class TelemedicineService
             $doctorLink = config('app.frontend_url') . '/telemedicine/doctor/' . $session->room_name;
 
             Log::info('Telemedicine session created', [
+                'tenant_id' => $this->tenantId,
                 'session_id' => $session->id,
                 'patient_link' => $patientLink,
                 'doctor_link' => $doctorLink,
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send session link: ' . $e->getMessage());
+            Log::error('Failed to send session link: ' . $e->getMessage(), [
+                'tenant_id' => $this->tenantId,
+            ]);
         }
     }
 
@@ -276,12 +310,15 @@ class TelemedicineService
     {
         try {
             Log::info('Telemedicine message sent', [
+                'tenant_id' => $this->tenantId,
                 'session_id' => $message->session_id,
                 'user_id' => $message->user_id,
                 'message_id' => $message->id,
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send message notification: ' . $e->getMessage());
+            Log::error('Failed to send message notification: ' . $e->getMessage(), [
+                'tenant_id' => $this->tenantId,
+            ]);
         }
     }
 }

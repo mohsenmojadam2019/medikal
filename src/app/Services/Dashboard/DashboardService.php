@@ -13,9 +13,13 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardService
 {
-    /**
-     * آمار کلی سیستم (برای ادمین)
-     */
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getAdminStats(): array
     {
         $now = now();
@@ -24,51 +28,54 @@ class DashboardService
 
         return [
             'users' => [
-                'total' => User::count(),
-                'active' => User::where('is_active', true)->count(),
-                'new_this_month' => User::where('created_at', '>=', $monthStart)->count(),
+                'total' => User::whereHas('tenants', function($q) {
+                    $q->where('tenant_id', $this->tenantId);
+                })->count(),
+                'active' => User::whereHas('tenants', function($q) {
+                    $q->where('tenant_id', $this->tenantId);
+                })->where('is_active', true)->count(),
+                'new_this_month' => User::whereHas('tenants', function($q) {
+                    $q->where('tenant_id', $this->tenantId);
+                })->where('created_at', '>=', $monthStart)->count(),
             ],
             'doctors' => [
-                'total' => Doctor::count(),
-                'active' => Doctor::where('is_available', true)->count(),
-                'verified' => Doctor::where('is_verified', true)->count(),
-                'new_this_month' => Doctor::where('created_at', '>=', $monthStart)->count(),
+                'total' => Doctor::where('tenant_id', $this->tenantId)->count(),
+                'active' => Doctor::where('tenant_id', $this->tenantId)->where('is_available', true)->count(),
+                'verified' => Doctor::where('tenant_id', $this->tenantId)->where('is_verified', true)->count(),
+                'new_this_month' => Doctor::where('tenant_id', $this->tenantId)->where('created_at', '>=', $monthStart)->count(),
             ],
             'patients' => [
-                'total' => Patient::count(),
-                'active' => Patient::where('is_active', true)->count(),
-                'verified' => Patient::whereNotNull('verified_at')->count(),
-                'new_this_month' => Patient::where('created_at', '>=', $monthStart)->count(),
+                'total' => Patient::where('tenant_id', $this->tenantId)->count(),
+                'active' => Patient::where('tenant_id', $this->tenantId)->where('is_active', true)->count(),
+                'verified' => Patient::where('tenant_id', $this->tenantId)->whereNotNull('verified_at')->count(),
+                'new_this_month' => Patient::where('tenant_id', $this->tenantId)->where('created_at', '>=', $monthStart)->count(),
             ],
             'appointments' => [
-                'total' => Appointment::count(),
-                'today' => Appointment::whereDate('date', $today)->count(),
-                'pending' => Appointment::where('status', Appointment::STATUS_PENDING)->count(),
-                'confirmed' => Appointment::where('status', Appointment::STATUS_CONFIRMED)->count(),
-                'completed' => Appointment::where('status', Appointment::STATUS_COMPLETED)->count(),
-                'cancelled' => Appointment::where('status', Appointment::STATUS_CANCELLED)->count(),
-                'no_show' => Appointment::where('status', Appointment::STATUS_NO_SHOW)->count(),
-                'this_month' => Appointment::where('created_at', '>=', $monthStart)->count(),
+                'total' => Appointment::where('tenant_id', $this->tenantId)->count(),
+                'today' => Appointment::where('tenant_id', $this->tenantId)->whereDate('date', $today)->count(),
+                'pending' => Appointment::where('tenant_id', $this->tenantId)->where('status', Appointment::STATUS_PENDING)->count(),
+                'confirmed' => Appointment::where('tenant_id', $this->tenantId)->where('status', Appointment::STATUS_CONFIRMED)->count(),
+                'completed' => Appointment::where('tenant_id', $this->tenantId)->where('status', Appointment::STATUS_COMPLETED)->count(),
+                'cancelled' => Appointment::where('tenant_id', $this->tenantId)->where('status', Appointment::STATUS_CANCELLED)->count(),
+                'no_show' => Appointment::where('tenant_id', $this->tenantId)->where('status', Appointment::STATUS_NO_SHOW)->count(),
+                'this_month' => Appointment::where('tenant_id', $this->tenantId)->where('created_at', '>=', $monthStart)->count(),
             ],
             'revenue' => [
-                'today' => Invoice::whereDate('paid_at', $today)->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
-                'this_month' => Invoice::where('paid_at', '>=', $monthStart)->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
-                'total' => Invoice::where('status', Invoice::STATUS_PAID)->sum('total_amount'),
-                'pending' => Invoice::where('status', Invoice::STATUS_ISSUED)->sum('total_amount'),
-                'overdue' => Invoice::overdue()->sum('total_amount'),
+                'today' => Invoice::where('tenant_id', $this->tenantId)->whereDate('paid_at', $today)->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
+                'this_month' => Invoice::where('tenant_id', $this->tenantId)->where('paid_at', '>=', $monthStart)->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
+                'total' => Invoice::where('tenant_id', $this->tenantId)->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
+                'pending' => Invoice::where('tenant_id', $this->tenantId)->where('status', Invoice::STATUS_ISSUED)->sum('total_amount'),
+                'overdue' => Invoice::where('tenant_id', $this->tenantId)->overdue()->sum('total_amount'),
             ],
             'prescriptions' => [
-                'total' => Prescription::count(),
-                'active' => Prescription::active()->count(),
-                'expiring_soon' => Prescription::expiringSoon()->count(),
-                'expired' => Prescription::expired()->count(),
+                'total' => Prescription::where('tenant_id', $this->tenantId)->count(),
+                'active' => Prescription::where('tenant_id', $this->tenantId)->active()->count(),
+                'expiring_soon' => Prescription::where('tenant_id', $this->tenantId)->expiringSoon()->count(),
+                'expired' => Prescription::where('tenant_id', $this->tenantId)->expired()->count(),
             ],
         ];
     }
 
-    /**
-     * آمار پزشک (برای پنل پزشک)
-     */
     public function getDoctorStats(int $doctorId): array
     {
         $now = now();
@@ -78,51 +85,48 @@ class DashboardService
 
         return [
             'appointments' => [
-                'today' => Appointment::byDoctor($doctorId)->whereDate('date', $today)->count(),
-                'this_week' => Appointment::byDoctor($doctorId)->whereDate('date', '>=', $weekStart)->count(),
-                'this_month' => Appointment::byDoctor($doctorId)->where('created_at', '>=', $monthStart)->count(),
-                'total' => Appointment::byDoctor($doctorId)->count(),
-                'pending' => Appointment::byDoctor($doctorId)->where('status', Appointment::STATUS_PENDING)->count(),
-                'confirmed' => Appointment::byDoctor($doctorId)->where('status', Appointment::STATUS_CONFIRMED)->count(),
-                'completed' => Appointment::byDoctor($doctorId)->where('status', Appointment::STATUS_COMPLETED)->count(),
-                'cancelled' => Appointment::byDoctor($doctorId)->where('status', Appointment::STATUS_CANCELLED)->count(),
-                'no_show' => Appointment::byDoctor($doctorId)->where('status', Appointment::STATUS_NO_SHOW)->count(),
+                'today' => Appointment::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->whereDate('date', $today)->count(),
+                'this_week' => Appointment::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->whereDate('date', '>=', $weekStart)->count(),
+                'this_month' => Appointment::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->where('created_at', '>=', $monthStart)->count(),
+                'total' => Appointment::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->count(),
+                'pending' => Appointment::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->where('status', Appointment::STATUS_PENDING)->count(),
+                'confirmed' => Appointment::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->where('status', Appointment::STATUS_CONFIRMED)->count(),
+                'completed' => Appointment::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->where('status', Appointment::STATUS_COMPLETED)->count(),
+                'cancelled' => Appointment::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->where('status', Appointment::STATUS_CANCELLED)->count(),
+                'no_show' => Appointment::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->where('status', Appointment::STATUS_NO_SHOW)->count(),
             ],
             'patients' => [
-                'total' => Patient::byDoctor($doctorId)->count(),
-                'new_this_month' => Patient::byDoctor($doctorId)->where('created_at', '>=', $monthStart)->count(),
-                'active' => Patient::byDoctor($doctorId)->where('is_active', true)->count(),
+                'total' => Patient::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->count(),
+                'new_this_month' => Patient::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->where('created_at', '>=', $monthStart)->count(),
+                'active' => Patient::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->where('is_active', true)->count(),
             ],
             'revenue' => [
-                'today' => Invoice::whereHas('appointment', function ($query) use ($doctorId) {
+                'today' => Invoice::where('tenant_id', $this->tenantId)->whereHas('appointment', function ($query) use ($doctorId) {
                     $query->where('doctor_id', $doctorId);
                 })->whereDate('paid_at', $today)->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
-                'this_month' => Invoice::whereHas('appointment', function ($query) use ($doctorId) {
+                'this_month' => Invoice::where('tenant_id', $this->tenantId)->whereHas('appointment', function ($query) use ($doctorId) {
                     $query->where('doctor_id', $doctorId);
                 })->where('paid_at', '>=', $monthStart)->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
-                'total' => Invoice::whereHas('appointment', function ($query) use ($doctorId) {
+                'total' => Invoice::where('tenant_id', $this->tenantId)->whereHas('appointment', function ($query) use ($doctorId) {
                     $query->where('doctor_id', $doctorId);
                 })->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
-                'pending' => Invoice::whereHas('appointment', function ($query) use ($doctorId) {
+                'pending' => Invoice::where('tenant_id', $this->tenantId)->whereHas('appointment', function ($query) use ($doctorId) {
                     $query->where('doctor_id', $doctorId);
                 })->where('status', Invoice::STATUS_ISSUED)->sum('total_amount'),
             ],
             'prescriptions' => [
-                'total' => Prescription::byDoctor($doctorId)->count(),
-                'active' => Prescription::byDoctor($doctorId)->active()->count(),
-                'expiring_soon' => Prescription::byDoctor($doctorId)->expiringSoon()->count(),
-                'expired' => Prescription::byDoctor($doctorId)->expired()->count(),
+                'total' => Prescription::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->count(),
+                'active' => Prescription::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->active()->count(),
+                'expiring_soon' => Prescription::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->expiringSoon()->count(),
+                'expired' => Prescription::where('tenant_id', $this->tenantId)->byDoctor($doctorId)->expired()->count(),
             ],
             'rating' => [
-                'average' => Doctor::find($doctorId)?->rating ?? 0,
-                'total_reviews' => Doctor::find($doctorId)?->total_reviews ?? 0,
+                'average' => Doctor::where('tenant_id', $this->tenantId)->find($doctorId)?->rating ?? 0,
+                'total_reviews' => Doctor::where('tenant_id', $this->tenantId)->find($doctorId)?->total_reviews ?? 0,
             ],
         ];
     }
 
-    /**
-     * آمار بیمار (برای پنل بیمار)
-     */
     public function getPatientStats(int $patientId): array
     {
         $now = now();
@@ -131,54 +135,52 @@ class DashboardService
 
         return [
             'appointments' => [
-                'total' => Appointment::byPatient($patientId)->count(),
-                'upcoming' => Appointment::byPatient($patientId)->upcoming()->count(),
-                'completed' => Appointment::byPatient($patientId)->where('status', Appointment::STATUS_COMPLETED)->count(),
-                'cancelled' => Appointment::byPatient($patientId)->where('status', Appointment::STATUS_CANCELLED)->count(),
-                'no_show' => Appointment::byPatient($patientId)->where('status', Appointment::STATUS_NO_SHOW)->count(),
+                'total' => Appointment::where('tenant_id', $this->tenantId)->byPatient($patientId)->count(),
+                'upcoming' => Appointment::where('tenant_id', $this->tenantId)->byPatient($patientId)->upcoming()->count(),
+                'completed' => Appointment::where('tenant_id', $this->tenantId)->byPatient($patientId)->where('status', Appointment::STATUS_COMPLETED)->count(),
+                'cancelled' => Appointment::where('tenant_id', $this->tenantId)->byPatient($patientId)->where('status', Appointment::STATUS_CANCELLED)->count(),
+                'no_show' => Appointment::where('tenant_id', $this->tenantId)->byPatient($patientId)->where('status', Appointment::STATUS_NO_SHOW)->count(),
             ],
             'prescriptions' => [
-                'total' => Prescription::byPatient($patientId)->count(),
-                'active' => Prescription::byPatient($patientId)->active()->count(),
-                'completed' => Prescription::byPatient($patientId)->where('status', Prescription::STATUS_COMPLETED)->count(),
+                'total' => Prescription::where('tenant_id', $this->tenantId)->byPatient($patientId)->count(),
+                'active' => Prescription::where('tenant_id', $this->tenantId)->byPatient($patientId)->active()->count(),
+                'completed' => Prescription::where('tenant_id', $this->tenantId)->byPatient($patientId)->where('status', Prescription::STATUS_COMPLETED)->count(),
             ],
             'invoices' => [
-                'total' => Invoice::byPatient($patientId)->count(),
-                'paid' => Invoice::byPatient($patientId)->where('status', Invoice::STATUS_PAID)->count(),
-                'pending' => Invoice::byPatient($patientId)->where('status', Invoice::STATUS_ISSUED)->count(),
-                'total_paid' => Invoice::byPatient($patientId)->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
-                'total_pending' => Invoice::byPatient($patientId)->where('status', Invoice::STATUS_ISSUED)->sum('total_amount'),
+                'total' => Invoice::where('tenant_id', $this->tenantId)->byPatient($patientId)->count(),
+                'paid' => Invoice::where('tenant_id', $this->tenantId)->byPatient($patientId)->where('status', Invoice::STATUS_PAID)->count(),
+                'pending' => Invoice::where('tenant_id', $this->tenantId)->byPatient($patientId)->where('status', Invoice::STATUS_ISSUED)->count(),
+                'total_paid' => Invoice::where('tenant_id', $this->tenantId)->byPatient($patientId)->where('status', Invoice::STATUS_PAID)->sum('total_amount'),
+                'total_pending' => Invoice::where('tenant_id', $this->tenantId)->byPatient($patientId)->where('status', Invoice::STATUS_ISSUED)->sum('total_amount'),
             ],
-            'last_visit' => Appointment::byPatient($patientId)
+            'last_visit' => Appointment::where('tenant_id', $this->tenantId)->byPatient($patientId)
                 ->where('status', Appointment::STATUS_COMPLETED)
                 ->orderBy('date', 'desc')
                 ->first(),
-            'next_appointment' => Appointment::byPatient($patientId)
+            'next_appointment' => Appointment::where('tenant_id', $this->tenantId)->byPatient($patientId)
                 ->upcoming()
                 ->orderBy('date', 'asc')
                 ->first(),
         ];
     }
 
-    /**
-     * آمار نوبت‌های روزانه (برای نمودار)
-     */
     public function getDailyAppointments(int $days = 30): array
     {
         $data = [];
         $endDate = now();
         $startDate = $endDate->copy()->subDays($days);
 
-        $appointments = Appointment::select(
-            DB::raw('DATE(date) as date'),
-            DB::raw('COUNT(*) as total'),
-            DB::raw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed"),
-            DB::raw("SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled")
-        )
-        ->whereBetween('date', [$startDate, $endDate])
-        ->groupBy('date')
-        ->orderBy('date', 'asc')
-        ->get();
+        $appointments = Appointment::where('tenant_id', $this->tenantId)
+            ->select(
+                DB::raw('DATE(date) as date'),
+                DB::raw('COUNT(*) as total'),
+                DB::raw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed"),
+                DB::raw("SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled")
+            )
+            ->whereBetween('date', [$startDate, $endDate])
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get();
 
         $dates = [];
         $current = $startDate->copy();
@@ -200,24 +202,22 @@ class DashboardService
         return $data;
     }
 
-    /**
-     * آمار درآمد روزانه (برای نمودار)
-     */
     public function getDailyRevenue(int $days = 30): array
     {
         $data = [];
         $endDate = now();
         $startDate = $endDate->copy()->subDays($days);
 
-        $revenues = Invoice::select(
-            DB::raw('DATE(paid_at) as date'),
-            DB::raw('SUM(total_amount) as total')
-        )
-        ->where('status', Invoice::STATUS_PAID)
-        ->whereBetween('paid_at', [$startDate, $endDate])
-        ->groupBy('date')
-        ->orderBy('date', 'asc')
-        ->get();
+        $revenues = Invoice::where('tenant_id', $this->tenantId)
+            ->select(
+                DB::raw('DATE(paid_at) as date'),
+                DB::raw('SUM(total_amount) as total')
+            )
+            ->where('status', Invoice::STATUS_PAID)
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get();
 
         $dates = [];
         $current = $startDate->copy();
@@ -237,9 +237,6 @@ class DashboardService
         return $data;
     }
 
-    /**
-     * توزیع نوبت‌ها بر اساس وضعیت
-     */
     public function getAppointmentStatusDistribution(): array
     {
         $statuses = [
@@ -254,7 +251,7 @@ class DashboardService
 
         $result = [];
         foreach ($statuses as $status) {
-            $result[$status] = Appointment::where('status', $status)->count();
+            $result[$status] = Appointment::where('tenant_id', $this->tenantId)->where('status', $status)->count();
         }
 
         return $result;

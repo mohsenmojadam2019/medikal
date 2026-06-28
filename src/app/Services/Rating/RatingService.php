@@ -8,9 +8,17 @@ use Illuminate\Support\Facades\DB;
 
 class RatingService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function create(array $data): Rating
     {
         return DB::transaction(function () use ($data) {
+            $data['tenant_id'] = $this->tenantId;
             $rating = Rating::create($data);
             $this->updateDoctorRating($data['doctor_id']);
             return $rating->load(['patient.user', 'doctor.user']);
@@ -19,7 +27,8 @@ class RatingService
 
     public function getDoctorRatings(int $doctorId, array $filters = [], int $perPage = 15)
     {
-        $query = Rating::where('doctor_id', $doctorId)
+        $query = Rating::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->with(['patient.user']);
 
         if (isset($filters['min_score'])) {
@@ -43,7 +52,9 @@ class RatingService
 
     public function getDoctorStats(int $doctorId): array
     {
-        $ratings = Rating::where('doctor_id', $doctorId);
+        $ratings = Rating::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId);
+
         $total = $ratings->count();
 
         if ($total === 0) {
@@ -76,7 +87,8 @@ class RatingService
 
     public function getTopDoctors(int $limit = 10)
     {
-        return Doctor::with(['user', 'specialty'])
+        return Doctor::where('tenant_id', $this->tenantId)
+            ->with(['user', 'specialty'])
             ->where('is_active', true)
             ->where('is_verified', true)
             ->orderBy('rating', 'desc')
@@ -84,12 +96,9 @@ class RatingService
             ->get();
     }
 
-    /**
-     * پاسخ به نظر بیمار (ادمین)
-     */
     public function replyToRating(int $ratingId, string $reply): Rating
     {
-        $rating = Rating::findOrFail($ratingId);
+        $rating = Rating::where('tenant_id', $this->tenantId)->findOrFail($ratingId);
 
         $rating->update([
             'reply' => $reply,
@@ -99,12 +108,9 @@ class RatingService
         return $rating->fresh();
     }
 
-    /**
-     * حذف پاسخ (ادمین)
-     */
     public function deleteReply(int $ratingId): Rating
     {
-        $rating = Rating::findOrFail($ratingId);
+        $rating = Rating::where('tenant_id', $this->tenantId)->findOrFail($ratingId);
         $rating->update([
             'reply' => null,
             'replied_at' => null,
@@ -114,12 +120,19 @@ class RatingService
 
     private function updateDoctorRating(int $doctorId): void
     {
-        $avg = Rating::where('doctor_id', $doctorId)->avg('score');
-        $count = Rating::where('doctor_id', $doctorId)->count();
+        $avg = Rating::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
+            ->avg('score');
 
-        Doctor::where('id', $doctorId)->update([
-            'rating' => round($avg ?? 0, 1),
-            'total_reviews' => $count,
-        ]);
+        $count = Rating::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
+            ->count();
+
+        Doctor::where('tenant_id', $this->tenantId)
+            ->where('id', $doctorId)
+            ->update([
+                'rating' => round($avg ?? 0, 1),
+                'total_reviews' => $count,
+            ]);
     }
 }

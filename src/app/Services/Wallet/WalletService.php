@@ -12,10 +12,17 @@ use Illuminate\Support\Facades\Log;
 
 class WalletService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getWallet(int $userId): Wallet
     {
         return Wallet::firstOrCreate(
-            ['user_id' => $userId],
+            ['user_id' => $userId, 'tenant_id' => $this->tenantId],
             [
                 'balance' => 0,
                 'frozen_balance' => 0,
@@ -28,7 +35,7 @@ class WalletService
     public function getBalance(int $userId): array
     {
         $wallet = $this->getWallet($userId);
-        
+
         return [
             'total_balance' => $wallet->balance,
             'frozen_balance' => $wallet->frozen_balance,
@@ -100,7 +107,8 @@ class WalletService
 
     public function getTransactions(int $userId, int $perPage = 20)
     {
-        return WalletTransaction::where('user_id', $userId)
+        return WalletTransaction::where('tenant_id', $this->tenantId)
+            ->where('user_id', $userId)
             ->with(['appointment', 'invoice'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -111,31 +119,40 @@ class WalletService
         $wallet = $this->getWallet($userId);
 
         return [
-            'total_deposits' => WalletTransaction::where('user_id', $userId)
+            'total_deposits' => WalletTransaction::where('tenant_id', $this->tenantId)
+                ->where('user_id', $userId)
                 ->where('type', 'deposit')
                 ->where('status', 'completed')
                 ->sum('amount'),
-            'total_payments' => WalletTransaction::where('user_id', $userId)
+            'total_payments' => WalletTransaction::where('tenant_id', $this->tenantId)
+                ->where('user_id', $userId)
                 ->where('type', 'payment')
                 ->where('status', 'completed')
                 ->sum('amount') * -1,
-            'total_refunds' => WalletTransaction::where('user_id', $userId)
+            'total_refunds' => WalletTransaction::where('tenant_id', $this->tenantId)
+                ->where('user_id', $userId)
                 ->where('type', 'refund')
                 ->where('status', 'completed')
                 ->sum('amount'),
-            'total_withdraws' => WalletTransaction::where('user_id', $userId)
+            'total_withdraws' => WalletTransaction::where('tenant_id', $this->tenantId)
+                ->where('user_id', $userId)
                 ->where('type', 'withdraw')
                 ->where('status', 'completed')
                 ->sum('amount') * -1,
             'current_balance' => $wallet->balance,
-            'transaction_count' => WalletTransaction::where('user_id', $userId)->count(),
+            'transaction_count' => WalletTransaction::where('tenant_id', $this->tenantId)
+                ->where('user_id', $userId)
+                ->count(),
         ];
     }
 
     public function payAppointment(int $userId, int $appointmentId): array
     {
         return DB::transaction(function () use ($userId, $appointmentId) {
-            $appointment = Appointment::with(['doctor'])->findOrFail($appointmentId);
+            $appointment = Appointment::where('tenant_id', $this->tenantId)
+                ->with(['doctor'])
+                ->findOrFail($appointmentId);
+
             $wallet = $this->getWallet($userId);
 
             if ($appointment->patient->user_id != $userId) {
@@ -184,7 +201,7 @@ class WalletService
 
     public function listWallets(array $filters = [], int $perPage = 20)
     {
-        $query = Wallet::with(['user']);
+        $query = Wallet::where('tenant_id', $this->tenantId)->with(['user']);
 
         if (isset($filters['search'])) {
             $query->whereHas('user', function ($q) use ($filters) {
@@ -212,13 +229,13 @@ class WalletService
     public function getStats(): array
     {
         return [
-            'total_wallets' => Wallet::count(),
-            'active_wallets' => Wallet::where('is_active', true)->count(),
-            'total_balance' => Wallet::sum('balance'),
-            'total_frozen' => Wallet::sum('frozen_balance'),
-            'total_available' => Wallet::sum(DB::raw('balance - frozen_balance')),
-            'today_transactions' => WalletTransaction::whereDate('created_at', today())->count(),
-            'today_volume' => WalletTransaction::whereDate('created_at', today())->sum('amount'),
+            'total_wallets' => Wallet::where('tenant_id', $this->tenantId)->count(),
+            'active_wallets' => Wallet::where('tenant_id', $this->tenantId)->where('is_active', true)->count(),
+            'total_balance' => Wallet::where('tenant_id', $this->tenantId)->sum('balance'),
+            'total_frozen' => Wallet::where('tenant_id', $this->tenantId)->sum('frozen_balance'),
+            'total_available' => Wallet::where('tenant_id', $this->tenantId)->sum(DB::raw('balance - frozen_balance')),
+            'today_transactions' => WalletTransaction::where('tenant_id', $this->tenantId)->whereDate('created_at', today())->count(),
+            'today_volume' => WalletTransaction::where('tenant_id', $this->tenantId)->whereDate('created_at', today())->sum('amount'),
         ];
     }
 }

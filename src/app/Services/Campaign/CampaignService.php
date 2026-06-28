@@ -4,14 +4,19 @@ namespace App\Services\Campaign;
 
 use App\Models\Campaign;
 use App\Models\CampaignInteraction;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class CampaignService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getCampaigns(array $filters = [], int $perPage = 20)
     {
-        $query = Campaign::query();
+        $query = Campaign::where('tenant_id', $this->tenantId);
 
         if (isset($filters['search'])) {
             $query->where('name', 'LIKE', "%{$filters['search']}%")
@@ -39,7 +44,8 @@ class CampaignService
 
     public function getActiveCampaigns()
     {
-        return Campaign::where('status', 'active')
+        return Campaign::where('tenant_id', $this->tenantId)
+            ->where('status', 'active')
             ->where(function ($q) {
                 $q->whereNull('end_date')
                     ->orWhere('end_date', '>=', now());
@@ -49,6 +55,7 @@ class CampaignService
 
     public function createCampaign(array $data): Campaign
     {
+        $data['tenant_id'] = $this->tenantId;
         return Campaign::create($data);
     }
 
@@ -89,26 +96,21 @@ class CampaignService
 
     public function trackInteraction(array $data): CampaignInteraction
     {
-        $campaign = Campaign::findOrFail($data['campaign_id']);
+        $campaign = Campaign::where('tenant_id', $this->tenantId)
+            ->findOrFail($data['campaign_id']);
 
         if ($data['action'] === 'converted' && isset($data['patient_id'])) {
             $campaign->increment('current_count');
         }
 
-        return CampaignInteraction::create([
-            'campaign_id' => $data['campaign_id'],
-            'patient_id' => $data['patient_id'] ?? null,
-            'channel' => $data['channel'],
-            'action' => $data['action'],
-            'content' => $data['content'] ?? null,
-            'metadata' => $data['metadata'] ?? null,
-            'occurred_at' => now(),
-        ]);
+        $data['tenant_id'] = $this->tenantId;
+        return CampaignInteraction::create($data);
     }
 
     public function getCampaignInteractions(int $campaignId, array $filters = [], int $perPage = 20)
     {
-        $query = CampaignInteraction::where('campaign_id', $campaignId);
+        $query = CampaignInteraction::where('tenant_id', $this->tenantId)
+            ->where('campaign_id', $campaignId);
 
         if (isset($filters['channel'])) {
             $query->where('channel', $filters['channel']);
@@ -127,7 +129,9 @@ class CampaignService
 
     public function getCampaignStats(int $campaignId): array
     {
-        $campaign = Campaign::with(['interactions'])->findOrFail($campaignId);
+        $campaign = Campaign::where('tenant_id', $this->tenantId)
+            ->with(['interactions'])
+            ->findOrFail($campaignId);
 
         return [
             'campaign' => $campaign,
@@ -144,11 +148,11 @@ class CampaignService
     public function getOverallStats(): array
     {
         return [
-            'total_campaigns' => Campaign::count(),
-            'active_campaigns' => Campaign::where('status', 'active')->count(),
-            'completed_campaigns' => Campaign::where('status', 'completed')->count(),
-            'total_interactions' => CampaignInteraction::count(),
-            'total_conversions' => CampaignInteraction::where('action', 'converted')->count(),
+            'total_campaigns' => Campaign::where('tenant_id', $this->tenantId)->count(),
+            'active_campaigns' => Campaign::where('tenant_id', $this->tenantId)->where('status', 'active')->count(),
+            'completed_campaigns' => Campaign::where('tenant_id', $this->tenantId)->where('status', 'completed')->count(),
+            'total_interactions' => CampaignInteraction::where('tenant_id', $this->tenantId)->count(),
+            'total_conversions' => CampaignInteraction::where('tenant_id', $this->tenantId)->where('action', 'converted')->count(),
             'average_conversion_rate' => $this->calculateAverageConversionRate(),
             'by_type' => $this->getStatsByType(),
         ];
@@ -156,8 +160,13 @@ class CampaignService
 
     private function calculateAverageConversionRate(): float
     {
-        $campaigns = Campaign::where('status', 'completed')->get();
-        if ($campaigns->isEmpty()) return 0;
+        $campaigns = Campaign::where('tenant_id', $this->tenantId)
+            ->where('status', 'completed')
+            ->get();
+
+        if ($campaigns->isEmpty()) {
+            return 0;
+        }
 
         $rates = $campaigns->map(function ($campaign) {
             return $campaign->target_count ?
@@ -170,7 +179,8 @@ class CampaignService
 
     private function getStatsByType(): array
     {
-        return Campaign::selectRaw('type, count(*) as total, sum(current_count) as conversions')
+        return Campaign::where('tenant_id', $this->tenantId)
+            ->selectRaw('type, count(*) as total, sum(current_count) as conversions')
             ->groupBy('type')
             ->get()
             ->map(function ($item) {

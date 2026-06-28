@@ -11,12 +11,17 @@ use Spatie\Permission\Models\Role;
 
 class DoctorService
 {
-    /**
-     * لیست پزشکان با فیلتر
-     */
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function list(array $filters = [], int $perPage = 15)
     {
-        $query = Doctor::with(['user', 'specialty', 'primaryAddress']);
+        $query = Doctor::where('tenant_id', $this->tenantId)
+            ->with(['user', 'specialty', 'primaryAddress']);
 
         if (isset($filters['search'])) {
             $query->search($filters['search']);
@@ -37,13 +42,9 @@ class DoctorService
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
     }
 
-    /**
-     * ایجاد پزشک جدید
-     */
     public function create(array $data): Doctor
     {
         return DB::transaction(function () use ($data) {
-            // 1. ایجاد کاربر
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'] ?? null,
@@ -52,12 +53,11 @@ class DoctorService
                 'is_active' => true,
             ]);
 
-            // 2. اختصاص نقش پزشک
             $doctorRole = Role::firstOrCreate(['name' => 'doctor', 'guard_name' => 'web']);
             $user->assignRole($doctorRole);
 
-            // 3. ایجاد پزشک
             $doctor = Doctor::create([
+                'tenant_id' => $this->tenantId,
                 'user_id' => $user->id,
                 'specialty_id' => $data['specialty_id'] ?? null,
                 'license_number' => $data['license_number'],
@@ -74,11 +74,10 @@ class DoctorService
                 'is_verified' => $data['is_verified'] ?? false,
             ]);
 
-            // 4. ایجاد آدرس
             if (isset($data['address'])) {
                 $doctor->addresses()->create(array_merge(
                     $data['address'],
-                    ['is_primary' => true]
+                    ['is_primary' => true, 'tenant_id' => $this->tenantId]
                 ));
             }
 
@@ -86,22 +85,16 @@ class DoctorService
         });
     }
 
-    /**
-     * نمایش پزشک
-     */
     public function show($id): Doctor
     {
-        return Doctor::with(['user', 'specialty', 'primaryAddress', 'schedules'])
+        return Doctor::where('tenant_id', $this->tenantId)
+            ->with(['user', 'specialty', 'primaryAddress', 'schedules'])
             ->findOrFail($id);
     }
 
-    /**
-     * به‌روزرسانی پزشک
-     */
     public function update(Doctor $doctor, array $data): Doctor
     {
         return DB::transaction(function () use ($doctor, $data) {
-            // 1. به‌روزرسانی کاربر
             if (isset($data['name']) || isset($data['email']) || isset($data['mobile'])) {
                 $doctor->user->update([
                     'name' => $data['name'] ?? $doctor->user->name,
@@ -110,7 +103,6 @@ class DoctorService
                 ]);
             }
 
-            // 2. به‌روزرسانی پزشک
             $doctorData = array_intersect_key($data, array_flip([
                 'specialty_id', 'license_number', 'clinic_name', 'clinic_address',
                 'clinic_phone', 'clinic_email', 'biography', 'education',
@@ -119,7 +111,6 @@ class DoctorService
             ]));
             $doctor->update($doctorData);
 
-            // 3. به‌روزرسانی آدرس
             if (isset($data['address'])) {
                 $address = $doctor->primaryAddress;
                 if ($address) {
@@ -127,7 +118,7 @@ class DoctorService
                 } else {
                     $doctor->addresses()->create(array_merge(
                         $data['address'],
-                        ['is_primary' => true]
+                        ['is_primary' => true, 'tenant_id' => $this->tenantId]
                     ));
                 }
             }
@@ -136,45 +127,31 @@ class DoctorService
         });
     }
 
-    /**
-     * تغییر وضعیت پزشک
-     */
     public function toggleAvailability(Doctor $doctor): Doctor
     {
         $doctor->update(['is_available' => !$doctor->is_available]);
         return $doctor->fresh();
     }
 
-    /**
-     * تایید پزشک
-     */
     public function verify(Doctor $doctor): Doctor
     {
         $doctor->update(['is_verified' => true]);
         return $doctor->fresh();
     }
 
-    /**
-     * حذف پزشک
-     */
     public function delete(Doctor $doctor): void
     {
         DB::transaction(function () use ($doctor) {
-            // حذف آدرس‌ها
             $doctor->addresses()->delete();
-            // حذف پزشک
             $doctor->delete();
-            // غیرفعال کردن کاربر
             $doctor->user->update(['is_active' => false]);
         });
     }
 
-    /**
-     * لیست پزشکان عمومی (بدون احراز هویت)
-     */
     public function publicList(array $filters = [], int $perPage = 15)
     {
-        $query = Doctor::with(['user', 'specialty', 'primaryAddress'])
+        $query = Doctor::where('tenant_id', $this->tenantId)
+            ->with(['user', 'specialty', 'primaryAddress'])
             ->where('is_available', true)
             ->where('is_verified', true);
 

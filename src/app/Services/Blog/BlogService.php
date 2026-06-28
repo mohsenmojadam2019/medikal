@@ -7,16 +7,21 @@ use App\Models\PostCategory;
 use App\Models\Tag;
 use App\Models\PostComment;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class BlogService
 {
-    // ========== POSTS ==========
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
 
     public function getPosts(array $filters = [], int $perPage = 15)
     {
-        $query = Post::with(['user', 'category', 'tags']);
+        $query = Post::where('tenant_id', $this->tenantId)
+            ->with(['user', 'category', 'tags']);
 
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -58,7 +63,8 @@ class BlogService
 
     public function getFeaturedPosts(int $limit = 5)
     {
-        return Post::published()
+        return Post::where('tenant_id', $this->tenantId)
+            ->published()
             ->featured()
             ->with(['user', 'category', 'tags'])
             ->orderBy('published_at', 'desc')
@@ -68,7 +74,8 @@ class BlogService
 
     public function getBreakingPosts(int $limit = 3)
     {
-        return Post::published()
+        return Post::where('tenant_id', $this->tenantId)
+            ->published()
             ->breaking()
             ->with(['user', 'category', 'tags'])
             ->orderBy('published_at', 'desc')
@@ -78,7 +85,8 @@ class BlogService
 
     public function getPopularPosts(int $limit = 5)
     {
-        return Post::published()
+        return Post::where('tenant_id', $this->tenantId)
+            ->published()
             ->with(['user', 'category', 'tags'])
             ->orderBy('views', 'desc')
             ->limit($limit)
@@ -87,8 +95,9 @@ class BlogService
 
     public function getPostBySlug(string $slug)
     {
-        $post = Post::with(['user', 'category', 'tags', 'comments.user'])
+        $post = Post::where('tenant_id', $this->tenantId)
             ->where('slug', $slug)
+            ->with(['user', 'category', 'tags', 'comments.user'])
             ->firstOrFail();
 
         $post->incrementViews();
@@ -97,7 +106,8 @@ class BlogService
 
     public function getRelatedPosts(Post $post, int $limit = 3)
     {
-        return Post::published()
+        return Post::where('tenant_id', $this->tenantId)
+            ->published()
             ->where('id', '!=', $post->id)
             ->where(function ($query) use ($post) {
                 $query->where('category_id', $post->category_id)
@@ -115,6 +125,7 @@ class BlogService
     {
         return DB::transaction(function () use ($data) {
             $post = Post::create([
+                'tenant_id' => $this->tenantId,
                 'user_id' => $data['user_id'] ?? auth()->id(),
                 'category_id' => $data['category_id'] ?? null,
                 'title' => $data['title'],
@@ -132,7 +143,10 @@ class BlogService
             if (isset($data['tags']) && is_array($data['tags'])) {
                 $tagIds = [];
                 foreach ($data['tags'] as $tagName) {
-                    $tag = Tag::firstOrCreate(['name' => $tagName], ['slug' => Str::slug($tagName)]);
+                    $tag = Tag::firstOrCreate(
+                        ['name' => $tagName, 'tenant_id' => $this->tenantId],
+                        ['slug' => Str::slug($tagName)]
+                    );
                     $tagIds[] = $tag->id;
                 }
                 $post->tags()->sync($tagIds);
@@ -154,7 +168,10 @@ class BlogService
             if (isset($data['tags']) && is_array($data['tags'])) {
                 $tagIds = [];
                 foreach ($data['tags'] as $tagName) {
-                    $tag = Tag::firstOrCreate(['name' => $tagName], ['slug' => Str::slug($tagName)]);
+                    $tag = Tag::firstOrCreate(
+                        ['name' => $tagName, 'tenant_id' => $this->tenantId],
+                        ['slug' => Str::slug($tagName)]
+                    );
                     $tagIds[] = $tag->id;
                 }
                 $post->tags()->sync($tagIds);
@@ -169,11 +186,9 @@ class BlogService
         $post->delete();
     }
 
-    // ========== CATEGORIES ==========
-
     public function getCategories(array $filters = [], int $perPage = 20)
     {
-        $query = PostCategory::query();
+        $query = PostCategory::where('tenant_id', $this->tenantId);
 
         if (isset($filters['search'])) {
             $query->where('name', 'LIKE', "%{$filters['search']}%");
@@ -188,7 +203,8 @@ class BlogService
 
     public function getActiveCategories()
     {
-        return PostCategory::active()
+        return PostCategory::where('tenant_id', $this->tenantId)
+            ->active()
             ->orderBy('name')
             ->withCount(['posts' => function ($query) {
                 $query->published();
@@ -198,6 +214,7 @@ class BlogService
 
     public function createCategory(array $data): PostCategory
     {
+        $data['tenant_id'] = $this->tenantId;
         return PostCategory::create($data);
     }
 
@@ -212,11 +229,9 @@ class BlogService
         $category->delete();
     }
 
-    // ========== TAGS ==========
-
     public function getTags(array $filters = [], int $perPage = 20)
     {
-        $query = Tag::query();
+        $query = Tag::where('tenant_id', $this->tenantId);
 
         if (isset($filters['search'])) {
             $query->where('name', 'LIKE', "%{$filters['search']}%");
@@ -231,7 +246,8 @@ class BlogService
 
     public function getActiveTags()
     {
-        return Tag::active()
+        return Tag::where('tenant_id', $this->tenantId)
+            ->active()
             ->withCount('posts')
             ->orderBy('name')
             ->get();
@@ -239,6 +255,7 @@ class BlogService
 
     public function createTag(array $data): Tag
     {
+        $data['tenant_id'] = $this->tenantId;
         return Tag::create($data);
     }
 
@@ -253,11 +270,10 @@ class BlogService
         $tag->delete();
     }
 
-    // ========== COMMENTS ==========
-
     public function getComments(array $filters = [], int $perPage = 20)
     {
-        $query = PostComment::with(['user', 'post']);
+        $query = PostComment::where('tenant_id', $this->tenantId)
+            ->with(['user', 'post']);
 
         if (isset($filters['post_id'])) {
             $query->where('post_id', $filters['post_id']);
@@ -277,7 +293,8 @@ class BlogService
 
     public function getPostComments(int $postId)
     {
-        return PostComment::where('post_id', $postId)
+        return PostComment::where('tenant_id', $this->tenantId)
+            ->where('post_id', $postId)
             ->where('status', 'approved')
             ->whereNull('parent_id')
             ->with(['user', 'replies.user'])
@@ -289,6 +306,7 @@ class BlogService
     {
         return DB::transaction(function () use ($data) {
             $comment = PostComment::create([
+                'tenant_id' => $this->tenantId,
                 'post_id' => $data['post_id'],
                 'user_id' => $data['user_id'] ?? null,
                 'parent_id' => $data['parent_id'] ?? null,
@@ -321,20 +339,18 @@ class BlogService
         $comment->delete();
     }
 
-    // ========== STATS ==========
-
     public function getStats(): array
     {
         return [
-            'total_posts' => Post::count(),
-            'published_posts' => Post::published()->count(),
-            'draft_posts' => Post::draft()->count(),
-            'total_categories' => PostCategory::count(),
-            'total_tags' => Tag::count(),
-            'total_comments' => PostComment::count(),
-            'pending_comments' => PostComment::pending()->count(),
-            'total_views' => Post::sum('views'),
-            'total_likes' => Post::sum('likes'),
+            'total_posts' => Post::where('tenant_id', $this->tenantId)->count(),
+            'published_posts' => Post::where('tenant_id', $this->tenantId)->published()->count(),
+            'draft_posts' => Post::where('tenant_id', $this->tenantId)->draft()->count(),
+            'total_categories' => PostCategory::where('tenant_id', $this->tenantId)->count(),
+            'total_tags' => Tag::where('tenant_id', $this->tenantId)->count(),
+            'total_comments' => PostComment::where('tenant_id', $this->tenantId)->count(),
+            'pending_comments' => PostComment::where('tenant_id', $this->tenantId)->pending()->count(),
+            'total_views' => Post::where('tenant_id', $this->tenantId)->sum('views'),
+            'total_likes' => Post::where('tenant_id', $this->tenantId)->sum('likes'),
         ];
     }
 
@@ -345,10 +361,12 @@ class BlogService
             $month = now()->subMonths($i);
             $stats[] = [
                 'month' => $month->format('Y-m'),
-                'posts' => Post::whereMonth('published_at', $month->month)
+                'posts' => Post::where('tenant_id', $this->tenantId)
+                    ->whereMonth('published_at', $month->month)
                     ->whereYear('published_at', $month->year)
                     ->count(),
-                'views' => Post::whereMonth('published_at', $month->month)
+                'views' => Post::where('tenant_id', $this->tenantId)
+                    ->whereMonth('published_at', $month->month)
                     ->whereYear('published_at', $month->year)
                     ->sum('views'),
             ];

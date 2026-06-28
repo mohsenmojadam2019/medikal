@@ -21,9 +21,13 @@ use Illuminate\Support\Facades\DB;
 
 class ManagementDashboardService
 {
-    /**
-     * دریافت آمار کلی داشبورد مدیریت
-     */
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getStats(array $filters = []): array
     {
         $dateRange = $this->getDateRange($filters);
@@ -43,9 +47,6 @@ class ManagementDashboardService
         ];
     }
 
-    /**
-     * دریافت داده‌های نمودارها
-     */
     public function getChartData(array $filters = []): array
     {
         $days = $filters['days'] ?? 30;
@@ -61,13 +62,9 @@ class ManagementDashboardService
         ];
     }
 
-    // ============================================================
-    // PRIVATE METHODS - STATS
-    // ============================================================
-
     private function getAppointmentStats(array $dateRange): array
     {
-        $query = Appointment::query();
+        $query = Appointment::where('tenant_id', $this->tenantId);
 
         return [
             'total' => $query->count(),
@@ -87,7 +84,7 @@ class ManagementDashboardService
 
     private function getPatientStats(array $dateRange): array
     {
-        $query = Patient::query();
+        $query = Patient::where('tenant_id', $this->tenantId);
 
         return [
             'total' => $query->count(),
@@ -101,7 +98,7 @@ class ManagementDashboardService
 
     private function getDoctorStats(): array
     {
-        $query = Doctor::query();
+        $query = Doctor::where('tenant_id', $this->tenantId);
 
         return [
             'total' => $query->count(),
@@ -114,7 +111,7 @@ class ManagementDashboardService
 
     private function getRevenueStats(array $dateRange): array
     {
-        $query = Invoice::where('status', 'paid');
+        $query = Invoice::where('tenant_id', $this->tenantId)->where('status', 'paid');
 
         return [
             'today' => (clone $query)->whereDate('paid_at', today())->sum('total_amount'),
@@ -122,52 +119,52 @@ class ManagementDashboardService
             'this_month' => (clone $query)->whereBetween('paid_at', $dateRange['month'])->sum('total_amount'),
             'this_year' => (clone $query)->whereYear('paid_at', date('Y'))->sum('total_amount'),
             'total' => (clone $query)->sum('total_amount'),
-            'pending' => Invoice::where('status', 'issued')->sum('total_amount'),
-            'overdue' => Invoice::where('status', 'overdue')->sum('total_amount'),
+            'pending' => Invoice::where('tenant_id', $this->tenantId)->where('status', 'issued')->sum('total_amount'),
+            'overdue' => Invoice::where('tenant_id', $this->tenantId)->where('status', 'overdue')->sum('total_amount'),
         ];
     }
 
     private function getHospitalStats(): array
     {
-        $query = Admission::query();
+        $query = Admission::where('tenant_id', $this->tenantId);
 
         return [
             'total_admissions' => $query->count(),
             'active_admissions' => (clone $query)->whereIn('status', ['admitted', 'in_progress'])->count(),
             'discharged_today' => (clone $query)->whereDate('discharged_at', today())->count(),
-            'available_beds' => \App\Models\Bed::where('status', 'available')->count(),
+            'available_beds' => \App\Models\Bed::where('tenant_id', $this->tenantId)->where('status', 'available')->count(),
             'occupancy_rate' => $this->calculateOccupancyRate(),
         ];
     }
 
     private function getLabStats(): array
     {
-        $query = LabOrder::query();
+        $query = LabOrder::where('tenant_id', $this->tenantId);
 
         return [
             'total_orders' => $query->count(),
             'pending_orders' => (clone $query)->whereIn('status', ['pending', 'waiting_payment', 'paid'])->count(),
             'completed_orders' => (clone $query)->where('status', 'completed')->count(),
-            'critical_results' => LabResult::where('is_critical', true)->count(),
-            'abnormal_results' => LabResult::where('is_abnormal', true)->count(),
+            'critical_results' => LabResult::where('tenant_id', $this->tenantId)->where('is_critical', true)->count(),
+            'abnormal_results' => LabResult::where('tenant_id', $this->tenantId)->where('is_abnormal', true)->count(),
         ];
     }
 
     private function getPharmacyStats(): array
     {
-        $query = PharmacyOrder::query();
+        $query = PharmacyOrder::where('tenant_id', $this->tenantId);
 
         return [
             'total_orders' => $query->count(),
             'pending_orders' => (clone $query)->whereIn('status', ['pending', 'checking', 'payment_pending'])->count(),
             'completed_orders' => (clone $query)->where('status', 'delivered')->count(),
-            'low_stock_drugs' => Drug::where('stock', '<', 10)->where('is_active', true)->count(),
+            'low_stock_drugs' => Drug::where('tenant_id', $this->tenantId)->where('stock', '<', 10)->where('is_active', true)->count(),
         ];
     }
 
     private function getPrescriptionStats(): array
     {
-        $query = Prescription::query();
+        $query = Prescription::where('tenant_id', $this->tenantId);
 
         return [
             'total' => $query->count(),
@@ -180,16 +177,16 @@ class ManagementDashboardService
     private function getWalletStats(): array
     {
         return [
-            'total_balance' => Wallet::sum('balance'),
-            'total_transactions' => \App\Models\WalletTransaction::count(),
-            'today_transactions' => \App\Models\WalletTransaction::whereDate('created_at', today())->count(),
-            'active_wallets' => Wallet::where('is_active', true)->count(),
+            'total_balance' => Wallet::where('tenant_id', $this->tenantId)->sum('balance'),
+            'total_transactions' => \App\Models\WalletTransaction::where('tenant_id', $this->tenantId)->count(),
+            'today_transactions' => \App\Models\WalletTransaction::where('tenant_id', $this->tenantId)->whereDate('created_at', today())->count(),
+            'active_wallets' => Wallet::where('tenant_id', $this->tenantId)->where('is_active', true)->count(),
         ];
     }
 
     private function getRatingStats(array $dateRange): array
     {
-        $query = Rating::query();
+        $query = Rating::where('tenant_id', $this->tenantId);
 
         return [
             'average' => round((clone $query)->avg('score') ?? 0, 1),
@@ -202,16 +199,13 @@ class ManagementDashboardService
     private function getAlertStats(): array
     {
         return [
-            'critical' => Notification::where('priority', 'urgent')
+            'critical' => Notification::where('tenant_id', $this->tenantId)
+                ->where('priority', 'urgent')
                 ->where('is_read', false)
                 ->count(),
-            'unread' => Notification::where('is_read', false)->count(),
+            'unread' => Notification::where('tenant_id', $this->tenantId)->where('is_read', false)->count(),
         ];
     }
-
-    // ============================================================
-    // PRIVATE METHODS - CHARTS
-    // ============================================================
 
     private function getAppointmentsTrend(int $days): array
     {
@@ -225,11 +219,11 @@ class ManagementDashboardService
             $dateString = $date->format('Y-m-d');
             $labels[] = $date->format('d/m');
 
-            $total = Appointment::whereDate('date', $dateString)->count();
-            $completedCount = Appointment::whereDate('date', $dateString)
+            $total = Appointment::where('tenant_id', $this->tenantId)->whereDate('date', $dateString)->count();
+            $completedCount = Appointment::where('tenant_id', $this->tenantId)->whereDate('date', $dateString)
                 ->where('status', 'completed')
                 ->count();
-            $cancelledCount = Appointment::whereDate('date', $dateString)
+            $cancelledCount = Appointment::where('tenant_id', $this->tenantId)->whereDate('date', $dateString)
                 ->where('status', 'cancelled')
                 ->count();
 
@@ -256,7 +250,8 @@ class ManagementDashboardService
             $dateString = $date->format('Y-m-d');
             $labels[] = $date->format('d/m');
 
-            $revenue = Invoice::where('status', 'paid')
+            $revenue = Invoice::where('tenant_id', $this->tenantId)
+                ->where('status', 'paid')
                 ->whereDate('paid_at', $dateString)
                 ->sum('total_amount');
 
@@ -296,7 +291,7 @@ class ManagementDashboardService
         $colorList = [];
 
         foreach ($statuses as $status) {
-            $count = Appointment::where('status', $status)->count();
+            $count = Appointment::where('tenant_id', $this->tenantId)->where('status', $status)->count();
             if ($count > 0) {
                 $data[] = $count;
                 $labelList[] = $labels[$status];
@@ -313,7 +308,8 @@ class ManagementDashboardService
 
     private function getTopDoctors(int $limit = 5): array
     {
-        return Doctor::with(['user', 'specialty'])
+        return Doctor::where('tenant_id', $this->tenantId)
+            ->with(['user', 'specialty'])
             ->where('is_active', true)
             ->where('is_verified', true)
             ->withCount(['appointments' => function ($query) {
@@ -341,8 +337,8 @@ class ManagementDashboardService
     {
         $activities = [];
 
-        // 1. نوبت‌های جدید
-        $appointments = Appointment::with(['patient.user', 'doctor.user'])
+        $appointments = Appointment::where('tenant_id', $this->tenantId)
+            ->with(['patient.user', 'doctor.user'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get()
@@ -357,8 +353,8 @@ class ManagementDashboardService
                 ];
             });
 
-        // 2. پذیرش‌های جدید
-        $admissions = Admission::with(['patient.user', 'doctor.user'])
+        $admissions = Admission::where('tenant_id', $this->tenantId)
+            ->with(['patient.user', 'doctor.user'])
             ->orderBy('created_at', 'desc')
             ->limit(3)
             ->get()
@@ -373,8 +369,8 @@ class ManagementDashboardService
                 ];
             });
 
-        // 3. نتایج آزمایش جدید
-        $labResults = LabResult::with(['labOrder.patient', 'labTest'])
+        $labResults = LabResult::where('tenant_id', $this->tenantId)
+            ->with(['labOrder.patient', 'labTest'])
             ->where('is_critical', true)
             ->orderBy('created_at', 'desc')
             ->limit(2)
@@ -390,8 +386,8 @@ class ManagementDashboardService
                 ];
             });
 
-        // 4. ترخیص‌ها
-        $discharges = \App\Models\Discharge::with(['admission.patient'])
+        $discharges = \App\Models\Discharge::where('tenant_id', $this->tenantId)
+            ->with(['admission.patient'])
             ->orderBy('created_at', 'desc')
             ->limit(3)
             ->get()
@@ -406,8 +402,8 @@ class ManagementDashboardService
                 ];
             });
 
-        // 5. فرم‌های جدید
-        $forms = \App\Models\FormResponse::with(['patient.user', 'digitalForm'])
+        $forms = \App\Models\FormResponse::where('tenant_id', $this->tenantId)
+            ->with(['patient.user', 'digitalForm'])
             ->orderBy('created_at', 'desc')
             ->limit(3)
             ->get()
@@ -422,8 +418,8 @@ class ManagementDashboardService
                 ];
             });
 
-        // 6. پرداخت‌ها
-        $payments = Invoice::with(['patient.user'])
+        $payments = Invoice::where('tenant_id', $this->tenantId)
+            ->with(['patient.user'])
             ->where('status', 'paid')
             ->orderBy('paid_at', 'desc')
             ->limit(3)
@@ -439,7 +435,6 @@ class ManagementDashboardService
                 ];
             });
 
-        // ترکیب و مرتب‌سازی
         $activities = collect()
             ->merge($appointments)
             ->merge($admissions)
@@ -467,7 +462,7 @@ class ManagementDashboardService
             $dateString = $date->format('Y-m-d');
             $labels[] = $date->format('d/m');
 
-            $count = Patient::whereDate('created_at', '<=', $dateString)->count();
+            $count = Patient::where('tenant_id', $this->tenantId)->whereDate('created_at', '<=', $dateString)->count();
             $data[] = $count;
         }
 
@@ -476,10 +471,6 @@ class ManagementDashboardService
             'data' => $data,
         ];
     }
-
-    // ============================================================
-    // HELPER METHODS
-    // ============================================================
 
     private function getDateRange(array $filters): array
     {
@@ -499,10 +490,12 @@ class ManagementDashboardService
 
     private function calculateOccupancyRate(): float
     {
-        $totalBeds = \App\Models\Bed::where('is_active', true)->count();
-        $occupiedBeds = \App\Models\Bed::where('status', 'occupied')->count();
+        $totalBeds = \App\Models\Bed::where('tenant_id', $this->tenantId)->where('is_active', true)->count();
+        $occupiedBeds = \App\Models\Bed::where('tenant_id', $this->tenantId)->where('status', 'occupied')->count();
 
-        if ($totalBeds == 0) return 0;
+        if ($totalBeds == 0) {
+            return 0;
+        }
 
         return round(($occupiedBeds / $totalBeds) * 100, 1);
     }

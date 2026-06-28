@@ -16,20 +16,19 @@ use Illuminate\Support\Facades\Log;
 
 class HospitalService
 {
+    protected $tenantId;
     protected InvoiceService $invoiceService;
 
     public function __construct(InvoiceService $invoiceService)
     {
+        $this->tenantId = session('tenant_id');
         $this->invoiceService = $invoiceService;
     }
 
-    // ============================================================
-    // WARD MANAGEMENT
-    // ============================================================
-
     public function getWards(array $filters = [], int $perPage = 20)
     {
-        $query = Ward::withCount(['beds', 'admissions']);
+        $query = Ward::where('tenant_id', $this->tenantId)
+            ->withCount(['beds', 'admissions']);
 
         if (isset($filters['search'])) {
             $query->where('name', 'LIKE', "%{$filters['search']}%")
@@ -49,6 +48,7 @@ class HospitalService
 
     public function createWard(array $data): Ward
     {
+        $data['tenant_id'] = $this->tenantId;
         return Ward::create($data);
     }
 
@@ -63,13 +63,10 @@ class HospitalService
         $ward->delete();
     }
 
-    // ============================================================
-    // BED MANAGEMENT
-    // ============================================================
-
     public function getBeds(array $filters = [], int $perPage = 20)
     {
-        $query = Bed::with(['ward']);
+        $query = Bed::where('tenant_id', $this->tenantId)
+            ->with(['ward']);
 
         if (isset($filters['ward_id'])) {
             $query->where('ward_id', $filters['ward_id']);
@@ -88,6 +85,7 @@ class HospitalService
 
     public function createBed(array $data): Bed
     {
+        $data['tenant_id'] = $this->tenantId;
         return Bed::create($data);
     }
 
@@ -108,13 +106,10 @@ class HospitalService
         return $bed->fresh();
     }
 
-    // ============================================================
-    // ADMISSION MANAGEMENT
-    // ============================================================
-
     public function getAdmissions(array $filters = [], int $perPage = 15)
     {
-        $query = Admission::with(['patient.user', 'doctor.user', 'ward', 'bed']);
+        $query = Admission::where('tenant_id', $this->tenantId)
+            ->with(['patient.user', 'doctor.user', 'ward', 'bed']);
 
         if (isset($filters['patient_id'])) {
             $query->byPatient($filters['patient_id']);
@@ -155,44 +150,42 @@ class HospitalService
 
     public function getAdmission(int $id): Admission
     {
-        return Admission::with([
-            'patient.user',
-            'doctor.user',
-            'ward',
-            'bed',
-            'services',
-            'drugs',
-            'days',
-            'discharge',
-            'invoice'
-        ])->findOrFail($id);
+        return Admission::where('tenant_id', $this->tenantId)
+            ->with([
+                'patient.user',
+                'doctor.user',
+                'ward',
+                'bed',
+                'services',
+                'drugs',
+                'days',
+                'discharge',
+                'invoice'
+            ])
+            ->findOrFail($id);
     }
 
     public function createAdmission(array $data): Admission
     {
         return DB::transaction(function () use ($data) {
-            // 1. بررسی در دسترس بودن تخت
             if (isset($data['bed_id'])) {
-                $bed = Bed::findOrFail($data['bed_id']);
+                $bed = Bed::where('tenant_id', $this->tenantId)->findOrFail($data['bed_id']);
                 if ($bed->status !== BedStatusEnum::AVAILABLE) {
                     throw new \Exception('تخت انتخاب شده در دسترس نیست');
                 }
             }
 
-            // 2. ایجاد پذیرش
+            $data['tenant_id'] = $this->tenantId;
             $admission = Admission::create($data);
 
-            // 3. اشغال تخت
             if (isset($data['bed_id'])) {
                 $bed->occupy();
             }
 
-            // 4. به‌روزرسانی اشغال بخش
             if ($admission->ward) {
                 $admission->ward->updateOccupancy();
             }
 
-            // 5. ایجاد فاکتور اولیه
             $this->createAdmissionInvoice($admission);
 
             return $admission->fresh();
@@ -202,21 +195,17 @@ class HospitalService
     public function updateAdmission(Admission $admission, array $data): Admission
     {
         return DB::transaction(function () use ($admission, $data) {
-            // اگر تخت تغییر کرده
             if (isset($data['bed_id']) && $data['bed_id'] != $admission->bed_id) {
-                // آزاد کردن تخت قبلی
                 if ($admission->bed) {
                     $admission->bed->free();
                 }
 
-                // اشغال تخت جدید
-                $newBed = Bed::findOrFail($data['bed_id']);
+                $newBed = Bed::where('tenant_id', $this->tenantId)->findOrFail($data['bed_id']);
                 if ($newBed->status !== BedStatusEnum::AVAILABLE) {
                     throw new \Exception('تخت جدید در دسترس نیست');
                 }
                 $newBed->occupy();
 
-                // به‌روزرسانی بخش
                 if ($admission->ward) {
                     $admission->ward->updateOccupancy();
                 }
@@ -247,8 +236,9 @@ class HospitalService
     public function dischargePatient(Admission $admission, array $data): Discharge
     {
         return DB::transaction(function () use ($admission, $data) {
-            // 1. ایجاد ترخیص
+            $data['tenant_id'] = $this->tenantId;
             $discharge = Discharge::create([
+                'tenant_id' => $this->tenantId,
                 'admission_id' => $admission->id,
                 'doctor_id' => $data['doctor_id'] ?? $admission->doctor_id,
                 'final_diagnosis' => $data['final_diagnosis'] ?? null,
@@ -259,23 +249,19 @@ class HospitalService
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            // 2. محاسبه هزینه نهایی
             $totalCost = $this->calculateAdmissionCost($admission);
 
-            // 3. بروزرسانی فاکتور
             $invoice = $admission->invoice;
             if ($invoice) {
                 $invoice->update([
                     'amount' => $totalCost,
-                    'total_amount' => $totalCost * 1.09, // با مالیات
+                    'total_amount' => $totalCost * 1.09,
                     'status' => InvoiceStatusEnum::ISSUED,
                 ]);
             }
 
-            // 4. تکمیل ترخیص
             $discharge->complete();
 
-            // 5. آزاد کردن تخت
             if ($admission->bed) {
                 $admission->bed->free();
             }
@@ -287,13 +273,10 @@ class HospitalService
         });
     }
 
-    // ============================================================
-    // ADMISSION DAYS (VITAL SIGNS)
-    // ============================================================
-
     public function addAdmissionDay(array $data): AdmissionDay
     {
-        $admission = Admission::findOrFail($data['admission_id']);
+        $admission = Admission::where('tenant_id', $this->tenantId)
+            ->findOrFail($data['admission_id']);
 
         if (!$admission->is_active) {
             throw new \Exception('بیمار بستری نیست');
@@ -301,7 +284,9 @@ class HospitalService
 
         $dayNumber = $admission->days()->count() + 1;
 
+        $data['tenant_id'] = $this->tenantId;
         return AdmissionDay::create([
+            'tenant_id' => $this->tenantId,
             'admission_id' => $data['admission_id'],
             'day_number' => $dayNumber,
             'date' => $data['date'] ?? now()->toDateString(),
@@ -324,25 +309,25 @@ class HospitalService
 
     public function getAdmissionDays(int $admissionId)
     {
-        return AdmissionDay::where('admission_id', $admissionId)
+        return AdmissionDay::where('tenant_id', $this->tenantId)
+            ->where('admission_id', $admissionId)
             ->with(['nurse'])
             ->orderBy('day_number', 'asc')
             ->get();
     }
 
-    // ============================================================
-    // ADMISSION SERVICES
-    // ============================================================
-
     public function addService(array $data): AdmissionService
     {
-        $admission = Admission::findOrFail($data['admission_id']);
+        $admission = Admission::where('tenant_id', $this->tenantId)
+            ->findOrFail($data['admission_id']);
 
         if (!$admission->is_active) {
             throw new \Exception('بیمار بستری نیست');
         }
 
+        $data['tenant_id'] = $this->tenantId;
         $service = AdmissionService::create([
+            'tenant_id' => $this->tenantId,
             'admission_id' => $data['admission_id'],
             'service_name' => $data['service_name'],
             'type' => $data['type'] ?? 'other',
@@ -356,19 +341,14 @@ class HospitalService
             'metadata' => $data['metadata'] ?? null,
         ]);
 
-        // بروزرسانی فاکتور
         $this->updateAdmissionInvoice($admission);
-
         return $service->fresh();
     }
 
-    // ============================================================
-    // ADMISSION DRUGS
-    // ============================================================
-
     public function addDrug(array $data): AdmissionDrug
     {
-        $admission = Admission::findOrFail($data['admission_id']);
+        $admission = Admission::where('tenant_id', $this->tenantId)
+            ->findOrFail($data['admission_id']);
 
         if (!$admission->is_active) {
             throw new \Exception('بیمار بستری نیست');
@@ -376,7 +356,9 @@ class HospitalService
 
         $totalPrice = ($data['unit_price'] ?? 0) * ($data['quantity'] ?? 1);
 
+        $data['tenant_id'] = $this->tenantId;
         $drug = AdmissionDrug::create([
+            'tenant_id' => $this->tenantId,
             'admission_id' => $data['admission_id'],
             'drug_name' => $data['drug_name'],
             'dosage' => $data['dosage'],
@@ -392,29 +374,19 @@ class HospitalService
             'metadata' => $data['metadata'] ?? null,
         ]);
 
-        // بروزرسانی فاکتور
         $this->updateAdmissionInvoice($admission);
-
         return $drug->fresh();
     }
 
-    // ============================================================
-    // CALCULATIONS & INVOICE
-    // ============================================================
-
     public function calculateAdmissionCost(Admission $admission): float
     {
-        // 1. هزینه تخت
         $bedCost = 0;
         if ($admission->bed && $admission->admission_date) {
             $days = $admission->duration;
             $bedCost = $days * ($admission->bed->price_per_day ?? 0);
         }
 
-        // 2. هزینه خدمات
         $servicesCost = $admission->services()->sum('price');
-
-        // 3. هزینه داروها
         $drugsCost = $admission->drugs()->sum('total_price');
 
         return $bedCost + $servicesCost + $drugsCost;
@@ -425,6 +397,7 @@ class HospitalService
         $totalCost = $this->calculateAdmissionCost($admission);
 
         return Invoice::create([
+            'tenant_id' => $this->tenantId,
             'patient_id' => $admission->patient_id,
             'invoice_number' => $this->generateInvoiceNumber(),
             'amount' => $totalCost,
@@ -466,7 +439,6 @@ class HospitalService
     {
         $items = [];
 
-        // هزینه تخت
         if ($admission->bed) {
             $items[] = [
                 'description' => "تخت {$admission->bed->bed_number} - بخش {$admission->ward->name}",
@@ -476,7 +448,6 @@ class HospitalService
             ];
         }
 
-        // خدمات
         foreach ($admission->services as $service) {
             $items[] = [
                 'description' => $service->service_name,
@@ -486,7 +457,6 @@ class HospitalService
             ];
         }
 
-        // داروها
         foreach ($admission->drugs as $drug) {
             $items[] = [
                 'description' => "{$drug->drug_name} ({$drug->dosage})",
@@ -499,13 +469,9 @@ class HospitalService
         return $items;
     }
 
-    // ============================================================
-    // STATISTICS
-    // ============================================================
-
     public function getStats(array $filters = []): array
     {
-        $query = Admission::query();
+        $query = Admission::where('tenant_id', $this->tenantId);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('admission_date', '>=', $filters['from_date']);
@@ -527,7 +493,7 @@ class HospitalService
 
     private function getAdmissionsByWard(array $filters): array
     {
-        $query = Admission::query();
+        $query = Admission::where('tenant_id', $this->tenantId);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('admission_date', '>=', $filters['from_date']);
@@ -552,10 +518,12 @@ class HospitalService
 
     private function getOccupancyRate(): float
     {
-        $totalCapacity = Ward::sum('capacity');
-        $totalOccupied = Bed::where('status', BedStatusEnum::OCCUPIED)->count();
+        $totalCapacity = Ward::where('tenant_id', $this->tenantId)->sum('capacity');
+        $totalOccupied = Bed::where('tenant_id', $this->tenantId)->where('status', BedStatusEnum::OCCUPIED)->count();
 
-        if ($totalCapacity == 0) return 0;
+        if ($totalCapacity == 0) {
+            return 0;
+        }
         return round(($totalOccupied / $totalCapacity) * 100, 1);
     }
 }

@@ -10,9 +10,16 @@ use Illuminate\Support\Facades\Log;
 
 class SurveyService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getSurveys(array $filters = [], int $perPage = 20)
     {
-        $query = Survey::query();
+        $query = Survey::where('tenant_id', $this->tenantId);
 
         if (isset($filters['search'])) {
             $query->where('title', 'LIKE', "%{$filters['search']}%");
@@ -31,11 +38,14 @@ class SurveyService
 
     public function getAvailableSurveys()
     {
-        return Survey::available()->get();
+        return Survey::where('tenant_id', $this->tenantId)
+            ->available()
+            ->get();
     }
 
     public function createSurvey(array $data): Survey
     {
+        $data['tenant_id'] = $this->tenantId;
         return Survey::create($data);
     }
 
@@ -59,8 +69,8 @@ class SurveyService
     public function submitResponse(array $data): SurveyResponse
     {
         return DB::transaction(function () use ($data) {
-            $survey = Survey::findOrFail($data['survey_id']);
-            $patient = \App\Models\Patient::findOrFail($data['patient_id']);
+            $survey = Survey::where('tenant_id', $this->tenantId)->findOrFail($data['survey_id']);
+            $patient = \App\Models\Patient::where('tenant_id', $this->tenantId)->findOrFail($data['patient_id']);
 
             if (!$survey->canPatientRespond($patient->id)) {
                 throw new \Exception('شما قبلاً به این نظرسنجی پاسخ داده‌اید');
@@ -68,7 +78,9 @@ class SurveyService
 
             $score = $this->calculateScore($data['answers'] ?? []);
 
+            $data['tenant_id'] = $this->tenantId;
             $response = SurveyResponse::create([
+                'tenant_id' => $this->tenantId,
                 'survey_id' => $data['survey_id'],
                 'patient_id' => $data['patient_id'],
                 'appointment_id' => $data['appointment_id'] ?? null,
@@ -93,8 +105,9 @@ class SurveyService
 
     public function getSurveyResponses(int $surveyId, array $filters = [], int $perPage = 20)
     {
-        $query = SurveyResponse::with(['patient', 'appointment', 'doctor'])
-            ->bySurvey($surveyId);
+        $query = SurveyResponse::where('tenant_id', $this->tenantId)
+            ->where('survey_id', $surveyId)
+            ->with(['patient', 'appointment', 'doctor']);
 
         if (isset($filters['min_score'])) {
             $query->where('score', '>=', $filters['min_score']);
@@ -113,8 +126,9 @@ class SurveyService
 
     public function getPatientResponses(int $patientId, int $perPage = 20)
     {
-        return SurveyResponse::with(['survey'])
-            ->byPatient($patientId)
+        return SurveyResponse::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
+            ->with(['survey'])
             ->completed()
             ->orderBy('completed_at', 'desc')
             ->paginate($perPage);
@@ -122,12 +136,14 @@ class SurveyService
 
     public function createFeedback(array $data): Feedback
     {
+        $data['tenant_id'] = $this->tenantId;
         return Feedback::create($data);
     }
 
     public function createFeedbackFromResponse(SurveyResponse $response): Feedback
     {
         return Feedback::create([
+            'tenant_id' => $this->tenantId,
             'patient_id' => $response->patient_id,
             'doctor_id' => $response->doctor_id,
             'appointment_id' => $response->appointment_id,
@@ -142,7 +158,8 @@ class SurveyService
 
     public function getFeedbacks(array $filters = [], int $perPage = 20)
     {
-        $query = Feedback::with(['patient', 'doctor']);
+        $query = Feedback::where('tenant_id', $this->tenantId)
+            ->with(['patient', 'doctor']);
 
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -169,37 +186,39 @@ class SurveyService
 
     public function getPatientFeedbacks(int $patientId, int $perPage = 20)
     {
-        return Feedback::with(['doctor'])
-            ->byPatient($patientId)
+        return Feedback::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
+            ->with(['doctor'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     public function getDoctorFeedbacks(int $doctorId, int $perPage = 20)
     {
-        return Feedback::with(['patient'])
-            ->byDoctor($doctorId)
+        return Feedback::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
+            ->with(['patient'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     public function replyToFeedback(int $feedbackId, string $reply): Feedback
     {
-        $feedback = Feedback::findOrFail($feedbackId);
+        $feedback = Feedback::where('tenant_id', $this->tenantId)->findOrFail($feedbackId);
         $feedback->reply($reply);
         return $feedback->fresh();
     }
 
     public function resolveFeedback(int $feedbackId): Feedback
     {
-        $feedback = Feedback::findOrFail($feedbackId);
+        $feedback = Feedback::where('tenant_id', $this->tenantId)->findOrFail($feedbackId);
         $feedback->markAsResolved();
         return $feedback->fresh();
     }
 
     public function getStats(array $filters = []): array
     {
-        $query = SurveyResponse::query();
+        $query = SurveyResponse::where('tenant_id', $this->tenantId);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('completed_at', '>=', $filters['from_date']);
@@ -214,16 +233,17 @@ class SurveyService
             'average_score' => round($query->avg('score') ?? 0, 1),
             'high_score' => (clone $query)->highScore()->count(),
             'low_score' => (clone $query)->lowScore()->count(),
-            'total_feedbacks' => Feedback::count(),
-            'pending_feedbacks' => Feedback::pending()->count(),
-            'resolved_feedbacks' => Feedback::where('status', 'resolved')->count(),
+            'total_feedbacks' => Feedback::where('tenant_id', $this->tenantId)->count(),
+            'pending_feedbacks' => Feedback::where('tenant_id', $this->tenantId)->pending()->count(),
+            'resolved_feedbacks' => Feedback::where('tenant_id', $this->tenantId)->where('status', 'resolved')->count(),
             'by_survey' => $this->getStatsBySurvey($filters),
         ];
     }
 
     private function getStatsBySurvey(array $filters): array
     {
-        $query = SurveyResponse::with(['survey']);
+        $query = SurveyResponse::where('tenant_id', $this->tenantId)
+            ->with(['survey']);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('completed_at', '>=', $filters['from_date']);

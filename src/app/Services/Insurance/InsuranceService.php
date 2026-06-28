@@ -12,9 +12,16 @@ use Illuminate\Support\Facades\Log;
 
 class InsuranceService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getInsurances(array $filters = [], int $perPage = 20)
     {
-        $query = Insurance::query();
+        $query = Insurance::where('tenant_id', $this->tenantId);
 
         if (isset($filters['search'])) {
             $query->where('name', 'LIKE', "%{$filters['search']}%")
@@ -34,11 +41,12 @@ class InsuranceService
 
     public function getActiveInsurances()
     {
-        return Insurance::active()->valid()->get();
+        return Insurance::where('tenant_id', $this->tenantId)->active()->valid()->get();
     }
 
     public function createInsurance(array $data): Insurance
     {
+        $data['tenant_id'] = $this->tenantId;
         return Insurance::create($data);
     }
 
@@ -63,27 +71,31 @@ class InsuranceService
     {
         return DB::transaction(function () use ($data) {
             if (isset($data['is_primary']) && $data['is_primary']) {
-                PatientInsurance::where('patient_id', $data['patient_id'])
+                PatientInsurance::where('tenant_id', $this->tenantId)
+                    ->where('patient_id', $data['patient_id'])
                     ->where('is_primary', true)
                     ->update(['is_primary' => false]);
             }
 
+            $data['tenant_id'] = $this->tenantId;
             return PatientInsurance::create($data);
         });
     }
 
     public function getPatientInsurances(int $patientId)
     {
-        return PatientInsurance::with(['insurance'])
-            ->byPatient($patientId)
+        return PatientInsurance::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
+            ->with(['insurance'])
             ->active()
             ->get();
     }
 
     public function getPatientPrimaryInsurance(int $patientId): ?PatientInsurance
     {
-        return PatientInsurance::with(['insurance'])
-            ->byPatient($patientId)
+        return PatientInsurance::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
+            ->with(['insurance'])
             ->primary()
             ->active()
             ->first();
@@ -93,7 +105,8 @@ class InsuranceService
     {
         return DB::transaction(function () use ($patientInsurance, $data) {
             if (isset($data['is_primary']) && $data['is_primary']) {
-                PatientInsurance::where('patient_id', $patientInsurance->patient_id)
+                PatientInsurance::where('tenant_id', $this->tenantId)
+                    ->where('patient_id', $patientInsurance->patient_id)
                     ->where('id', '!=', $patientInsurance->id)
                     ->where('is_primary', true)
                     ->update(['is_primary' => false]);
@@ -113,13 +126,19 @@ class InsuranceService
     public function applyInsuranceToAppointment(int $appointmentId, int $patientInsuranceId): AppointmentInsurance
     {
         return DB::transaction(function () use ($appointmentId, $patientInsuranceId) {
-            $appointment = Appointment::with(['patient'])->findOrFail($appointmentId);
-            $patientInsurance = PatientInsurance::with(['insurance'])->findOrFail($patientInsuranceId);
+            $appointment = Appointment::where('tenant_id', $this->tenantId)
+                ->with(['patient'])
+                ->findOrFail($appointmentId);
+
+            $patientInsurance = PatientInsurance::where('tenant_id', $this->tenantId)
+                ->with(['insurance'])
+                ->findOrFail($patientInsuranceId);
 
             $totalAmount = $appointment->final_price ?? 0;
             $coverage = $patientInsurance->calculateCoverage($totalAmount);
 
             $appointmentInsurance = AppointmentInsurance::create([
+                'tenant_id' => $this->tenantId,
                 'appointment_id' => $appointmentId,
                 'patient_insurance_id' => $patientInsuranceId,
                 'total_amount' => $coverage['total_amount'],
@@ -140,28 +159,33 @@ class InsuranceService
 
     public function getAppointmentInsurance(int $appointmentId): ?AppointmentInsurance
     {
-        return AppointmentInsurance::with(['patientInsurance', 'patientInsurance.insurance'])
-            ->byAppointment($appointmentId)
+        return AppointmentInsurance::where('tenant_id', $this->tenantId)
+            ->where('appointment_id', $appointmentId)
+            ->with(['patientInsurance', 'patientInsurance.insurance'])
             ->first();
     }
 
     public function approveInsuranceClaim(int $appointmentInsuranceId): AppointmentInsurance
     {
-        $appInsurance = AppointmentInsurance::findOrFail($appointmentInsuranceId);
+        $appInsurance = AppointmentInsurance::where('tenant_id', $this->tenantId)
+            ->findOrFail($appointmentInsuranceId);
+
         $appInsurance->approve();
         return $appInsurance->fresh();
     }
 
     public function rejectInsuranceClaim(int $appointmentInsuranceId): AppointmentInsurance
     {
-        $appInsurance = AppointmentInsurance::findOrFail($appointmentInsuranceId);
+        $appInsurance = AppointmentInsurance::where('tenant_id', $this->tenantId)
+            ->findOrFail($appointmentInsuranceId);
+
         $appInsurance->reject();
         return $appInsurance->fresh();
     }
 
     public function getInsuranceStats(array $filters = []): array
     {
-        $query = AppointmentInsurance::query();
+        $query = AppointmentInsurance::where('tenant_id', $this->tenantId);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('created_at', '>=', $filters['from_date']);
@@ -190,9 +214,10 @@ class InsuranceService
 
     public function getInsuranceReport(int $insuranceId, array $filters = []): array
     {
-        $query = AppointmentInsurance::whereHas('patientInsurance', function ($q) use ($insuranceId) {
-            $q->where('insurance_id', $insuranceId);
-        });
+        $query = AppointmentInsurance::where('tenant_id', $this->tenantId)
+            ->whereHas('patientInsurance', function ($q) use ($insuranceId) {
+                $q->where('insurance_id', $insuranceId);
+            });
 
         if (isset($filters['from_date'])) {
             $query->whereDate('created_at', '>=', $filters['from_date']);

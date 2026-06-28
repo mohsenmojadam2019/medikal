@@ -14,12 +14,17 @@ use Illuminate\Support\Facades\Log;
 
 class InstallmentService
 {
-    // ========== Settings ==========
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
 
     public function getSettings(int $clinicId): InstallmentSetting
     {
         return InstallmentSetting::firstOrCreate(
-            ['clinic_id' => $clinicId],
+            ['clinic_id' => $clinicId, 'tenant_id' => $this->tenantId],
             [
                 'enable_installments' => true,
                 'max_installments' => 12,
@@ -52,8 +57,6 @@ class InstallmentService
         return $this->getSettings($clinicId)->enable_installments;
     }
 
-    // ========== Contracts ==========
-
     public function createContract(array $data): InstallmentContract
     {
         return DB::transaction(function () use ($data) {
@@ -67,7 +70,9 @@ class InstallmentService
                 throw new \Exception("تعداد اقساط نمی‌تواند بیشتر از {$settings->max_installments} باشد");
             }
 
+            $data['tenant_id'] = $this->tenantId;
             $contract = InstallmentContract::create([
+                'tenant_id' => $this->tenantId,
                 'patient_id' => $data['patient_id'],
                 'appointment_id' => $data['appointment_id'] ?? null,
                 'invoice_id' => $data['invoice_id'] ?? null,
@@ -99,6 +104,7 @@ class InstallmentService
         $installments = [];
         for ($i = 1; $i <= $contract->number_of_installments; $i++) {
             $installments[] = [
+                'tenant_id' => $this->tenantId,
                 'contract_id' => $contract->id,
                 'installment_number' => $i,
                 'amount' => $installmentAmount,
@@ -114,7 +120,8 @@ class InstallmentService
 
     public function getContracts(array $filters = [], int $perPage = 20)
     {
-        $query = InstallmentContract::with(['patient', 'installments']);
+        $query = InstallmentContract::where('tenant_id', $this->tenantId)
+            ->with(['patient', 'installments']);
 
         if (isset($filters['patient_id'])) {
             $query->where('patient_id', $filters['patient_id']);
@@ -141,7 +148,8 @@ class InstallmentService
 
     public function getContract(int $id): InstallmentContract
     {
-        return InstallmentContract::with(['patient', 'installments', 'appointment', 'invoice'])
+        return InstallmentContract::where('tenant_id', $this->tenantId)
+            ->with(['patient', 'installments', 'appointment', 'invoice'])
             ->findOrFail($id);
     }
 
@@ -153,7 +161,7 @@ class InstallmentService
 
     public function activateContract(int $id): InstallmentContract
     {
-        $contract = InstallmentContract::findOrFail($id);
+        $contract = InstallmentContract::where('tenant_id', $this->tenantId)->findOrFail($id);
 
         if ($contract->status !== 'pending') {
             throw new \Exception('فقط قراردادهای در انتظار قابل تایید هستند');
@@ -165,7 +173,7 @@ class InstallmentService
 
     public function completeContract(int $id): InstallmentContract
     {
-        $contract = InstallmentContract::findOrFail($id);
+        $contract = InstallmentContract::where('tenant_id', $this->tenantId)->findOrFail($id);
         $contract->update([
             'status' => 'completed',
             'end_date' => now(),
@@ -175,7 +183,7 @@ class InstallmentService
 
     public function cancelContract(int $id): InstallmentContract
     {
-        $contract = InstallmentContract::findOrFail($id);
+        $contract = InstallmentContract::where('tenant_id', $this->tenantId)->findOrFail($id);
 
         if (!$contract->canBeCancelled()) {
             throw new \Exception('این قرارداد قابل لغو نیست');
@@ -187,16 +195,15 @@ class InstallmentService
 
     public function markAsDefaulted(int $id): InstallmentContract
     {
-        $contract = InstallmentContract::findOrFail($id);
+        $contract = InstallmentContract::where('tenant_id', $this->tenantId)->findOrFail($id);
         $contract->update(['status' => 'defaulted']);
         return $contract->fresh();
     }
 
-    // ========== Installments ==========
-
     public function getInstallments(array $filters = [], int $perPage = 20)
     {
-        $query = Installment::with(['contract', 'contract.patient']);
+        $query = Installment::where('tenant_id', $this->tenantId)
+            ->with(['contract', 'contract.patient']);
 
         if (isset($filters['contract_id'])) {
             $query->where('contract_id', $filters['contract_id']);
@@ -227,47 +234,47 @@ class InstallmentService
 
     public function getUpcomingInstallments(int $patientId, int $days = 7)
     {
-        return Installment::whereHas('contract', function ($q) use ($patientId) {
-            $q->where('patient_id', $patientId)
-                ->whereIn('status', ['active', 'pending']);
-        })
-        ->where('status', 'pending')
-        ->whereBetween('due_date', [now(), now()->addDays($days)])
-        ->with(['contract'])
-        ->orderBy('due_date')
-        ->get();
+        return Installment::where('tenant_id', $this->tenantId)
+            ->whereHas('contract', function ($q) use ($patientId) {
+                $q->where('patient_id', $patientId)
+                    ->whereIn('status', ['active', 'pending']);
+            })
+            ->where('status', 'pending')
+            ->whereBetween('due_date', [now(), now()->addDays($days)])
+            ->with(['contract'])
+            ->orderBy('due_date')
+            ->get();
     }
 
     public function getOverdueInstallments(int $patientId)
     {
-        return Installment::whereHas('contract', function ($q) use ($patientId) {
-            $q->where('patient_id', $patientId)
-                ->whereIn('status', ['active', 'pending']);
-        })
-        ->where('status', 'pending')
-        ->where('due_date', '<', now())
-        ->with(['contract'])
-        ->orderBy('due_date')
-        ->get();
+        return Installment::where('tenant_id', $this->tenantId)
+            ->whereHas('contract', function ($q) use ($patientId) {
+                $q->where('patient_id', $patientId)
+                    ->whereIn('status', ['active', 'pending']);
+            })
+            ->where('status', 'pending')
+            ->where('due_date', '<', now())
+            ->with(['contract'])
+            ->orderBy('due_date')
+            ->get();
     }
 
     public function payInstallment(int $installmentId, array $paymentData): Installment
     {
         return DB::transaction(function () use ($installmentId, $paymentData) {
-            $installment = Installment::findOrFail($installmentId);
+            $installment = Installment::where('tenant_id', $this->tenantId)->findOrFail($installmentId);
             $contract = $installment->contract;
 
             if ($installment->status === 'paid') {
                 throw new \Exception('این قسط قبلاً پرداخت شده است');
             }
 
-            // محاسبه جریمه دیرکرد
             $penalty = $installment->calculatePenalty();
-
             $totalPayable = $installment->amount + $penalty;
 
-            // ثبت پرداخت
             $installmentPayment = InstallmentPayment::create([
+                'tenant_id' => $this->tenantId,
                 'installment_id' => $installment->id,
                 'payment_id' => $paymentData['payment_id'] ?? null,
                 'amount' => $installment->amount,
@@ -285,10 +292,8 @@ class InstallmentService
                 'metadata' => $paymentData['metadata'] ?? null,
             ]);
 
-            // بروزرسانی تعداد اقساط پرداخت‌شده
             $contract->increment('installments_paid');
 
-            // اگر همه اقساط پرداخت شد، قرارداد رو کامل کن
             if ($contract->installments_paid >= $contract->number_of_installments) {
                 $this->completeContract($contract->id);
             }
@@ -299,7 +304,7 @@ class InstallmentService
 
     public function waiveInstallment(int $installmentId): Installment
     {
-        $installment = Installment::findOrFail($installmentId);
+        $installment = Installment::where('tenant_id', $this->tenantId)->findOrFail($installmentId);
 
         if ($installment->status === 'paid') {
             throw new \Exception('این قسط قبلاً پرداخت شده است');
@@ -308,8 +313,6 @@ class InstallmentService
         $installment->waive();
         return $installment->fresh();
     }
-
-    // ========== Calculations ==========
 
     public function calculateInstallmentAmount(array $data, ?InstallmentSetting $settings = null): float
     {
@@ -356,15 +359,14 @@ class InstallmentService
         ];
     }
 
-    // ========== Stats ==========
-
     public function getStats(int $clinicId): array
     {
-        $query = InstallmentContract::whereHas('appointment', function ($q) use ($clinicId) {
-            $q->whereHas('doctor', function ($q2) use ($clinicId) {
-                $q2->where('clinic_id', $clinicId);
+        $query = InstallmentContract::where('tenant_id', $this->tenantId)
+            ->whereHas('appointment', function ($q) use ($clinicId) {
+                $q->whereHas('doctor', function ($q2) use ($clinicId) {
+                    $q2->where('clinic_id', $clinicId);
+                });
             });
-        });
 
         return [
             'total_contracts' => $query->count(),
@@ -373,13 +375,17 @@ class InstallmentService
             'defaulted_contracts' => (clone $query)->where('status', 'defaulted')->count(),
             'total_amount' => (clone $query)->sum('total_amount'),
             'total_paid' => (clone $query)->sum('installments_paid'),
-            'total_overdue' => Installment::whereHas('contract', function ($q) use ($clinicId) {
-                $q->whereHas('appointment', function ($q2) use ($clinicId) {
-                    $q2->whereHas('doctor', function ($q3) use ($clinicId) {
-                        $q3->where('clinic_id', $clinicId);
+            'total_overdue' => Installment::where('tenant_id', $this->tenantId)
+                ->whereHas('contract', function ($q) use ($clinicId) {
+                    $q->whereHas('appointment', function ($q2) use ($clinicId) {
+                        $q2->whereHas('doctor', function ($q3) use ($clinicId) {
+                            $q3->where('clinic_id', $clinicId);
+                        });
                     });
-                });
-            })->where('status', 'pending')->where('due_date', '<', now())->count(),
+                })
+                ->where('status', 'pending')
+                ->where('due_date', '<', now())
+                ->count(),
         ];
     }
 }

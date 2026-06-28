@@ -11,9 +11,13 @@ use Spatie\Permission\Models\Permission;
 
 class UserService
 {
-    /**
-     * لیست کاربران با فیلتر
-     */
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function list(array $filters = [], int $perPage = 15)
     {
         $query = User::query();
@@ -37,9 +41,6 @@ class UserService
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
     }
 
-    /**
-     * ایجاد کاربر جدید
-     */
     public function create(array $data): User
     {
         return DB::transaction(function () use ($data) {
@@ -51,13 +52,12 @@ class UserService
                 'is_active' => $data['is_active'] ?? true,
             ]);
 
-            // اختصاص نقش
             if (isset($data['role'])) {
                 $user->assignRole($data['role']);
             }
 
-            // ایجاد آدرس
             if (isset($data['address'])) {
+                $data['address']['tenant_id'] = $this->tenantId;
                 $user->addresses()->create($data['address']);
             }
 
@@ -65,9 +65,6 @@ class UserService
         });
     }
 
-    /**
-     * به‌روزرسانی کاربر
-     */
     public function update(User $user, array $data): User
     {
         return DB::transaction(function () use ($user, $data) {
@@ -93,17 +90,16 @@ class UserService
                 $user->update($updateData);
             }
 
-            // تغییر نقش
             if (isset($data['role'])) {
                 $user->syncRoles([$data['role']]);
             }
 
-            // تغییر آدرس
             if (isset($data['address'])) {
                 $address = $user->primaryAddress;
                 if ($address) {
                     $address->update($data['address']);
                 } else {
+                    $data['address']['tenant_id'] = $this->tenantId;
                     $user->addresses()->create(array_merge($data['address'], ['is_primary' => true]));
                 }
             }
@@ -112,9 +108,6 @@ class UserService
         });
     }
 
-    /**
-     * تغییر رمز عبور
-     */
     public function changePassword(User $user, string $oldPassword, string $newPassword): bool
     {
         if (!Hash::check($oldPassword, $user->password)) {
@@ -125,9 +118,6 @@ class UserService
         return true;
     }
 
-    /**
-     * تغییر استان و شهر کاربر
-     */
     public function updateLocation(User $user, int $provinceId, int $cityId): User
     {
         $address = $user->primaryAddress;
@@ -141,17 +131,11 @@ class UserService
         return $user->fresh();
     }
 
-    /**
-     * حذف کاربر
-     */
     public function delete(User $user): void
     {
         $user->delete();
     }
 
-    /**
-     * تغییر وضعیت کاربر
-     */
     public function toggleStatus(User $user): User
     {
         $user->update(['is_active' => !$user->is_active]);

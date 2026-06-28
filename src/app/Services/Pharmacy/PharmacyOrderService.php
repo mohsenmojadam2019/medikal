@@ -14,10 +14,19 @@ use Illuminate\Support\Facades\Log;
 
 class PharmacyOrderService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function createOrder(array $data): PharmacyOrder
     {
         return DB::transaction(function () use ($data) {
+            $data['tenant_id'] = $this->tenantId;
             $order = PharmacyOrder::create([
+                'tenant_id' => $this->tenantId,
                 'patient_id' => $data['patient_id'],
                 'pharmacy_id' => $data['pharmacy_id'],
                 'prescription_id' => $data['prescription_id'],
@@ -26,14 +35,16 @@ class PharmacyOrderService
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            $prescriptionItems = PrescriptionItem::where('prescription_id', $data['prescription_id'])->get();
+            $prescriptionItems = PrescriptionItem::where('tenant_id', $this->tenantId)
+                ->where('prescription_id', $data['prescription_id'])
+                ->get();
 
             $subtotal = 0;
             $availableItems = [];
             $unavailableItems = [];
 
             foreach ($prescriptionItems as $item) {
-                $drug = Drug::find($item->drug_id);
+                $drug = Drug::where('tenant_id', $this->tenantId)->find($item->drug_id);
                 $isAvailable = true;
                 $price = rand(10000, 50000);
 
@@ -41,6 +52,7 @@ class PharmacyOrderService
                     $totalPrice = $price * $item->quantity;
 
                     PharmacyOrderItem::create([
+                        'tenant_id' => $this->tenantId,
                         'order_id' => $order->id,
                         'drug_id' => $item->drug_id,
                         'quantity' => $item->quantity,
@@ -58,6 +70,7 @@ class PharmacyOrderService
                     ];
                 } else {
                     PharmacyOrderItem::create([
+                        'tenant_id' => $this->tenantId,
                         'order_id' => $order->id,
                         'drug_id' => $item->drug_id,
                         'quantity' => $item->quantity,
@@ -100,7 +113,6 @@ class PharmacyOrderService
                 $order->status = PharmacyOrderStatusEnum::PAYMENT_PENDING;
                 $order->save();
 
-                // تولید لینک پرداخت تست
                 $paymentLink = route('pharmacy.payment.callback', ['gateway' => 'local']) . '?' . http_build_query([
                     'order_number' => $order->order_number,
                     'amount' => $order->total_amount,
@@ -117,9 +129,6 @@ class PharmacyOrderService
         });
     }
 
-    /**
-     * شروع پرداخت
-     */
     public function initiatePayment(PharmacyOrder $order, string $gateway = 'local'): array
     {
         if ($order->is_paid) {
@@ -130,10 +139,9 @@ class PharmacyOrderService
             throw new \Exception('مبلغ سفارش صفر است');
         }
 
-        // برای درگاه local، فقط لینک تست برگردون
         if ($gateway === 'local') {
             $transactionId = 'LOCAL_' . $order->id . '_' . time();
-            
+
             $order->update([
                 'payment_gateway' => 'local',
                 'payment_authority' => $transactionId,
@@ -157,13 +165,9 @@ class PharmacyOrderService
             ];
         }
 
-        // برای سایر درگاه‌ها (زرین‌پال و ...) بعداً اضافه میشه
         throw new \Exception("درگاه {$gateway} فعلاً پشتیبانی نمی‌شود");
     }
 
-    /**
-     * تایید پرداخت
-     */
     public function verifyPayment(string $gateway, array $data): array
     {
         $transactionId = $data['transactionId'] ?? $data['transaction_id'] ?? null;
@@ -176,7 +180,8 @@ class PharmacyOrderService
             ];
         }
 
-        $order = PharmacyOrder::where('payment_authority', $transactionId)
+        $order = PharmacyOrder::where('tenant_id', $this->tenantId)
+            ->where('payment_authority', $transactionId)
             ->orWhere('order_number', $orderNumber)
             ->first();
 
@@ -195,15 +200,14 @@ class PharmacyOrderService
             ];
         }
 
-        // بروزرسانی سفارش
         $order->update([
             'payment_status' => PharmacyOrderPaymentStatusEnum::PAID,
             'status' => PharmacyOrderStatusEnum::PAID,
             'paid_at' => now(),
         ]);
 
-        // ارسال نوتیفیکیشن
         PharmacyNotification::create([
+            'tenant_id' => $this->tenantId,
             'patient_id' => $order->patient_id,
             'order_id' => $order->id,
             'type' => 'panel',
@@ -226,6 +230,7 @@ class PharmacyOrderService
     {
         try {
             PharmacyNotification::create([
+                'tenant_id' => $this->tenantId,
                 'patient_id' => $order->patient_id,
                 'order_id' => $order->id,
                 'type' => 'panel',
@@ -244,12 +249,14 @@ class PharmacyOrderService
             ]);
 
             Log::info('Order notification sent', [
+                'tenant_id' => $this->tenantId,
                 'order_id' => $order->id,
                 'patient_id' => $order->patient_id,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to send order notification', [
+                'tenant_id' => $this->tenantId,
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
             ]);
@@ -316,7 +323,8 @@ class PharmacyOrderService
 
     public function getPatientOrders(int $patientId, int $perPage = 15)
     {
-        return PharmacyOrder::where('patient_id', $patientId)
+        return PharmacyOrder::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
             ->with(['items', 'items.drug'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -324,7 +332,8 @@ class PharmacyOrderService
 
     public function getPharmacyOrders(int $pharmacyId, int $perPage = 15)
     {
-        return PharmacyOrder::where('pharmacy_id', $pharmacyId)
+        return PharmacyOrder::where('tenant_id', $this->tenantId)
+            ->where('pharmacy_id', $pharmacyId)
             ->with(['patient.user', 'items', 'items.drug'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);

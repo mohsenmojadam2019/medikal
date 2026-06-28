@@ -12,9 +12,16 @@ use Illuminate\Support\Facades\Log;
 
 class VaccinationService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getVaccines(array $filters = [], int $perPage = 20)
     {
-        $query = Vaccine::query();
+        $query = Vaccine::where('tenant_id', $this->tenantId);
 
         if (isset($filters['search'])) {
             $query->where('name', 'LIKE', "%{$filters['search']}%")
@@ -39,11 +46,15 @@ class VaccinationService
 
     public function getActiveVaccines()
     {
-        return Vaccine::active()->orderBy('name')->get();
+        return Vaccine::where('tenant_id', $this->tenantId)
+            ->active()
+            ->orderBy('name')
+            ->get();
     }
 
     public function createVaccine(array $data): Vaccine
     {
+        $data['tenant_id'] = $this->tenantId;
         return Vaccine::create($data);
     }
 
@@ -67,8 +78,11 @@ class VaccinationService
     public function recordVaccination(array $data): PatientVaccination
     {
         return DB::transaction(function () use ($data) {
-            $vaccine = Vaccine::findOrFail($data['vaccine_id']);
-            $patient = Patient::findOrFail($data['patient_id']);
+            $vaccine = Vaccine::where('tenant_id', $this->tenantId)
+                ->findOrFail($data['vaccine_id']);
+
+            $patient = Patient::where('tenant_id', $this->tenantId)
+                ->findOrFail($data['patient_id']);
 
             $nextDueDate = null;
             if (isset($data['dose_number']) && $data['dose_number'] < $vaccine->doses_required) {
@@ -76,7 +90,9 @@ class VaccinationService
                     ->addDays($vaccine->interval_days ?? 30);
             }
 
+            $data['tenant_id'] = $this->tenantId;
             $vaccination = PatientVaccination::create([
+                'tenant_id' => $this->tenantId,
                 'patient_id' => $data['patient_id'],
                 'vaccine_id' => $data['vaccine_id'],
                 'doctor_id' => $data['doctor_id'] ?? null,
@@ -93,6 +109,7 @@ class VaccinationService
 
             if ($nextDueDate) {
                 $this->createReminder([
+                    'tenant_id' => $this->tenantId,
                     'patient_id' => $patient->id,
                     'vaccine_id' => $vaccine->id,
                     'patient_vaccination_id' => $vaccination->id,
@@ -108,8 +125,9 @@ class VaccinationService
 
     public function getPatientVaccinations(int $patientId, array $filters = [], int $perPage = 20)
     {
-        $query = PatientVaccination::with(['vaccine', 'doctor'])
-            ->byPatient($patientId);
+        $query = PatientVaccination::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
+            ->with(['vaccine', 'doctor']);
 
         if (isset($filters['vaccine_id'])) {
             $query->byVaccine($filters['vaccine_id']);
@@ -124,8 +142,9 @@ class VaccinationService
 
     public function getPatientVaccinationSummary(int $patientId): array
     {
-        $vaccinations = PatientVaccination::with(['vaccine'])
-            ->byPatient($patientId)
+        $vaccinations = PatientVaccination::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
+            ->with(['vaccine'])
             ->completed()
             ->get();
 
@@ -153,8 +172,9 @@ class VaccinationService
 
     public function getUpcomingVaccinations(int $patientId, int $days = 30)
     {
-        return PatientVaccination::with(['vaccine'])
-            ->byPatient($patientId)
+        return PatientVaccination::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
+            ->with(['vaccine'])
             ->where('status', 'scheduled')
             ->whereDate('next_due_date', '<=', now()->addDays($days))
             ->orderBy('next_due_date')
@@ -163,8 +183,9 @@ class VaccinationService
 
     public function getOverdueVaccinations(int $patientId)
     {
-        return PatientVaccination::with(['vaccine'])
-            ->byPatient($patientId)
+        return PatientVaccination::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
+            ->with(['vaccine'])
             ->where('status', 'scheduled')
             ->whereDate('next_due_date', '<', now())
             ->orderBy('next_due_date')
@@ -173,13 +194,15 @@ class VaccinationService
 
     public function createReminder(array $data): VaccinationReminder
     {
+        $data['tenant_id'] = $this->tenantId;
         return VaccinationReminder::create($data);
     }
 
     public function getPatientReminders(int $patientId, array $filters = [], int $perPage = 20)
     {
-        $query = VaccinationReminder::with(['vaccine'])
-            ->byPatient($patientId);
+        $query = VaccinationReminder::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
+            ->with(['vaccine']);
 
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -190,12 +213,16 @@ class VaccinationService
 
     public function processReminders(): int
     {
-        $reminders = VaccinationReminder::due()->get();
+        $reminders = VaccinationReminder::where('tenant_id', $this->tenantId)
+            ->due()
+            ->get();
+
         $count = 0;
 
         foreach ($reminders as $reminder) {
             try {
                 Log::info('Vaccination reminder sent', [
+                    'tenant_id' => $this->tenantId,
                     'patient_id' => $reminder->patient_id,
                     'vaccine_id' => $reminder->vaccine_id,
                     'reminder_date' => $reminder->reminder_date,
@@ -203,7 +230,9 @@ class VaccinationService
                 $reminder->markAsSent();
                 $count++;
             } catch (\Exception $e) {
-                Log::error('Failed to send vaccination reminder: ' . $e->getMessage());
+                Log::error('Failed to send vaccination reminder: ' . $e->getMessage(), [
+                    'tenant_id' => $this->tenantId,
+                ]);
             }
         }
 
@@ -212,7 +241,7 @@ class VaccinationService
 
     public function getStats(array $filters = []): array
     {
-        $query = PatientVaccination::query();
+        $query = PatientVaccination::where('tenant_id', $this->tenantId);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('administration_date', '>=', $filters['from_date']);
@@ -241,7 +270,8 @@ class VaccinationService
 
     private function getVaccinationStatsByVaccine(array $filters): array
     {
-        $query = PatientVaccination::with(['vaccine']);
+        $query = PatientVaccination::where('tenant_id', $this->tenantId)
+            ->with(['vaccine']);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('administration_date', '>=', $filters['from_date']);
@@ -266,7 +296,8 @@ class VaccinationService
 
     private function getVaccinationStatsByMonth(array $filters): array
     {
-        $query = PatientVaccination::where('status', 'completed');
+        $query = PatientVaccination::where('tenant_id', $this->tenantId)
+            ->where('status', 'completed');
 
         if (isset($filters['from_date'])) {
             $query->whereDate('administration_date', '>=', $filters['from_date']);

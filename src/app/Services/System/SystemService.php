@@ -9,9 +9,13 @@ use Illuminate\Support\Facades\File;
 
 class SystemService
 {
-    /**
-     * دریافت لیست فایل‌های لاگ
-     */
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getLogFiles(): array
     {
         $logPath = storage_path('logs');
@@ -27,7 +31,6 @@ class SystemService
             ];
         }
 
-        // مرتب‌سازی بر اساس تاریخ (جدیدترین اول)
         usort($logFiles, function ($a, $b) {
             return strtotime($b['modified']) - strtotime($a['modified']);
         });
@@ -35,9 +38,6 @@ class SystemService
         return $logFiles;
     }
 
-    /**
-     * دریافت محتوای یک فایل لاگ
-     */
     public function getLogContent(string $filename, int $lines = 100): string
     {
         $logPath = storage_path('logs/' . $filename);
@@ -48,9 +48,6 @@ class SystemService
         return File::get($logPath, $lines);
     }
 
-    /**
-     * پاک کردن یک فایل لاگ
-     */
     public function deleteLogFile(string $filename): bool
     {
         $logPath = storage_path('logs/' . $filename);
@@ -61,9 +58,6 @@ class SystemService
         return File::delete($logPath);
     }
 
-    /**
-     * پاک کردن تمام لاگ‌ها
-     */
     public function clearAllLogs(): int
     {
         $logPath = storage_path('logs');
@@ -78,45 +72,36 @@ class SystemService
         return $count;
     }
 
-    /**
-     * پاک کردن کش سیستم
-     */
     public function clearAllCache(): array
     {
         $results = [];
 
         try {
-            // پاک کردن کش اپلیکیشن
             Artisan::call('cache:clear');
             $results['cache'] = '✅ کش اپلیکیشن پاک شد';
 
-            // پاک کردن کش کانفیگ
             Artisan::call('config:clear');
             $results['config'] = '✅ کش کانفیگ پاک شد';
 
-            // پاک کردن کش رووت
             Artisan::call('route:clear');
             $results['route'] = '✅ کش رووت پاک شد';
 
-            // پاک کردن کش ویو
             Artisan::call('view:clear');
             $results['view'] = '✅ کش ویو پاک شد';
 
-            // پاک کردن کش آپتیمایز
             Artisan::call('optimize:clear');
             $results['optimize'] = '✅ کش آپتیمایز پاک شد';
 
-            // پاک کردن کش اوپکد
             if (function_exists('opcache_reset')) {
                 opcache_reset();
                 $results['opcache'] = '✅ کش اوپکد پاک شد';
             }
 
-            // پاک کردن کش لاراول
             Cache::flush();
             $results['cache_store'] = '✅ کش استور پاک شد';
 
             $results['status'] = 'success';
+            $results['tenant_id'] = $this->tenantId;
 
         } catch (\Exception $e) {
             $results['error'] = '❌ خطا: ' . $e->getMessage();
@@ -126,9 +111,6 @@ class SystemService
         return $results;
     }
 
-    /**
-     * دریافت اطلاعات سیستم
-     */
     public function getSystemInfo(): array
     {
         return [
@@ -142,6 +124,7 @@ class SystemService
             'max_execution_time' => ini_get('max_execution_time'),
             'upload_max_filesize' => ini_get('upload_max_filesize'),
             'post_max_size' => ini_get('post_max_size'),
+            'tenant_id' => $this->tenantId,
         ];
     }
 

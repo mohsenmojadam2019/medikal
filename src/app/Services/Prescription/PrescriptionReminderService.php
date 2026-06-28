@@ -8,33 +8,32 @@ use Illuminate\Support\Facades\Log;
 
 class PrescriptionReminderService
 {
-    /**
-     * تولید یادآوری‌های دارو برای یک نسخه
-     */
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function generateReminders(Prescription $prescription): array
     {
         return $prescription->generateReminders();
     }
 
-    /**
-     * دریافت نسخه‌های در حال انقضا
-     */
     public function getExpiringSoon(int $days = 3)
     {
-        return Prescription::expiringSoon($days)->get();
+        return Prescription::where('tenant_id', $this->tenantId)
+            ->expiringSoon($days)
+            ->get();
     }
 
-    /**
-     * دریافت نسخه‌های منقضی شده
-     */
     public function getExpired()
     {
-        return Prescription::expired()->get();
+        return Prescription::where('tenant_id', $this->tenantId)
+            ->expired()
+            ->get();
     }
 
-    /**
-     * ارسال یادآوری برای نسخه‌های در حال انقضا
-     */
     public function sendExpiryReminders(): int
     {
         $prescriptions = $this->getExpiringSoon();
@@ -45,12 +44,16 @@ class PrescriptionReminderService
                 $patient = $prescription->patient;
                 if ($patient && $patient->phone) {
                     $message = "داروی {$prescription->drug_name} شما تا {$prescription->end_date->format('Y/m/d')} باقی مانده است.";
-                    // app(SmsManager::class)->send($patient->phone, $message);
-                    Log::info("Reminder sent for prescription {$prescription->code}");
+                    Log::info("Reminder sent for prescription {$prescription->code}", [
+                        'tenant_id' => $this->tenantId,
+                        'prescription_id' => $prescription->id,
+                    ]);
                     $count++;
                 }
             } catch (\Exception $e) {
-                Log::error("Failed to send reminder for prescription {$prescription->code}: " . $e->getMessage());
+                Log::error("Failed to send reminder for prescription {$prescription->code}: " . $e->getMessage(), [
+                    'tenant_id' => $this->tenantId,
+                ]);
             }
         }
 

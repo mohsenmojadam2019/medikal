@@ -10,12 +10,17 @@ use Illuminate\Support\Facades\Log;
 
 class PrescriptionService
 {
-    /**
-     * لیست نسخه‌ها
-     */
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function list(array $filters = [], int $perPage = 15)
     {
-        $query = Prescription::with(['patient.user', 'doctor.user', 'appointment']);
+        $query = Prescription::where('tenant_id', $this->tenantId)
+            ->with(['patient.user', 'doctor.user', 'appointment']);
 
         if (isset($filters['patient_id'])) {
             $query->byPatient($filters['patient_id']);
@@ -47,17 +52,14 @@ class PrescriptionService
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
     }
 
-    /**
-     * ایجاد نسخه از نوبت
-     */
     public function createFromAppointment(Appointment $appointment, array $data): Prescription
     {
         return DB::transaction(function () use ($appointment, $data) {
-            // محاسبه تاریخ پایان
             $startDate = $data['start_date'] ?? now()->toDateString();
             $duration = $data['duration'] ?? 7;
 
             $prescription = Prescription::create([
+                'tenant_id' => $this->tenantId,
                 'appointment_id' => $appointment->id,
                 'patient_id' => $appointment->patient_id,
                 'doctor_id' => $appointment->doctor_id,
@@ -74,34 +76,28 @@ class PrescriptionService
                 'metadata' => $data['metadata'] ?? null,
             ]);
 
-            // تولید یادآوری‌ها
             $this->generateReminders($prescription);
 
             return $prescription;
         });
     }
 
-    /**
-     * نمایش نسخه
-     */
     public function show(int $id): Prescription
     {
-        return Prescription::with([
-            'patient.user',
-            'doctor.user',
-            'appointment'
-        ])->findOrFail($id);
+        return Prescription::where('tenant_id', $this->tenantId)
+            ->with([
+                'patient.user',
+                'doctor.user',
+                'appointment'
+            ])
+            ->findOrFail($id);
     }
 
-    /**
-     * به‌روزرسانی نسخه
-     */
     public function update(Prescription $prescription, array $data): Prescription
     {
         return DB::transaction(function () use ($prescription, $data) {
             $prescription->update($data);
 
-            // اگر تاریخ شروع یا مدت تغییر کرد، تاریخ پایان رو محاسبه کن
             if (isset($data['start_date']) || isset($data['duration'])) {
                 $startDate = $data['start_date'] ?? $prescription->start_date;
                 $duration = $data['duration'] ?? $prescription->duration;
@@ -114,9 +110,6 @@ class PrescriptionService
         });
     }
 
-    /**
-     * تغییر وضعیت نسخه
-     */
     public function changeStatus(Prescription $prescription, string $status): Prescription
     {
         $method = match ($status) {
@@ -131,20 +124,15 @@ class PrescriptionService
         return $prescription->fresh();
     }
 
-    /**
-     * حذف نسخه
-     */
     public function delete(Prescription $prescription): void
     {
         $prescription->delete();
     }
 
-    /**
-     * نسخه‌های بیمار
-     */
     public function patientPrescriptions(int $patientId, array $filters = [], int $perPage = 15)
     {
-        $query = Prescription::where('patient_id', $patientId)
+        $query = Prescription::where('tenant_id', $this->tenantId)
+            ->where('patient_id', $patientId)
             ->with(['doctor.user']);
 
         if (isset($filters['status'])) {
@@ -158,12 +146,10 @@ class PrescriptionService
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
     }
 
-    /**
-     * نسخه‌های پزشک
-     */
     public function doctorPrescriptions(int $doctorId, array $filters = [], int $perPage = 15)
     {
-        $query = Prescription::where('doctor_id', $doctorId)
+        $query = Prescription::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->with(['patient.user']);
 
         if (isset($filters['status'])) {
@@ -173,25 +159,17 @@ class PrescriptionService
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
     }
 
-    /**
-     * بررسی تداخل دارویی
-     */
     public function checkInteractions(Prescription $prescription): array
     {
         return $prescription->getDrugInteractions();
     }
 
-    /**
-     * تولید یادآوری‌های دارو
-     */
     public function generateReminders(Prescription $prescription): array
     {
         $reminders = $prescription->generateReminders();
 
-        // ذخیره در دیتابیس (اگر جدول reminders وجود داشته باشه)
-        // یا ارسال به صف برای پردازش
-
         Log::info('Reminders generated for prescription', [
+            'tenant_id' => $this->tenantId,
             'prescription_id' => $prescription->id,
             'patient_id' => $prescription->patient_id,
             'count' => count($reminders),
@@ -200,41 +178,35 @@ class PrescriptionService
         return $reminders;
     }
 
-    /**
-     * نسخه‌های در حال انقضا
-     */
     public function getExpiringSoon(int $days = 3)
     {
-        return Prescription::expiringSoon($days)->with(['patient.user', 'doctor.user'])->get();
+        return Prescription::where('tenant_id', $this->tenantId)
+            ->expiringSoon($days)
+            ->with(['patient.user', 'doctor.user'])
+            ->get();
     }
 
-    /**
-     * نسخه‌های منقضی شده
-     */
     public function getExpired()
     {
-        return Prescription::expired()->with(['patient.user'])->get();
+        return Prescription::where('tenant_id', $this->tenantId)
+            ->expired()
+            ->with(['patient.user'])
+            ->get();
     }
 
-    /**
-     * آمار نسخه‌ها
-     */
     public function getStats(): array
     {
         return [
-            'total' => Prescription::count(),
-            'active' => Prescription::active()->count(),
-            'pending' => Prescription::pending()->count(),
-            'completed' => Prescription::where('status', PrescriptionStatusEnum::COMPLETED)->count(),
-            'cancelled' => Prescription::where('status', PrescriptionStatusEnum::CANCELLED)->count(),
-            'expired' => Prescription::where('status', PrescriptionStatusEnum::EXPIRED)->count(),
-            'expiring_soon' => Prescription::expiringSoon()->count(),
+            'total' => Prescription::where('tenant_id', $this->tenantId)->count(),
+            'active' => Prescription::where('tenant_id', $this->tenantId)->active()->count(),
+            'pending' => Prescription::where('tenant_id', $this->tenantId)->pending()->count(),
+            'completed' => Prescription::where('tenant_id', $this->tenantId)->where('status', PrescriptionStatusEnum::COMPLETED)->count(),
+            'cancelled' => Prescription::where('tenant_id', $this->tenantId)->where('status', PrescriptionStatusEnum::CANCELLED)->count(),
+            'expired' => Prescription::where('tenant_id', $this->tenantId)->where('status', PrescriptionStatusEnum::EXPIRED)->count(),
+            'expiring_soon' => Prescription::where('tenant_id', $this->tenantId)->expiringSoon()->count(),
         ];
     }
 
-    /**
-     * چاپ نسخه
-     */
     public function getPrintData(Prescription $prescription): array
     {
         return [

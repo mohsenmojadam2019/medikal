@@ -6,39 +6,41 @@ use App\Models\Doctor;
 use App\Models\Clinic;
 use App\Models\City;
 use App\Models\Province;
+use App\Models\Specialty;
+use App\Models\Rating;
 use Illuminate\Support\Facades\Cache;
 
 class LocationService
 {
-    /**
-     * جستجوی پزشکان بر اساس موقعیت مکانی
-     */
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function findNearbyDoctors($lat, $lng, $radius = 10, $filters = [], $perPage = 15)
     {
-        $query = Doctor::with(['user', 'specialty', 'primaryAddress'])
+        $query = Doctor::where('tenant_id', $this->tenantId)
+            ->with(['user', 'specialty', 'primaryAddress'])
             ->active()
             ->verified()
             ->available();
 
-        // فیلتر بر اساس فاصله
         $query->nearby($lat, $lng, $radius);
 
-        // فیلتر بر اساس تخصص
         if (isset($filters['specialty_id'])) {
             $query->bySpecialty($filters['specialty_id']);
         }
 
-        // فیلتر بر اساس جستجو
         if (isset($filters['search'])) {
             $query->search($filters['search']);
         }
 
-        // فیلتر بر اساس بیمه
         if (isset($filters['insurance'])) {
             $query->byInsurance($filters['insurance']);
         }
 
-        // مرتب‌سازی بر اساس فاصله یا امتیاز
         $sortBy = $filters['sort_by'] ?? 'distance';
         if ($sortBy === 'rating') {
             $query->orderBy('rating', 'desc');
@@ -49,54 +51,47 @@ class LocationService
         return $query->paginate($perPage);
     }
 
-    /**
-     * دریافت کلینیک‌های نزدیک
-     */
     public function findNearbyClinics($lat, $lng, $radius = 10, $perPage = 15)
     {
-        return Clinic::active()
+        return Clinic::where('tenant_id', $this->tenantId)
+            ->active()
             ->nearby($lat, $lng, $radius)
             ->orderBy('distance', 'asc')
             ->paginate($perPage);
     }
 
-    /**
-     * دریافت لیست استان‌ها (با کش)
-     */
     public function getProvinces()
     {
-        return Cache::remember('provinces_list', 3600, function () {
-            return Province::active()->orderBy('name')->get();
-        });
-    }
-
-    /**
-     * دریافت لیست شهرهای یک استان
-     */
-    public function getCitiesByProvince($provinceId)
-    {
-        $cacheKey = "cities_province_{$provinceId}";
-        return Cache::remember($cacheKey, 3600, function () use ($provinceId) {
-            return City::where('province_id', $provinceId)
+        return Cache::remember('provinces_list_' . $this->tenantId, 3600, function () {
+            return Province::where('tenant_id', $this->tenantId)
                 ->active()
                 ->orderBy('name')
                 ->get();
         });
     }
 
-    /**
-     * دریافت لیست تخصص‌ها
-     */
-    public function getSpecialties()
+    public function getCitiesByProvince($provinceId)
     {
-        return Cache::remember('specialties_list', 3600, function () {
-            return Specialty::active()->orderBy('name')->get();
+        $cacheKey = "cities_province_{$provinceId}_" . $this->tenantId;
+        return Cache::remember($cacheKey, 3600, function () use ($provinceId) {
+            return City::where('tenant_id', $this->tenantId)
+                ->where('province_id', $provinceId)
+                ->active()
+                ->orderBy('name')
+                ->get();
         });
     }
 
-    /**
-     * محاسبه فاصله بین دو نقطه
-     */
+    public function getSpecialties()
+    {
+        return Cache::remember('specialties_list_' . $this->tenantId, 3600, function () {
+            return Specialty::where('tenant_id', $this->tenantId)
+                ->active()
+                ->orderBy('name')
+                ->get();
+        });
+    }
+
     public function calculateDistance($lat1, $lng1, $lat2, $lng2): float
     {
         $theta = $lng1 - $lng2;
@@ -108,31 +103,28 @@ class LocationService
         return $miles * 1.609344;
     }
 
-    /**
-     * دریافت اطلاعات کامل یک پزشک برای نمایش در پروفایل
-     */
     public function getDoctorProfile($id)
     {
-        return Doctor::with([
-            'user',
-            'specialty',
-            'primaryAddress',
-            'primaryAddress.province',
-            'primaryAddress.city',
-            'schedules',
-            'ratings' => function ($query) {
-                $query->orderBy('created_at', 'desc')->limit(10);
-            },
-            'ratings.patient.user',
-        ])->findOrFail($id);
+        return Doctor::where('tenant_id', $this->tenantId)
+            ->with([
+                'user',
+                'specialty',
+                'primaryAddress',
+                'primaryAddress.province',
+                'primaryAddress.city',
+                'schedules',
+                'ratings' => function ($query) {
+                    $query->orderBy('created_at', 'desc')->limit(10);
+                },
+                'ratings.patient.user',
+            ])
+            ->findOrFail($id);
     }
 
-    /**
-     * دریافت نظرات پزشک
-     */
     public function getDoctorReviews($doctorId, $perPage = 15)
     {
-        return Rating::where('doctor_id', $doctorId)
+        return Rating::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->with(['patient.user'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);

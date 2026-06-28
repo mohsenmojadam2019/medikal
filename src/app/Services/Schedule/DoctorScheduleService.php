@@ -9,9 +9,17 @@ use Illuminate\Support\Facades\DB;
 
 class DoctorScheduleService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getWeeklySchedule(int $doctorId): array
     {
-        $schedules = DoctorSchedule::where('doctor_id', $doctorId)
+        $schedules = DoctorSchedule::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->where('is_special', false)
             ->where('is_active', true)
             ->orderBy('day_of_week')
@@ -27,7 +35,8 @@ class DoctorScheduleService
 
     public function getSpecialSchedules(int $doctorId): array
     {
-        return DoctorSchedule::where('doctor_id', $doctorId)
+        return DoctorSchedule::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->where('is_special', true)
             ->where('is_active', true)
             ->orderBy('special_date')
@@ -44,9 +53,9 @@ class DoctorScheduleService
                     continue;
                 }
 
-                // ✅ استفاده از updateOrCreate برای جلوگیری از duplicate
                 $record = DoctorSchedule::updateOrCreate(
                     [
+                        'tenant_id' => $this->tenantId,
                         'doctor_id' => $doctorId,
                         'day_of_week' => $schedule['day_of_week'],
                         'is_special' => false,
@@ -72,7 +81,8 @@ class DoctorScheduleService
     public function setSpecialSchedule(int $doctorId, array $data): DoctorSchedule
     {
         return DB::transaction(function () use ($doctorId, $data) {
-            $existing = DoctorSchedule::where('doctor_id', $doctorId)
+            $existing = DoctorSchedule::where('tenant_id', $this->tenantId)
+                ->where('doctor_id', $doctorId)
                 ->where('is_special', true)
                 ->whereDate('special_date', $data['special_date'])
                 ->first();
@@ -88,6 +98,7 @@ class DoctorScheduleService
             }
 
             return DoctorSchedule::create([
+                'tenant_id' => $this->tenantId,
                 'doctor_id' => $doctorId,
                 'day_of_week' => Carbon::parse($data['special_date'])->dayOfWeek,
                 'start_time' => $data['start_time'] ?? null,
@@ -104,13 +115,17 @@ class DoctorScheduleService
 
     public function deleteSpecialSchedule(int $scheduleId): void
     {
-        $schedule = DoctorSchedule::where('is_special', true)->findOrFail($scheduleId);
+        $schedule = DoctorSchedule::where('tenant_id', $this->tenantId)
+            ->where('is_special', true)
+            ->findOrFail($scheduleId);
+
         $schedule->delete();
     }
 
     public function copyFromPreviousWeek(int $doctorId): array
     {
-        $lastWeekSchedules = DoctorSchedule::where('doctor_id', $doctorId)
+        $lastWeekSchedules = DoctorSchedule::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->where('is_special', false)
             ->where('is_active', true)
             ->get();
@@ -120,14 +135,15 @@ class DoctorScheduleService
         }
 
         return DB::transaction(function () use ($doctorId, $lastWeekSchedules) {
-            // حذف زمانبندی فعلی
-            DoctorSchedule::where('doctor_id', $doctorId)
+            DoctorSchedule::where('tenant_id', $this->tenantId)
+                ->where('doctor_id', $doctorId)
                 ->where('is_special', false)
                 ->delete();
 
             $created = [];
             foreach ($lastWeekSchedules as $schedule) {
                 $created[] = DoctorSchedule::create([
+                    'tenant_id' => $this->tenantId,
                     'doctor_id' => $doctorId,
                     'day_of_week' => $schedule->day_of_week,
                     'start_time' => $schedule->start_time,
@@ -152,7 +168,8 @@ class DoctorScheduleService
 
         $weeklySchedules = $this->getWeeklySchedule($doctorId);
 
-        $specialSchedules = DoctorSchedule::where('doctor_id', $doctorId)
+        $specialSchedules = DoctorSchedule::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->where('is_special', true)
             ->whereBetween('special_date', [$startDate, $endDate])
             ->get()
@@ -160,7 +177,8 @@ class DoctorScheduleService
                 return $item->special_date->format('Y-m-d');
             });
 
-        $appointments = \App\Models\Appointment::where('doctor_id', $doctorId)
+        $appointments = \App\Models\Appointment::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->whereBetween('date', [$startDate, $endDate])
             ->whereIn('status', ['pending', 'confirmed', 'arrived', 'in_progress'])
             ->get()
@@ -210,7 +228,8 @@ class DoctorScheduleService
         $carbonDate = Carbon::parse($date);
         $dayOfWeek = $carbonDate->dayOfWeek;
 
-        $special = DoctorSchedule::where('doctor_id', $doctorId)
+        $special = DoctorSchedule::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->where('is_special', true)
             ->whereDate('special_date', $date)
             ->first();
@@ -225,7 +244,8 @@ class DoctorScheduleService
             ];
         }
 
-        $schedule = DoctorSchedule::where('doctor_id', $doctorId)
+        $schedule = DoctorSchedule::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->where('day_of_week', $dayOfWeek)
             ->where('is_special', false)
             ->where('is_active', true)

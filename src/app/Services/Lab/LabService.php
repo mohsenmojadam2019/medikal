@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 
 class LabService
 {
+    protected $tenantId;
     protected InvoiceService $invoiceService;
     protected NotificationService $notificationService;
 
@@ -24,19 +25,17 @@ class LabService
         InvoiceService $invoiceService,
         NotificationService $notificationService
     ) {
+        $this->tenantId = session('tenant_id');
         $this->invoiceService = $invoiceService;
         $this->notificationService = $notificationService;
     }
 
-    // ============================================================
-    // ORDER MANAGEMENT
-    // ============================================================
-
     public function createOrder(array $data): LabOrder
     {
         return DB::transaction(function () use ($data) {
-            // 1. ایجاد سفارش
+            $data['tenant_id'] = $this->tenantId;
             $order = LabOrder::create([
+                'tenant_id' => $this->tenantId,
                 'patient_id' => $data['patient_id'],
                 'doctor_id' => $data['doctor_id'] ?? auth()->user()->doctor?->id,
                 'appointment_id' => $data['appointment_id'] ?? null,
@@ -48,16 +47,16 @@ class LabService
                 'metadata' => $data['metadata'] ?? null,
             ]);
 
-            // 2. اضافه کردن تست‌ها
             $totalPrice = 0;
             foreach ($data['tests'] as $testData) {
-                $test = LabTest::findOrFail($testData['test_id']);
+                $test = LabTest::where('tenant_id', $this->tenantId)->findOrFail($testData['test_id']);
                 $unitPrice = $testData['unit_price'] ?? $test->price;
                 $quantity = $testData['quantity'] ?? 1;
                 $discount = $testData['discount'] ?? 0;
                 $totalPrice += ($unitPrice * $quantity) - $discount;
 
                 LabOrderTest::create([
+                    'tenant_id' => $this->tenantId,
                     'lab_order_id' => $order->id,
                     'lab_test_id' => $testData['test_id'],
                     'unit_price' => $unitPrice,
@@ -69,10 +68,7 @@ class LabService
                 ]);
             }
 
-            // 3. ایجاد فاکتور
-            $invoice = $this->createInvoice($order, $totalPrice);
-
-            // 4. ارسال نوتیفیکیشن به پزشک و بیمار
+            $this->createInvoice($order, $totalPrice);
             $this->sendOrderCreatedNotifications($order);
 
             return $order->fresh(['patient', 'doctor', 'orderTests', 'orderTests.labTest']);
@@ -81,23 +77,26 @@ class LabService
 
     public function getOrder(int $id): LabOrder
     {
-        return LabOrder::with([
-            'patient.user',
-            'doctor.user',
-            'doctor.specialty',
-            'appointment',
-            'orderTests.labTest',
-            'orderTests.labTest.category',
-            'results.labTest',
-            'results.files',
-            'invoice',
-            'labTechnician',
-        ])->findOrFail($id);
+        return LabOrder::where('tenant_id', $this->tenantId)
+            ->with([
+                'patient.user',
+                'doctor.user',
+                'doctor.specialty',
+                'appointment',
+                'orderTests.labTest',
+                'orderTests.labTest.category',
+                'results.labTest',
+                'results.files',
+                'invoice',
+                'labTechnician',
+            ])
+            ->findOrFail($id);
     }
 
     public function getOrders(array $filters = [], int $perPage = 15)
     {
-        $query = LabOrder::with(['patient.user', 'doctor.user', 'orderTests.labTest']);
+        $query = LabOrder::where('tenant_id', $this->tenantId)
+            ->with(['patient.user', 'doctor.user', 'orderTests.labTest']);
 
         if (isset($filters['patient_id'])) {
             $query->byPatient($filters['patient_id']);
@@ -146,28 +145,21 @@ class LabService
 
     public function updateOrderStatus(int $orderId, string $status, ?string $reason = null): LabOrder
     {
-        $order = LabOrder::findOrFail($orderId);
+        $order = LabOrder::where('tenant_id', $this->tenantId)->findOrFail($orderId);
         $statusEnum = LabOrderStatusEnum::from($status);
 
         $order->changeStatus($statusEnum, $reason);
-
-        // ارسال نوتیفیکیشن بر اساس وضعیت جدید
         $this->sendStatusUpdateNotifications($order, $statusEnum);
 
         return $order->fresh();
     }
 
-    // ============================================================
-    // RESULT MANAGEMENT
-    // ============================================================
-
     public function addResult(array $data): LabResult
     {
         return DB::transaction(function () use ($data) {
-            $order = LabOrder::findOrFail($data['lab_order_id']);
-            $test = LabTest::findOrFail($data['lab_test_id']);
+            $order = LabOrder::where('tenant_id', $this->tenantId)->findOrFail($data['lab_order_id']);
+            $test = LabTest::where('tenant_id', $this->tenantId)->findOrFail($data['lab_test_id']);
 
-            // بررسی مقدار و تعیین وضعیت
             $isAbnormal = false;
             $isCritical = false;
             $status = LabResultStatusEnum::PENDING;
@@ -185,7 +177,9 @@ class LabService
                 }
             }
 
+            $data['tenant_id'] = $this->tenantId;
             $result = LabResult::create([
+                'tenant_id' => $this->tenantId,
                 'lab_order_id' => $data['lab_order_id'],
                 'lab_order_test_id' => $data['lab_order_test_id'] ?? null,
                 'lab_test_id' => $data['lab_test_id'],
@@ -201,12 +195,10 @@ class LabService
                 'metadata' => $data['metadata'] ?? null,
             ]);
 
-            // اگر نتیجه بحرانی است، نوتیفیکیشن فوری ارسال کن
             if ($isCritical) {
                 $this->sendCriticalResultNotification($order, $result);
             }
 
-            // به‌روزرسانی وضعیت سفارش
             $this->updateOrderStatusAfterResult($order);
 
             return $result->fresh(['labTest', 'files']);
@@ -224,28 +216,24 @@ class LabService
 
     public function verifyResult(int $resultId): LabResult
     {
-        $result = LabResult::findOrFail($resultId);
+        $result = LabResult::where('tenant_id', $this->tenantId)->findOrFail($resultId);
         $result->verify();
         return $result->fresh();
     }
 
     public function deleteResult(int $resultId): void
     {
-        $result = LabResult::findOrFail($resultId);
+        $result = LabResult::where('tenant_id', $this->tenantId)->findOrFail($resultId);
         $result->delete();
 
-        // به‌روزرسانی وضعیت سفارش
         $order = $result->labOrder;
         $this->updateOrderStatusAfterResult($order);
     }
 
-    // ============================================================
-    // INVOICE MANAGEMENT
-    // ============================================================
-
     public function createInvoice(LabOrder $order, float $totalPrice): Invoice
     {
         return Invoice::create([
+            'tenant_id' => $this->tenantId,
             'patient_id' => $order->patient_id,
             'invoice_number' => $this->generateInvoiceNumber(),
             'amount' => $totalPrice,
@@ -284,13 +272,8 @@ class LabService
         return $items;
     }
 
-    // ============================================================
-    // NOTIFICATIONS
-    // ============================================================
-
     protected function sendOrderCreatedNotifications(LabOrder $order): void
     {
-        // ارسال به پزشک
         if ($order->doctor && $order->doctor->user) {
             $this->notificationService->sendToUser(
                 $order->doctor->user_id,
@@ -301,7 +284,6 @@ class LabService
             );
         }
 
-        // ارسال به بیمار
         if ($order->patient && $order->patient->user) {
             $this->notificationService->sendToUser(
                 $order->patient->user_id,
@@ -345,7 +327,6 @@ class LabService
 
     protected function sendCriticalResultNotification(LabOrder $order, LabResult $result): void
     {
-        // ارسال به پزشک معالج
         if ($order->doctor && $order->doctor->user) {
             $this->notificationService->sendToUser(
                 $order->doctor->user_id,
@@ -362,7 +343,6 @@ class LabService
             );
         }
 
-        // ارسال به بیمار
         if ($order->patient && $order->patient->user) {
             $this->notificationService->sendToUser(
                 $order->patient->user_id,
@@ -404,13 +384,9 @@ class LabService
         }
     }
 
-    // ============================================================
-    // STATISTICS
-    // ============================================================
-
     public function getStats(array $filters = []): array
     {
-        $query = LabOrder::query();
+        $query = LabOrder::where('tenant_id', $this->tenantId);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('created_at', '>=', $filters['from_date']);
@@ -431,19 +407,16 @@ class LabService
             'pending_orders' => (clone $query)->pending()->count(),
             'cancelled_orders' => (clone $query)->where('status', LabOrderStatusEnum::CANCELLED)->count(),
             'rejected_orders' => (clone $query)->where('status', LabOrderStatusEnum::REJECTED)->count(),
-            'critical_results' => LabResult::critical()->count(),
-            'abnormal_results' => LabResult::abnormal()->count(),
+            'critical_results' => LabResult::where('tenant_id', $this->tenantId)->critical()->count(),
+            'abnormal_results' => LabResult::where('tenant_id', $this->tenantId)->abnormal()->count(),
             'total_revenue' => (clone $query)->completed()->sum('total_price'),
         ];
     }
 
-    // ============================================================
-    // CATEGORY & TEST MANAGEMENT
-    // ============================================================
-
     public function getCategories(array $filters = [], int $perPage = 20)
     {
-        $query = LabCategory::withCount('tests');
+        $query = LabCategory::where('tenant_id', $this->tenantId)
+            ->withCount('tests');
 
         if (isset($filters['search'])) {
             $query->where('name', 'LIKE', "%{$filters['search']}%");
@@ -458,7 +431,8 @@ class LabService
 
     public function getTests(array $filters = [], int $perPage = 20)
     {
-        $query = LabTest::with(['category']);
+        $query = LabTest::where('tenant_id', $this->tenantId)
+            ->with(['category']);
 
         if (isset($filters['search'])) {
             $query->search($filters['search']);
@@ -477,7 +451,8 @@ class LabService
 
     public function getActiveTests()
     {
-        return LabTest::active()
+        return LabTest::where('tenant_id', $this->tenantId)
+            ->active()
             ->with(['category'])
             ->orderBy('name')
             ->get();
@@ -485,6 +460,7 @@ class LabService
 
     public function createCategory(array $data): LabCategory
     {
+        $data['tenant_id'] = $this->tenantId;
         return LabCategory::create($data);
     }
 
@@ -501,6 +477,7 @@ class LabService
 
     public function createTest(array $data): LabTest
     {
+        $data['tenant_id'] = $this->tenantId;
         return LabTest::create($data);
     }
 

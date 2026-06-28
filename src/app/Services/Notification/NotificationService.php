@@ -9,6 +9,13 @@ use Illuminate\Support\Facades\Log;
 
 class NotificationService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function sendToUser(
         int $userId,
         string $title,
@@ -19,6 +26,7 @@ class NotificationService
         ?int $senderId = null
     ): Notification {
         return Notification::create([
+            'tenant_id' => $this->tenantId,
             'user_id' => $userId,
             'sender_id' => $senderId ?? auth()->id(),
             'title' => $title,
@@ -45,6 +53,7 @@ class NotificationService
 
         foreach ($userIds as $userId) {
             $notifications[] = [
+                'tenant_id' => $this->tenantId,
                 'user_id' => $userId,
                 'sender_id' => $senderId ?? auth()->id(),
                 'title' => $title,
@@ -125,7 +134,8 @@ class NotificationService
         string $type = 'system',
         string $priority = 'normal'
     ): int {
-        $userIds = \App\Models\Patient::where('doctor_id', $doctorId)
+        $userIds = \App\Models\Patient::where('tenant_id', $this->tenantId)
+            ->where('doctor_id', $doctorId)
             ->with('user')
             ->get()
             ->pluck('user.id')
@@ -141,14 +151,16 @@ class NotificationService
 
     public function getUserNotifications(int $userId, int $perPage = 20)
     {
-        return Notification::byUser($userId)
+        return Notification::where('tenant_id', $this->tenantId)
+            ->byUser($userId)
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     public function getUnreadNotifications(int $userId)
     {
-        return Notification::byUser($userId)
+        return Notification::where('tenant_id', $this->tenantId)
+            ->byUser($userId)
             ->unread()
             ->orderBy('created_at', 'desc')
             ->get();
@@ -156,12 +168,16 @@ class NotificationService
 
     public function getUnreadCount(int $userId): int
     {
-        return Notification::byUser($userId)->unread()->count();
+        return Notification::where('tenant_id', $this->tenantId)
+            ->byUser($userId)
+            ->unread()
+            ->count();
     }
 
     public function markAllAsRead(int $userId): int
     {
-        return Notification::byUser($userId)
+        return Notification::where('tenant_id', $this->tenantId)
+            ->byUser($userId)
             ->unread()
             ->update([
                 'is_read' => true,
@@ -171,7 +187,8 @@ class NotificationService
 
     public function deleteOldNotifications(int $days = 30): int
     {
-        return Notification::where('created_at', '<', now()->subDays($days))
+        return Notification::where('tenant_id', $this->tenantId)
+            ->where('created_at', '<', now()->subDays($days))
             ->delete();
     }
 }

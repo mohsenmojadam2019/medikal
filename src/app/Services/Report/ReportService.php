@@ -17,6 +17,13 @@ use Illuminate\Support\Facades\Log;
 
 class ReportService
 {
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
+
     public function getAvailableReports(): array
     {
         return [
@@ -62,7 +69,10 @@ class ReportService
             return Excel::download($export, $fileName);
 
         } catch (\Exception $e) {
-            Log::error('Excel export failed: ' . $e->getMessage());
+            Log::error('Excel export failed: ' . $e->getMessage(), [
+                'tenant_id' => $this->tenantId,
+                'type' => $type,
+            ]);
             throw $e;
         }
     }
@@ -84,7 +94,10 @@ class ReportService
             return $pdf->download($fileName);
 
         } catch (\Exception $e) {
-            Log::error('PDF export failed: ' . $e->getMessage());
+            Log::error('PDF export failed: ' . $e->getMessage(), [
+                'tenant_id' => $this->tenantId,
+                'type' => $type,
+            ]);
             throw $e;
         }
     }
@@ -106,7 +119,10 @@ class ReportService
             return $pdf->stream($fileName);
 
         } catch (\Exception $e) {
-            Log::error('PDF stream failed: ' . $e->getMessage());
+            Log::error('PDF stream failed: ' . $e->getMessage(), [
+                'tenant_id' => $this->tenantId,
+                'type' => $type,
+            ]);
             throw $e;
         }
     }
@@ -124,7 +140,8 @@ class ReportService
 
     protected function getAppointmentsData(array $filters)
     {
-        $query = Appointment::with(['patient.user', 'doctor.user', 'doctor.specialty']);
+        $query = Appointment::where('tenant_id', $this->tenantId)
+            ->with(['patient.user', 'doctor.user', 'doctor.specialty']);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('date', '>=', $filters['from_date']);
@@ -147,7 +164,8 @@ class ReportService
 
     protected function getPatientsData(array $filters)
     {
-        $query = Patient::with(['user', 'doctor.user']);
+        $query = Patient::where('tenant_id', $this->tenantId)
+            ->with(['user', 'doctor.user']);
 
         if (isset($filters['search'])) {
             $query->search($filters['search']);
@@ -166,7 +184,8 @@ class ReportService
 
     protected function getDoctorsData(array $filters)
     {
-        $query = Doctor::with(['user', 'specialty']);
+        $query = Doctor::where('tenant_id', $this->tenantId)
+            ->with(['user', 'specialty']);
 
         if (isset($filters['search'])) {
             $query->search($filters['search']);
@@ -185,7 +204,8 @@ class ReportService
 
     protected function getRevenueData(array $filters)
     {
-        $query = Invoice::with(['patient.user', 'appointment']);
+        $query = Invoice::where('tenant_id', $this->tenantId)
+            ->with(['patient.user', 'appointment']);
 
         if (isset($filters['from_date'])) {
             $query->whereDate('created_at', '>=', $filters['from_date']);

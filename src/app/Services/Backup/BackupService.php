@@ -12,20 +12,19 @@ class BackupService
 {
     protected $disk;
     protected $backupPath;
+    protected $tenantId;
 
     public function __construct()
     {
         $this->disk = config('backup.disk', 'local');
         $this->backupPath = config('backup.path', 'backups');
+        $this->tenantId = session('tenant_id');
     }
-
-    // ============================================================
-    // 1. DATABASE BACKUP
-    // ============================================================
 
     public function backupDatabase(): array
     {
         $backup = BackupHistory::create([
+            'tenant_id' => $this->tenantId,
             'name' => 'database_backup_' . now()->format('Y-m-d_H-i-s'),
             'type' => 'database',
             'status' => 'pending',
@@ -36,16 +35,14 @@ class BackupService
             $backup->markAsRunning();
 
             $fileName = $backup->name . '.sql';
-            $filePath = $this->backupPath . '/database/' . $fileName;
+            $filePath = $this->backupPath . '/database/' . ($this->tenantId ? 'tenant_' . $this->tenantId . '/' : '') . $fileName;
 
-            // گرفتن بک‌آپ از دیتابیس
             $this->dumpDatabase($filePath);
 
             $fileSize = Storage::disk($this->disk)->size($filePath);
 
             $backup->markAsCompleted($filePath, $fileSize);
 
-            // فشرده‌سازی
             $this->compressBackup($filePath);
 
             return [
@@ -75,7 +72,6 @@ class BackupService
         $user = $database['username'];
         $password = $database['password'];
 
-        // روش 1: استفاده از mysqldump
         $command = sprintf(
             'mysqldump --host=%s --port=%s --user=%s --password=%s %s > %s',
             $host,
@@ -89,7 +85,6 @@ class BackupService
         exec($command, $output, $returnCode);
 
         if ($returnCode !== 0) {
-            // روش 2: استفاده از PHP (برای محیط‌هایی که mysqldump ندارند)
             $this->dumpDatabaseWithPHP($filePath);
         }
     }
@@ -103,21 +98,19 @@ class BackupService
         $content .= "-- Generated: " . now() . "\n\n";
 
         foreach ($tables as $table) {
-            // ساختار جدول
             $create = $connection->select("SHOW CREATE TABLE `$table`");
-            if (!empty($create)) {
+            if (empty($create) == false) {
                 $content .= $create[0]->{'Create Table'} . ";\n\n";
             }
 
-            // داده‌های جدول
             $rows = $connection->table($table)->get();
-            if ($rows->isNotEmpty()) {
+            if ($rows->isEmpty() == false) {
                 $content .= "INSERT INTO `$table` VALUES\n";
                 $values = [];
                 foreach ($rows as $row) {
                     $rowArray = (array) $row;
                     $escaped = array_map(function ($value) {
-                        if ($value === null) return 'NULL';
+                        if (is_null($value)) return 'NULL';
                         return "'" . addslashes($value) . "'";
                     }, $rowArray);
                     $values[] = "(" . implode(", ", $escaped) . ")";
@@ -129,13 +122,10 @@ class BackupService
         Storage::disk($this->disk)->put($filePath, $content);
     }
 
-    // ============================================================
-    // 2. FILES BACKUP
-    // ============================================================
-
     public function backupFiles(array $paths = []): array
     {
         $backup = BackupHistory::create([
+            'tenant_id' => $this->tenantId,
             'name' => 'files_backup_' . now()->format('Y-m-d_H-i-s'),
             'type' => 'files',
             'status' => 'pending',
@@ -146,7 +136,7 @@ class BackupService
             $backup->markAsRunning();
 
             $fileName = $backup->name . '.zip';
-            $filePath = $this->backupPath . '/files/' . $fileName;
+            $filePath = $this->backupPath . '/files/' . ($this->tenantId ? 'tenant_' . $this->tenantId . '/' : '') . $fileName;
 
             $this->zipFiles($paths, $filePath);
 
@@ -214,10 +204,6 @@ class BackupService
         }
     }
 
-    // ============================================================
-    // 3. COMPRESS BACKUP
-    // ============================================================
-
     private function compressBackup(string $filePath): void
     {
         try {
@@ -226,7 +212,6 @@ class BackupService
                 $compressedPath = $fullPath . '.gz';
                 $this->gzipFile($fullPath, $compressedPath);
                 unlink($fullPath);
-                // به‌روزرسانی مسیر فایل در دیتابیس
                 $backup = BackupHistory::where('file_path', $filePath)->first();
                 if ($backup) {
                     $backup->update(['file_path' => $filePath . '.gz']);
@@ -241,20 +226,20 @@ class BackupService
     {
         $fp = gzopen($destination, 'wb9');
         $file = fopen($source, 'rb');
-        while (!feof($file)) {
+        while (feof($file) == false) {
             gzwrite($fp, fread($file, 1024 * 1024));
         }
         fclose($file);
         gzclose($fp);
     }
 
-    // ============================================================
-    // 4. RESTORE
-    // ============================================================
-
     public function restoreBackup(int $backupId): array
     {
-        $backup = BackupHistory::findOrFail($backupId);
+        $backup = BackupHistory::with('tenant')->findOrFail($backupId);
+
+        if ($backup->tenant_id && $backup->tenant_id != $this->tenantId) {
+            return ['success' => false, 'error' => 'شما دسترسی به این بک‌آپ ندارید'];
+        }
 
         if ($backup->status !== 'completed') {
             return ['success' => false, 'error' => 'Backup file is not valid'];
@@ -263,7 +248,7 @@ class BackupService
         $filePath = $backup->file_path;
         $fullPath = storage_path('app/' . $filePath);
 
-        if (!file_exists($fullPath)) {
+        if (file_exists($fullPath) == false) {
             return ['success' => false, 'error' => 'Backup file not found'];
         }
 
@@ -289,7 +274,6 @@ class BackupService
 
     private function restoreDatabase(string $filePath): void
     {
-        // اگر فایل فشرده است
         if (pathinfo($filePath, PATHINFO_EXTENSION) === 'gz') {
             $content = gzdecode(file_get_contents($filePath));
             $tempFile = tempnam(sys_get_temp_dir(), 'sql');
@@ -332,16 +316,17 @@ class BackupService
         }
     }
 
-    // ============================================================
-    // 5. CLEANUP OLD BACKUPS
-    // ============================================================
-
     public function cleanupOldBackups(int $days = 30): int
     {
+        $query = BackupHistory::where('status', 'completed')
+            ->where('created_at', '<', Carbon::now()->subDays($days));
+
+        if ($this->tenantId) {
+            $query->where('tenant_id', $this->tenantId);
+        }
+
+        $oldBackups = $query->get();
         $count = 0;
-        $oldBackups = BackupHistory::where('status', 'completed')
-            ->where('created_at', '<', Carbon::now()->subDays($days))
-            ->get();
 
         foreach ($oldBackups as $backup) {
             try {
@@ -358,13 +343,13 @@ class BackupService
         return $count;
     }
 
-    // ============================================================
-    // 6. GET BACKUP HISTORY
-    // ============================================================
-
     public function getBackupHistory(array $filters = [], int $perPage = 20)
     {
         $query = BackupHistory::query();
+
+        if ($this->tenantId) {
+            $query->where('tenant_id', $this->tenantId);
+        }
 
         if (isset($filters['type'])) {
             $query->byType($filters['type']);

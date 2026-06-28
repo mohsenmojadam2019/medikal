@@ -10,13 +10,17 @@ use Carbon\Carbon;
 
 class LogStorageService
 {
-    // ============================================================
-    // 1. AUDIT LOG
-    // ============================================================
+    protected $tenantId;
+
+    public function __construct()
+    {
+        $this->tenantId = session('tenant_id');
+    }
 
     public function log($event, $modelType = null, $modelId = null, $oldValues = null, $newValues = null, $metadata = null): AuditLog
     {
         return AuditLog::create([
+            'tenant_id' => $this->tenantId,
             'user_id' => auth()->id(),
             'event' => $event,
             'model_type' => $modelType,
@@ -34,7 +38,7 @@ class LogStorageService
 
     public function getAuditLogs(array $filters = [], int $perPage = 50)
     {
-        $query = AuditLog::with(['user']);
+        $query = AuditLog::where('tenant_id', $this->tenantId)->with(['user']);
 
         if (isset($filters['user_id'])) {
             $query->byUser($filters['user_id']);
@@ -59,10 +63,6 @@ class LogStorageService
         return $query->recent($perPage);
     }
 
-    // ============================================================
-    // 2. LOG ARCHIVE
-    // ============================================================
-
     public function archiveLogs(string $type = 'laravel'): array
     {
         $logPath = storage_path('logs');
@@ -76,11 +76,11 @@ class LogStorageService
 
             if (!$date) continue;
 
-            // آرشیو کردن فایل‌های قدیمی (بیشتر از 7 روز)
             if ($date->diffInDays(now()) > 7) {
                 try {
                     $archivePath = $this->moveToArchive($file, $type);
                     LogArchive::create([
+                        'tenant_id' => $this->tenantId,
                         'file_name' => $filename,
                         'file_path' => $archivePath,
                         'file_size' => $file->getSize(),
@@ -104,12 +104,9 @@ class LogStorageService
 
     private function extractDateFromLogFile(string $filename): ?Carbon
     {
-        // laravel-2026-06-29.log
         if (preg_match('/laravel-(\d{4}-\d{2}-\d{2})\.log/', $filename, $matches)) {
             return Carbon::parse($matches[1]);
         }
-
-        // other log patterns
         return null;
     }
 
@@ -122,12 +119,8 @@ class LogStorageService
 
         $filename = $file->getFilename();
         $archivePath = $archiveDir . '/' . $filename;
-
-        // فشرده‌سازی
         $compressedPath = $archivePath . '.gz';
         $this->gzipFile($file->getPathname(), $compressedPath);
-
-        // حذف فایل اصلی
         File::delete($file->getPathname());
 
         return $compressedPath;
@@ -144,13 +137,9 @@ class LogStorageService
         gzclose($fp);
     }
 
-    // ============================================================
-    // 3. RETRIEVE ARCHIVED LOGS
-    // ============================================================
-
     public function getArchivedLogs(array $filters = [], int $perPage = 20)
     {
-        $query = LogArchive::query();
+        $query = LogArchive::where('tenant_id', $this->tenantId);
 
         if (isset($filters['type'])) {
             $query->byType($filters['type']);
@@ -169,18 +158,16 @@ class LogStorageService
 
     public function restoreArchivedLog(int $archiveId): array
     {
-        $archive = LogArchive::findOrFail($archiveId);
+        $archive = LogArchive::where('tenant_id', $this->tenantId)->findOrFail($archiveId);
 
         if (!File::exists($archive->file_path)) {
             return ['success' => false, 'error' => 'فایل آرشیو یافت نشد'];
         }
 
         try {
-            // باز کردن فایل فشرده
             $content = gzdecode(file_get_contents($archive->file_path));
             $restorePath = storage_path('logs/restored/' . $archive->file_name);
 
-            // ایجاد پوشه
             $restoreDir = dirname($restorePath);
             if (!File::exists($restoreDir)) {
                 File::makeDirectory($restoreDir, 0755, true);
@@ -202,14 +189,11 @@ class LogStorageService
         }
     }
 
-    // ============================================================
-    // 4. CLEANUP ARCHIVED LOGS
-    // ============================================================
-
     public function cleanupArchivedLogs(int $days = 90): int
     {
         $count = 0;
-        $oldArchives = LogArchive::where('archived_at', '<', Carbon::now()->subDays($days))
+        $oldArchives = LogArchive::where('tenant_id', $this->tenantId)
+            ->where('archived_at', '<', Carbon::now()->subDays($days))
             ->get();
 
         foreach ($oldArchives as $archive) {
@@ -227,25 +211,22 @@ class LogStorageService
         return $count;
     }
 
-    // ============================================================
-    // 5. STATISTICS
-    // ============================================================
-
     public function getStats(): array
     {
         return [
-            'total_audit_logs' => AuditLog::count(),
-            'today_audit_logs' => AuditLog::whereDate('created_at', today())->count(),
-            'total_archived_logs' => LogArchive::count(),
-            'archived_by_type' => LogArchive::selectRaw('type, count(*) as count')
+            'total_audit_logs' => AuditLog::where('tenant_id', $this->tenantId)->count(),
+            'today_audit_logs' => AuditLog::where('tenant_id', $this->tenantId)->whereDate('created_at', today())->count(),
+            'total_archived_logs' => LogArchive::where('tenant_id', $this->tenantId)->count(),
+            'archived_by_type' => LogArchive::where('tenant_id', $this->tenantId)
+                ->selectRaw('type, count(*) as count')
                 ->groupBy('type')
                 ->get()
                 ->pluck('count', 'type')
                 ->toArray(),
-            'total_backups' => \App\Models\BackupHistory::count(),
-            'successful_backups' => \App\Models\BackupHistory::where('status', 'completed')->count(),
-            'failed_backups' => \App\Models\BackupHistory::where('status', 'failed')->count(),
-            'total_backup_size' => \App\Models\BackupHistory::where('status', 'completed')->sum('file_size'),
+            'total_backups' => \App\Models\BackupHistory::where('tenant_id', $this->tenantId)->count(),
+            'successful_backups' => \App\Models\BackupHistory::where('tenant_id', $this->tenantId)->where('status', 'completed')->count(),
+            'failed_backups' => \App\Models\BackupHistory::where('tenant_id', $this->tenantId)->where('status', 'failed')->count(),
+            'total_backup_size' => \App\Models\BackupHistory::where('tenant_id', $this->tenantId)->where('status', 'completed')->sum('file_size'),
         ];
     }
 }
