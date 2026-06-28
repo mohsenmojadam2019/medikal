@@ -19,16 +19,9 @@ class SurveyController extends Controller
         $this->surveyService = $surveyService;
     }
 
-    // ============================================================
-    // SURVEYS
-    // ============================================================
-
     public function index(Request $request)
     {
-        $surveys = $this->surveyService->getSurveys(
-            $request->all(),
-            $request->get('per_page', 20)
-        );
+        $surveys = $this->surveyService->getSurveys($request->all(), $request->get('per_page', 20));
         return $this->success($surveys);
     }
 
@@ -128,10 +121,6 @@ class SurveyController extends Controller
         }
     }
 
-    // ============================================================
-    // RESPONSES
-    // ============================================================
-
     public function submit(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -157,26 +146,15 @@ class SurveyController extends Controller
 
     public function surveyResponses(Request $request, $surveyId)
     {
-        $responses = $this->surveyService->getSurveyResponses(
-            $surveyId,
-            $request->all(),
-            $request->get('per_page', 20)
-        );
+        $responses = $this->surveyService->getSurveyResponses($surveyId, $request->all(), $request->get('per_page', 20));
         return $this->success($responses);
     }
 
     public function patientResponses(Request $request, $patientId)
     {
-        $responses = $this->surveyService->getPatientResponses(
-            $patientId,
-            $request->get('per_page', 20)
-        );
+        $responses = $this->surveyService->getPatientResponses($patientId, $request->get('per_page', 20));
         return $this->success($responses);
     }
-
-    // ============================================================
-    // FEEDBACK
-    // ============================================================
 
     public function submitFeedback(Request $request)
     {
@@ -205,28 +183,19 @@ class SurveyController extends Controller
 
     public function feedbacks(Request $request)
     {
-        $feedbacks = $this->surveyService->getFeedbacks(
-            $request->all(),
-            $request->get('per_page', 20)
-        );
+        $feedbacks = $this->surveyService->getFeedbacks($request->all(), $request->get('per_page', 20));
         return $this->success($feedbacks);
     }
 
     public function patientFeedbacks(Request $request, $patientId)
     {
-        $feedbacks = $this->surveyService->getPatientFeedbacks(
-            $patientId,
-            $request->get('per_page', 20)
-        );
+        $feedbacks = $this->surveyService->getPatientFeedbacks($patientId, $request->get('per_page', 20));
         return $this->success($feedbacks);
     }
 
     public function doctorFeedbacks(Request $request, $doctorId)
     {
-        $feedbacks = $this->surveyService->getDoctorFeedbacks(
-            $doctorId,
-            $request->get('per_page', 20)
-        );
+        $feedbacks = $this->surveyService->getDoctorFeedbacks($doctorId, $request->get('per_page', 20));
         return $this->success($feedbacks);
     }
 
@@ -257,10 +226,6 @@ class SurveyController extends Controller
             return $this->error($e->getMessage(), 400);
         }
     }
-
-    // ============================================================
-    // REPORTS
-    // ============================================================
 
     public function stats(Request $request)
     {

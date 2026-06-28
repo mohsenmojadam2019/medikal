@@ -21,7 +21,19 @@ class MedicalNoteController extends Controller
 
     public function index(Request $request)
     {
-        $notes = $this->medicalNoteService->getAll($request->all());
+        $notes = $this->medicalNoteService->getNotes($request->all(), $request->get('per_page', 20));
+        return $this->success($notes);
+    }
+
+    public function patientNotes(Request $request, $patientId)
+    {
+        $notes = $this->medicalNoteService->getPatientNotes($patientId, $request->all(), $request->get('per_page', 20));
+        return $this->success($notes);
+    }
+
+    public function doctorNotes(Request $request, $doctorId)
+    {
+        $notes = $this->medicalNoteService->getDoctorNotes($doctorId, $request->all(), $request->get('per_page', 20));
         return $this->success($notes);
     }
 
@@ -33,63 +45,105 @@ class MedicalNoteController extends Controller
             'appointment_id' => 'nullable|exists:appointments,id',
             'title' => 'required|string|max:255',
             'content' => 'required|string',
-            'type' => 'nullable|string|in:general,diagnosis,prescription,followup',
+            'type' => 'nullable|in:general,prescription,diagnosis,follow_up,referral,emergency',
+            'priority' => 'nullable|in:low,normal,high,urgent',
+            'is_private' => 'nullable|boolean',
+            'is_shared' => 'nullable|boolean',
+            'tags' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $note = $this->medicalNoteService->create($request->all());
-        return $this->success($note, 'یادداشت پزشکی با موفقیت ایجاد شد', 201);
+        try {
+            $data = $request->all();
+            $data['doctor_id'] = $data['doctor_id'] ?? auth()->user()->doctor?->id;
+            $note = $this->medicalNoteService->createNote($data);
+            return $this->success($note, 'یادداشت با موفقیت ایجاد شد', 201);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
     }
 
     public function show($id)
     {
-        $note = $this->medicalNoteService->find($id);
-        if (!$note) {
+        try {
+            $note = $this->medicalNoteService->getNote($id);
+            return $this->success($note);
+        } catch (\Exception $e) {
             return $this->error('یادداشت یافت نشد', 404);
         }
-        return $this->success($note);
     }
 
     public function update(Request $request, $id)
     {
+        try {
+            $note = $this->medicalNoteService->getNote($id);
+        } catch (\Exception $e) {
+            return $this->error('یادداشت یافت نشد', 404);
+        }
+
         $validator = Validator::make($request->all(), [
             'title' => 'sometimes|string|max:255',
             'content' => 'sometimes|string',
-            'type' => 'sometimes|string|in:general,diagnosis,prescription,followup',
+            'type' => 'nullable|in:general,prescription,diagnosis,follow_up,referral,emergency',
+            'priority' => 'nullable|in:low,normal,high,urgent',
+            'is_private' => 'nullable|boolean',
+            'is_shared' => 'nullable|boolean',
+            'tags' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $note = $this->medicalNoteService->update($id, $request->all());
-        if (!$note) {
-            return $this->error('یادداشت یافت نشد', 404);
+        try {
+            $note = $this->medicalNoteService->updateNote($note, $request->all());
+            return $this->success($note, 'یادداشت با موفقیت بروزرسانی شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
         }
-        return $this->success($note, 'یادداشت پزشکی با موفقیت بروزرسانی شد');
     }
 
     public function destroy($id)
     {
-        $deleted = $this->medicalNoteService->delete($id);
-        if (!$deleted) {
-            return $this->error('یادداشت یافت نشد', 404);
+        try {
+            $note = $this->medicalNoteService->getNote($id);
+            $this->medicalNoteService->deleteNote($note);
+            return $this->success(null, 'یادداشت با موفقیت حذف شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
         }
-        return $this->success(null, 'یادداشت پزشکی با موفقیت حذف شد');
     }
 
-    public function patientNotes($patientId)
+    public function share($id)
     {
-        $notes = $this->medicalNoteService->getPatientNotes($patientId);
-        return $this->success($notes);
+        try {
+            $note = $this->medicalNoteService->shareNote($id);
+            return $this->success($note, 'یادداشت با موفقیت به اشتراک گذاشته شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
     }
 
-    public function doctorNotes($doctorId)
+    public function unshare($id)
     {
-        $notes = $this->medicalNoteService->getDoctorNotes($doctorId);
-        return $this->success($notes);
+        try {
+            $note = $this->medicalNoteService->unshareNote($id);
+            return $this->success($note, 'اشتراک‌گذاری یادداشت با موفقیت لغو شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    public function summary($patientId)
+    {
+        try {
+            $summary = $this->medicalNoteService->getPatientNoteSummary($patientId);
+            return $this->success($summary);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 404);
+        }
     }
 }

@@ -22,54 +22,58 @@ class TelemedicineController extends Controller
     public function createSession(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'doctor_id' => 'required|exists:doctors,id',
-            'patient_id' => 'required|exists:patients,id',
-            'scheduled_at' => 'required|date|after:now',
-            'duration_minutes' => 'required|integer|min:15|max:120',
+            'appointment_id' => 'required|exists:appointments,id',
             'notes' => 'nullable|string',
+            'metadata' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $session = $this->telemedicineService->createSession($request->all());
-        return $this->success($session, 'جلسه پزشکی از راه دور با موفقیت ایجاد شد', 201);
-    }
-
-    public function listSessions(Request $request)
-    {
-        $sessions = $this->telemedicineService->listSessions($request->all());
-        return $this->success($sessions);
+        try {
+            $session = $this->telemedicineService->createSession($request->all());
+            return $this->success($session, 'جلسه ویزیت آنلاین با موفقیت ایجاد شد', 201);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
     }
 
     public function getSession($id)
     {
-        $session = $this->telemedicineService->getSession($id);
-        if (!$session) {
+        try {
+            $session = $this->telemedicineService->getSession($id);
+            return $this->success($session);
+        } catch (\Exception $e) {
             return $this->error('جلسه یافت نشد', 404);
         }
-        return $this->success($session);
     }
 
     public function getSessionByRoom($roomName)
     {
-        $session = $this->telemedicineService->getSessionByRoom($roomName);
-        if (!$session) {
+        try {
+            $session = $this->telemedicineService->getSessionByRoom($roomName);
+            return $this->success($session);
+        } catch (\Exception $e) {
             return $this->error('جلسه یافت نشد', 404);
         }
-        return $this->success($session);
     }
 
-    public function doctorSessions($doctorId)
+    public function listSessions(Request $request)
     {
-        $sessions = $this->telemedicineService->getDoctorSessions($doctorId);
+        $sessions = $this->telemedicineService->getSessions($request->all(), $request->get('per_page', 15));
         return $this->success($sessions);
     }
 
-    public function patientSessions($patientId)
+    public function doctorSessions(Request $request, $doctorId)
     {
-        $sessions = $this->telemedicineService->getPatientSessions($patientId);
+        $sessions = $this->telemedicineService->getDoctorSessions($doctorId, $request->all(), $request->get('per_page', 15));
+        return $this->success($sessions);
+    }
+
+    public function patientSessions(Request $request, $patientId)
+    {
+        $sessions = $this->telemedicineService->getPatientSessions($patientId, $request->all(), $request->get('per_page', 15));
         return $this->success($sessions);
     }
 
@@ -81,38 +85,120 @@ class TelemedicineController extends Controller
 
     public function startSession($id)
     {
-        $session = $this->telemedicineService->startSession($id);
-        if (!$session) {
-            return $this->error('جلسه یافت نشد', 404);
+        try {
+            $session = $this->telemedicineService->startSession($id);
+            return $this->success($session, 'جلسه با موفقیت شروع شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
         }
-        return $this->success($session, 'جلسه با موفقیت شروع شد');
     }
 
-    public function completeSession(Request $request, $id)
+    public function completeSession($id)
     {
-        $validator = Validator::make($request->all(), [
-            'notes' => 'nullable|string',
-            'prescription' => 'nullable|string',
-            'diagnosis' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+        try {
+            $session = $this->telemedicineService->completeSession($id);
+            return $this->success($session, 'جلسه با موفقیت پایان یافت');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
         }
-
-        $session = $this->telemedicineService->completeSession($id, $request->all());
-        if (!$session) {
-            return $this->error('جلسه یافت نشد', 404);
-        }
-        return $this->success($session, 'جلسه با موفقیت تکمیل شد');
     }
 
     public function cancelSession($id)
     {
-        $session = $this->telemedicineService->cancelSession($id);
-        if (!$session) {
-            return $this->error('جلسه یافت نشد', 404);
+        try {
+            $session = $this->telemedicineService->cancelSession($id);
+            return $this->success($session, 'جلسه با موفقیت لغو شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
         }
-        return $this->success($session, 'جلسه با موفقیت لغو شد');
+    }
+
+    public function joinSession($id)
+    {
+        try {
+            $result = $this->telemedicineService->joinSession($id, auth()->id());
+            return $this->success($result, 'اتصال به جلسه با موفقیت انجام شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    public function sendMessage(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'session_id' => 'required|exists:telemedicine_sessions,id',
+            'message' => 'required|string|max:1000',
+            'type' => 'nullable|in:text,image,file,prescription',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        try {
+            $data = $request->all();
+            $data['user_id'] = auth()->id();
+            $message = $this->telemedicineService->sendMessage($data);
+            return $this->success($message, 'پیام با موفقیت ارسال شد', 201);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    public function getMessages(Request $request, $sessionId)
+    {
+        $messages = $this->telemedicineService->getMessages($sessionId, $request->get('per_page', 50));
+        $this->telemedicineService->markMessagesAsRead($sessionId, auth()->id());
+        return $this->success($messages);
+    }
+
+    public function unreadCount($sessionId)
+    {
+        $count = $this->telemedicineService->getUnreadCount($sessionId, auth()->id());
+        return $this->success(['count' => $count]);
+    }
+
+    public function uploadFile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'session_id' => 'required|exists:telemedicine_sessions,id',
+            'file' => 'required|file|max:20480',
+            'description' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        try {
+            $data = $request->except('file');
+            $data['user_id'] = auth()->id();
+            $file = $this->telemedicineService->uploadFile($data, $request->file('file'));
+            return $this->success($file, 'فایل با موفقیت آپلود شد', 201);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    public function getFiles($sessionId)
+    {
+        $files = $this->telemedicineService->getFiles($sessionId);
+        return $this->success($files);
+    }
+
+    public function deleteFile($id)
+    {
+        try {
+            $this->telemedicineService->deleteFile($id);
+            return $this->success(null, 'فایل با موفقیت حذف شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    public function stats(Request $request)
+    {
+        $stats = $this->telemedicineService->getStats($request->all());
+        return $this->success($stats);
     }
 }

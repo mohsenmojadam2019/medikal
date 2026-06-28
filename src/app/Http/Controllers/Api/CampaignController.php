@@ -19,9 +19,15 @@ class CampaignController extends Controller
         $this->campaignService = $campaignService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $campaigns = $this->campaignService->getAll();
+        $campaigns = $this->campaignService->getCampaigns($request->all(), $request->get('per_page', 20));
+        return $this->success($campaigns);
+    }
+
+    public function active()
+    {
+        $campaigns = $this->campaignService->getActiveCampaigns();
         return $this->success($campaigns);
     }
 
@@ -29,61 +35,150 @@ class CampaignController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'type' => 'required|string|in:email,sms,push,advertising',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'budget' => 'nullable|numeric|min:0',
-            'target_audience' => 'nullable|json',
+            'description' => 'nullable|string',
+            'type' => 'required|in:health,awareness,screening,vaccination',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after:start_date',
+            'target_audience' => 'nullable|string|max:255',
+            'target_count' => 'nullable|integer|min:1',
+            'channels' => 'nullable|array',
+            'content' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $campaign = $this->campaignService->create($request->all());
-        return $this->success($campaign, 'کمپین با موفقیت ایجاد شد', 201);
+        try {
+            $campaign = $this->campaignService->createCampaign($request->all());
+            return $this->success($campaign, 'کمپین با موفقیت ایجاد شد', 201);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
     }
 
     public function show($id)
     {
-        $campaign = $this->campaignService->find($id);
-        if (!$campaign) {
+        try {
+            $campaign = Campaign::findOrFail($id);
+            return $this->success($campaign);
+        } catch (\Exception $e) {
             return $this->error('کمپین یافت نشد', 404);
         }
-        return $this->success($campaign);
     }
 
     public function update(Request $request, $id)
     {
+        try {
+            $campaign = Campaign::findOrFail($id);
+        } catch (\Exception $e) {
+            return $this->error('کمپین یافت نشد', 404);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'type' => 'sometimes|string|in:email,sms,push,advertising',
-            'start_date' => 'sometimes|date',
-            'end_date' => 'sometimes|date|after:start_date',
-            'budget' => 'nullable|numeric|min:0',
-            'target_audience' => 'nullable|json',
+            'description' => 'nullable|string',
+            'type' => 'sometimes|in:health,awareness,screening,vaccination',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after:start_date',
+            'target_audience' => 'nullable|string|max:255',
+            'target_count' => 'nullable|integer|min:1',
+            'channels' => 'nullable|array',
+            'content' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $campaign = $this->campaignService->update($id, $request->all());
-        if (!$campaign) {
-            return $this->error('کمپین یافت نشد', 404);
+        try {
+            $campaign = $this->campaignService->updateCampaign($campaign, $request->all());
+            return $this->success($campaign, 'کمپین با موفقیت بروزرسانی شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
         }
-        return $this->success($campaign, 'کمپین با موفقیت بروزرسانی شد');
     }
 
     public function destroy($id)
     {
-        $campaign = $this->campaignService->delete($id);
-        if (!$campaign) {
-            return $this->error('کمپین یافت نشد', 404);
+        try {
+            $campaign = Campaign::findOrFail($id);
+            $this->campaignService->deleteCampaign($campaign);
+            return $this->success(null, 'کمپین با موفقیت حذف شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
         }
-        return $this->success(null, 'کمپین با موفقیت حذف شد');
+    }
+
+    public function activate($id)
+    {
+        try {
+            $campaign = Campaign::findOrFail($id);
+            $campaign = $this->campaignService->activateCampaign($campaign);
+            return $this->success($campaign, 'کمپین با موفقیت فعال شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    public function pause($id)
+    {
+        try {
+            $campaign = Campaign::findOrFail($id);
+            $campaign = $this->campaignService->pauseCampaign($campaign);
+            return $this->success($campaign, 'کمپین با موفقیت متوقف شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    public function complete($id)
+    {
+        try {
+            $campaign = Campaign::findOrFail($id);
+            $campaign = $this->campaignService->completeCampaign($campaign);
+            return $this->success($campaign, 'کمپین با موفقیت پایان یافت');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    public function trackInteraction(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'campaign_id' => 'required|exists:campaigns,id',
+            'channel' => 'required|in:sms,email,push,social',
+            'action' => 'required|in:sent,opened,clicked,converted,bounced',
+            'patient_id' => 'nullable|exists:patients,id',
+            'metadata' => 'nullable|array',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        try {
+            $interaction = $this->campaignService->trackInteraction($request->all());
+            return $this->success($interaction, 'تعامل با موفقیت ثبت شد', 201);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    public function interactions(Request $request, $campaignId)
+    {
+        $interactions = $this->campaignService->getCampaignInteractions($campaignId, $request->all(), $request->get('per_page', 20));
+        return $this->success($interactions);
+    }
+
+    public function stats($id)
+    {
+        try {
+            $stats = $this->campaignService->getCampaignStats($id);
+            return $this->success($stats);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 404);
+        }
     }
 
     public function overallStats()

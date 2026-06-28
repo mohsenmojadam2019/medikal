@@ -19,16 +19,9 @@ class VaccinationController extends Controller
         $this->vaccinationService = $vaccinationService;
     }
 
-    // ============================================================
-    // VACCINES
-    // ============================================================
-
     public function index(Request $request)
     {
-        $vaccines = $this->vaccinationService->getVaccines(
-            $request->all(),
-            $request->get('per_page', 20)
-        );
+        $vaccines = $this->vaccinationService->getVaccines($request->all(), $request->get('per_page', 20));
         return $this->success($vaccines);
     }
 
@@ -134,10 +127,6 @@ class VaccinationController extends Controller
         }
     }
 
-    // ============================================================
-    // PATIENT VACCINATIONS
-    // ============================================================
-
     public function record(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -166,11 +155,7 @@ class VaccinationController extends Controller
 
     public function patientVaccinations(Request $request, $patientId)
     {
-        $vaccinations = $this->vaccinationService->getPatientVaccinations(
-            $patientId,
-            $request->all(),
-            $request->get('per_page', 20)
-        );
+        $vaccinations = $this->vaccinationService->getPatientVaccinations($patientId, $request->all(), $request->get('per_page', 20));
         return $this->success($vaccinations);
     }
 
@@ -192,17 +177,9 @@ class VaccinationController extends Controller
         return $this->success($overdue);
     }
 
-    // ============================================================
-    // REMINDERS
-    // ============================================================
-
     public function reminders(Request $request, $patientId)
     {
-        $reminders = $this->vaccinationService->getPatientReminders(
-            $patientId,
-            $request->all(),
-            $request->get('per_page', 20)
-        );
+        $reminders = $this->vaccinationService->getPatientReminders($patientId, $request->all(), $request->get('per_page', 20));
         return $this->success($reminders);
     }
 
@@ -215,10 +192,6 @@ class VaccinationController extends Controller
             return $this->error($e->getMessage(), 400);
         }
     }
-
-    // ============================================================
-    // REPORTS
-    // ============================================================
 
     public function stats(Request $request)
     {

@@ -21,10 +21,7 @@ class InsuranceController extends Controller
 
     public function index(Request $request)
     {
-        $insurances = $this->insuranceService->getInsurances(
-            $request->all(),
-            $request->get('per_page', 20)
-        );
+        $insurances = $this->insuranceService->getInsurances($request->all(), $request->get('per_page', 20));
         return $this->success($insurances);
     }
 
@@ -217,10 +214,7 @@ class InsuranceController extends Controller
         }
 
         try {
-            $appInsurance = $this->insuranceService->applyInsuranceToAppointment(
-                $request->appointment_id,
-                $request->patient_insurance_id
-            );
+            $appInsurance = $this->insuranceService->applyInsuranceToAppointment($request->appointment_id, $request->patient_insurance_id);
             return $this->success($appInsurance, 'بیمه با موفقیت به نوبت اعمال شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
