@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class TelemedicineFile extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'session_id',
         'user_id',
         'file_name',

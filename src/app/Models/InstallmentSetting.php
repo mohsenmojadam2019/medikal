@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class InstallmentSetting extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'clinic_id',
         'enable_installments',
         'max_installments',

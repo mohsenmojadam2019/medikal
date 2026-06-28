@@ -15,6 +15,7 @@ class WebhookLog extends Model
         'error_message',
         'ip_address',
         'user_agent',
+        'tenant_id',
     ];
 
     protected $casts = [

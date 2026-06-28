@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class DigitalSignature extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'digital_form_id',
         'form_response_id',
         'patient_id',

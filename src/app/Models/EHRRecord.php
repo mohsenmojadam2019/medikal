@@ -9,6 +9,7 @@ class EHRRecord extends Model
     protected $table = 'ehr_records';
 
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'doctor_id',
         'record_number',

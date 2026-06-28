@@ -11,6 +11,7 @@ class DigitalForm extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'title',
         'slug',
         'description',

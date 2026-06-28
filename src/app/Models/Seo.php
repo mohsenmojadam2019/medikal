@@ -9,6 +9,7 @@ class Seo extends Model
     protected $table = 'seo';  // ✅ نام جدول درست
 
     protected $fillable = [
+        'tenant_id',
         'seoable_type',
         'seoable_id',
         'title',

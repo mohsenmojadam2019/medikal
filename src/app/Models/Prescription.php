@@ -12,6 +12,7 @@ class Prescription extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'appointment_id',
         'patient_id',
         'doctor_id',

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class AdmissionDay extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'admission_id',
         'day_number',
         'date',

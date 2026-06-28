@@ -10,6 +10,7 @@ class TelemedicineSession extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'doctor_id',
         'patient_id',
         'room_name',

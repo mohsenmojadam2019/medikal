@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 class MedicalDocument extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'doctor_id',
         'ehr_record_id',

@@ -14,6 +14,7 @@ class Post extends Model implements HasMedia
     use SoftDeletes, InteractsWithMedia;
 
     protected $fillable = [
+        'tenant_id',
         'user_id',
         'category_id',
         'title',

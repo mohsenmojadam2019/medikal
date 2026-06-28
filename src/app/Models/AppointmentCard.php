@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class AppointmentCard extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'appointment_id',
         'card_number',
         'qr_code',

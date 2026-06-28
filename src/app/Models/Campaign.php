@@ -10,6 +10,7 @@ class Campaign extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'description',
         'type',

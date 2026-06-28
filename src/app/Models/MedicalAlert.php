@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class MedicalAlert extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'doctor_id',
         'type',

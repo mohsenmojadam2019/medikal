@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class PharmacyNotification extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'patient_id', 'order_id', 'type', 'title', 'message', 'data', 'is_read', 'sent_at'
     ];
 

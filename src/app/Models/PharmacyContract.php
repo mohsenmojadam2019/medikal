@@ -10,6 +10,7 @@ class PharmacyContract extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'clinic_id', 'pharmacy_id', 'type', 'is_active'
     ];
 

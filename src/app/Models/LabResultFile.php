@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class LabResultFile extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'lab_result_id',
         'file_name',
         'file_path',

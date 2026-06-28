@@ -9,6 +9,7 @@ class PharmacyOrderItem extends Model
     protected $table = 'pharmacy_order_items';
 
     protected $fillable = [
+        'tenant_id',
         'order_id',
         'drug_id',
         'quantity',

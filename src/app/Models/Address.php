@@ -10,6 +10,7 @@ class Address extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'addressable_type',
         'addressable_id',
         'province_id',

@@ -10,6 +10,7 @@ class Drug extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'generic_name',
         'code',

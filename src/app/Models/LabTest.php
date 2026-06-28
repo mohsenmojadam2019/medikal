@@ -10,6 +10,7 @@ class LabTest extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'category_id',
         'code',
         'name',

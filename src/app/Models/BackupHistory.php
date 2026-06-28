@@ -9,6 +9,7 @@ class BackupHistory extends Model
     protected $table = 'backup_history';
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'type',
         'status',

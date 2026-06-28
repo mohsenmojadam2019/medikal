@@ -10,6 +10,7 @@ class Pharmacy extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'name', 'license_number', 'address', 'phone', 'email',
         'latitude', 'longitude', 'working_hours', 'is_active',
         'is_online', 'metadata'

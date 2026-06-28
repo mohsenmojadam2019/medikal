@@ -11,6 +11,7 @@ class Payment extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'invoice_id',
         'patient_id',
         'transaction_id',

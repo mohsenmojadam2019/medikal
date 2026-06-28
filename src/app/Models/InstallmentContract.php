@@ -10,6 +10,7 @@ class InstallmentContract extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'appointment_id',
         'invoice_id',

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Installment extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'contract_id',
         'installment_number',
         'amount',

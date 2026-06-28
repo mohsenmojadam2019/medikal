@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class PatientVaccination extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'vaccine_id',
         'doctor_id',

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Reminder extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'appointment_id',
         'patient_id',
         'type',

@@ -10,6 +10,7 @@ class DoctorSchedule extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'doctor_id',
         'day_of_week', // 0=شنبه, 1=یکشنبه, ...
         'start_time',

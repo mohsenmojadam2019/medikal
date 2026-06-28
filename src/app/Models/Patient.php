@@ -11,6 +11,7 @@ class Patient extends Model
     use SoftDeletes, HasSeo;
 
     protected $fillable = [
+        'tenant_id',
         'user_id',
         'doctor_id',
         'national_code',

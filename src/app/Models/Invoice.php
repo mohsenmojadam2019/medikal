@@ -12,6 +12,7 @@ class Invoice extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'appointment_id',
         'invoice_number',

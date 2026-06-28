@@ -12,6 +12,7 @@ class LabOrder extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'order_number',
         'patient_id',
         'doctor_id',

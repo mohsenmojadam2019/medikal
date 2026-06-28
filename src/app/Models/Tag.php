@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 class Tag extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'name',
         'slug',
         'is_active',

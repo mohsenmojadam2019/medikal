@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Rating extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'doctor_id',
         'patient_id',
         'appointment_id',

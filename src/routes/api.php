@@ -1675,3 +1675,19 @@ Route::middleware(['auth:sanctum'])->prefix('installments')->group(function () {
     // ===== Stats =====
     Route::get('/stats', [App\Http\Controllers\Api\InstallmentController::class, 'stats']);
 });
+
+// ============================================================
+// SUPER ADMIN ROUTES
+// ============================================================
+
+Route::middleware(['auth:sanctum', 'role:super_admin'])->prefix('super-admin')->group(function () {
+
+    // ===== Tenant Management =====
+    Route::get('/tenants', [App\Http\Controllers\Admin\SuperAdmin\TenantController::class, 'index']);
+    Route::post('/tenants', [App\Http\Controllers\Admin\SuperAdmin\TenantController::class, 'store']);
+    Route::get('/tenants/{id}', [App\Http\Controllers\Admin\SuperAdmin\TenantController::class, 'show']);
+    Route::put('/tenants/{id}', [App\Http\Controllers\Admin\SuperAdmin\TenantController::class, 'update']);
+    Route::post('/tenants/{id}/toggle-status', [App\Http\Controllers\Admin\SuperAdmin\TenantController::class, 'toggleStatus']);
+    Route::get('/stats', [App\Http\Controllers\Admin\SuperAdmin\TenantController::class, 'stats']);
+    Route::get('/plans', [App\Http\Controllers\Admin\SuperAdmin\TenantController::class, 'plans']);
+});

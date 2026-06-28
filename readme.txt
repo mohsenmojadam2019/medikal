@@ -15,6 +15,21 @@ Password: password123
 
 
 
+$doctors = Doctor::all();
+$doctors = Doctor::byTenant()->get();
+
+
+$doctor = Doctor::create($data);
+$data['tenant_id'] = tenant()->id; // یا session('tenant_id')
+$doctor = Doctor::create($data);
+
+
+
+$patient->appointments()->get();
+$patient->appointments()->byTenant()->get();
+
+
+
 
 
 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

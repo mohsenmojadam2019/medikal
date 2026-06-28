@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\HasTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class TelemedicineMessage extends Model
 {
+    use HasTenant;
+
     protected $fillable = [
+        'tenant_id',  // ✅ اضافه شد
         'session_id',
         'user_id',
         'message',
@@ -42,7 +46,7 @@ class TelemedicineMessage extends Model
         return $labels[$this->type] ?? $this->type;
     }
 
-    public function getFileUrlAttribute(): string
+    public function getFileUrlAttribute(): ?string
     {
         return $this->file_path ? \Storage::url($this->file_path) : null;
     }

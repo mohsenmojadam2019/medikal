@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class AdmissionService extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'admission_id',
         'service_name',
         'type',

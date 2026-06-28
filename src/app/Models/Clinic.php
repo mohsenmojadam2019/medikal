@@ -10,6 +10,7 @@ class Clinic extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'slug',
         'address',

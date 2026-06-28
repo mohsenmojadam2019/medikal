@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class CampaignInteraction extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'campaign_id',
         'patient_id',
         'channel',

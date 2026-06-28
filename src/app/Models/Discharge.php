@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Discharge extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'admission_id',
         'discharge_number',
         'discharge_date',

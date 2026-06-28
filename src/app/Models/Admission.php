@@ -3,15 +3,18 @@
 namespace App\Models;
 
 use App\Enums\AdmissionStatusEnum;
+use App\Enums\BedStatusEnum;
 use App\Enums\WardTypeEnum;
+use App\Traits\HasTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Admission extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasTenant;
 
     protected $fillable = [
+        'tenant_id',
         'admission_number',
         'patient_id',
         'doctor_id',
@@ -174,7 +177,7 @@ class Admission extends Model
         $this->update(['status' => AdmissionStatusEnum::IN_PROGRESS]);
     }
 
-    public function discharge(): void
+    public function markAsDischarged(): void
     {
         $this->update([
             'status' => AdmissionStatusEnum::DISCHARGED,

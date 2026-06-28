@@ -10,6 +10,7 @@ class Notification extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'user_id',
         'sender_id',
         'type',

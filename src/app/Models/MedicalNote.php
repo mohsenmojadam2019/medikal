@@ -10,6 +10,7 @@ class MedicalNote extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'doctor_id',
         'appointment_id',

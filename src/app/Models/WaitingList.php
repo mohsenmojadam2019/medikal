@@ -9,6 +9,7 @@ class WaitingList extends Model
     protected $table = 'waiting_list';
 
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'doctor_id',
         'appointment_id',

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Referral extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'from_doctor_id',
         'to_doctor_id',

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class LabOrderTest extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'lab_order_id',
         'lab_test_id',
         'unit_price',

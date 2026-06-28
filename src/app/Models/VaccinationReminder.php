@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class VaccinationReminder extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'patient_id',
         'vaccine_id',
         'patient_vaccination_id',

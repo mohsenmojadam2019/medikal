@@ -15,6 +15,7 @@ class ReceptionistSetting extends Model
         'default_appointment_duration',
         'notification_settings',
         'display_settings',
+        'tenant_id',
     ];
 
     protected $casts = [

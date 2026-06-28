@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\HasSeo;
+use App\Traits\HasTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
@@ -12,9 +13,10 @@ use Spatie\Image\Enums\Fit;
 
 class Doctor extends Model implements HasMedia
 {
-    use SoftDeletes, HasSeo, InteractsWithMedia;
+    use SoftDeletes, HasSeo, InteractsWithMedia, HasTenant;
 
     protected $fillable = [
+        'tenant_id',  // ✅ اضافه شد
         'user_id',
         'specialty_id',
         'license_number',

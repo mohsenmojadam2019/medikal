@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class FormResponse extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'digital_form_id',
         'patient_id',
         'appointment_id',

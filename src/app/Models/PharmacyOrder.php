@@ -12,6 +12,7 @@ class PharmacyOrder extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'order_number', 'patient_id', 'pharmacy_id', 'prescription_id',
         'status', 'payment_status', 'subtotal', 'insurance_share',
         'patient_share', 'delivery_fee', 'total_amount', 'payment_link',

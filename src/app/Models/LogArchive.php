@@ -9,6 +9,7 @@ class LogArchive extends Model
     protected $table = 'log_archives';
 
     protected $fillable = [
+        'tenant_id',
         'file_name',
         'file_path',
         'file_size',

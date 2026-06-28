@@ -11,6 +11,7 @@ class Ward extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'code',
         'type',

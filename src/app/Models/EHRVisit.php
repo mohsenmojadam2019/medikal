@@ -9,6 +9,7 @@ class EHRVisit extends Model
     protected $table = 'ehr_visits';
 
     protected $fillable = [
+        'tenant_id',
         'ehr_record_id',
         'appointment_id',
         'doctor_id',

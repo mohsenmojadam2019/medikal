@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class AppointmentInsurance extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'appointment_id',
         'patient_insurance_id',
         'total_amount',
