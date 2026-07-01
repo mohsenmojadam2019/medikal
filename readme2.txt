@@ -16,14 +16,14 @@ curl -X GET http://localhost:8210/api/admin/dashboard \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json"
 ----------------------------------------------------
-docker exec -it medikal-laravel bash
+docker exec -it medikall-laravel bash
 
-docker exec -it medikal-laravel php artisan config:clear
-docker exec -it medikal-laravel php artisan cache:clear
-docker exec -it medikal-laravel php artisan view:clear
-docker exec -it medikal-laravel php artisan optimize:clear
+docker exec -it medikall-laravel php artisan config:clear
+docker exec -it medikall-laravel php artisan cache:clear
+docker exec -it medikall-laravel php artisan view:clear
+docker exec -it medikall-laravel php artisan optimize:clear
 
-docker exec -it medikal-laravel php artisan tinker
+docker exec -it medikall-laravel php artisan tinker
 ----------------------------------
 curl -X POST http://localhost:8210/api/login \
   -H "Content-Type: application/json" \

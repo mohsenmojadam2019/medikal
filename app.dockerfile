@@ -19,7 +19,7 @@ RUN docker-php-ext-configure pcntl --enable-pcntl && \
     docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-configure soap --enable-soap
 
-RUN docker-php-ext-install pcntl exif gd zip bcmath mbstring intl opcache pdo pdo_mysql mysqli medikals soap
+RUN docker-php-ext-install pcntl exif gd zip bcmath mbstring intl opcache pdo pdo_mysql mysqli medikalls soap
 
 # نصب Redis extension
 RUN mkdir -p /usr/src/php/ext/redis && \

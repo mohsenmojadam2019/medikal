@@ -12,11 +12,23 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
+        then: function () {
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/admin.php'));
+        }
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
             'tenant' => \App\Http\Middleware\TenantMiddleware::class,
+            'locale' => \App\Http\Middleware\SetLocale::class,
+        ]);
+
+        // اضافه کردن middleware به گروه api
+        $middleware->group('api', [
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\SetLocale::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

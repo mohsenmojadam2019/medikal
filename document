@@ -808,19 +808,19 @@ APIهای مرتبط:
 مراحل نصب:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  ۱. کلون کردن پروژه                                                        │
-│     git clone https://github.com/mohsenmojadam2019/medikal.git             │
+│     git clone https://github.com/mohsenmojadam2019/medikall.git             │
 │                                                                             │
 │  ۲. اجرای کانتینرهای داکر                                                  │
 │     docker-compose up -d                                                    │
 │                                                                             │
 │  ۳. نصب وابستگی‌های کامپوزر                                                │
-│     docker exec -it medikal-laravel composer install                        │
+│     docker exec -it medikall-laravel composer install                        │
 │                                                                             │
 │  ۴. اجرای مایگریشن‌ها                                                       │
-│     docker exec -it medikal-laravel php artisan migrate                    │
+│     docker exec -it medikall-laravel php artisan migrate                    │
 │                                                                             │
 │  ۵. اجرای سیدرها                                                            │
-│     docker exec -it medikal-laravel php artisan db:seed                    │
+│     docker exec -it medikall-laravel php artisan db:seed                    │
 │                                                                             │
 │  ۶. نصب وابستگی‌های فرانت‌اند (اختیاری)                                    │
 │     cd frontend && npm install && npm run build                            │

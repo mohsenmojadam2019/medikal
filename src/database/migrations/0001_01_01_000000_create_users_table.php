@@ -23,6 +23,8 @@ return new class extends Migration
             $table->timestamp('last_login_at')->nullable();
             $table->string('last_login_ip')->nullable();
             $table->json('metadata')->nullable();
+            $table->string('language', 10)->default('fa')->nullable();
+            $table->index('language');
             $table->rememberToken();
             $table->softDeletes();
             $table->timestamps();

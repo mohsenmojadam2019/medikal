@@ -30,7 +30,7 @@ bash
 curl -X POST http://localhost:8210/api/auth/login/email \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@medikal.com",
+    "email": "admin@medikall.com",
     "password": "password123"
   }'
 ۱.۴ اطلاعات کاربر جاری
@@ -614,7 +614,7 @@ curl -X GET http://localhost:8210/api/landing/recent-reviews?limit=6
 مقادیر نمونه برای تست (Seeders)
 bash
 # کاربر ادمین
-Email: admin@medikal.com
+Email: admin@medikall.com
 Password: password123
 
 # یا
@@ -791,7 +791,7 @@ curl -X POST http://localhost:8210/api/admin/wallet/{userId}/add-bonus \
 ==================================================
 ==================================================
 
-cat >> /home/god/Videos/medikal/readme3.txt << 'EOF'
+cat >> /home/god/Videos/medikall/readme3.txt << 'EOF'
 
 ==================================================
 ==================================================
@@ -2739,7 +2739,7 @@ curl -X GET http://localhost:8210/api/receptionist/dashboard/1 \
 ==================================================
 
 # کاربر ادمین
-Email: admin@medikal.com
+Email: admin@medikall.com
 Password: password123
 
 # یا

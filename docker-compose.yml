@@ -3,11 +3,11 @@
 services:
 
   #PHP Service
-  medikal-laravel:
+  medikall-laravel:
     build:
       context: .
       dockerfile: app.dockerfile
-    container_name: medikal-laravel
+    container_name: medikall-laravel
     tty: true
     env_file: './src/.env'
     working_dir: /var/www
@@ -20,18 +20,18 @@ services:
       - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
     command: /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
     networks:
-      - medikal-main-network
+      - medikall-main-network
     depends_on:
-      - medikal-mysql
-      - medikal-redis
-  #      - medikal-mongodb
+      - medikall-mysql
+      - medikall-redis
+  #      - medikall-mongodb
   #    command: /bin/bash -c "php-fpm | /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf"
 
   #Nginx Service
-  medikal-webserver:
+  medikall-webserver:
     image: nginx
     #    image: docker.arvancloud.ir/nginx
-    container_name: medikal-webserver
+    container_name: medikall-webserver
     restart: unless-stopped
     tty: true
     ports:
@@ -40,21 +40,21 @@ services:
       - ./src:/var/www
       - ./nginx/conf.d/:/etc/nginx/conf.d/
     depends_on:
-      - medikal-laravel
+      - medikall-laravel
     networks:
-      - medikal-main-network
+      - medikall-main-network
 
   #MySQL Service
-  medikal-mysql:
+  medikall-mysql:
     #    image: docker.arvancloud.ir/mysql
     image: mysql
-    container_name: medikal-mysql
+    container_name: medikall-mysql
     restart: unless-stopped
     tty: true
     ports:
       - "3321:3306"
     volumes:
-      - ./medikal:/var/lib/mysql
+      - ./medikall:/var/lib/mysql
     environment:
       MYSQL_DATABASE: cms
       MYSQL_PASSWORD: bV7c5smN2T8h4hlMzF90Bpum
@@ -62,38 +62,38 @@ services:
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     networks:
-      - medikal-main-network
+      - medikall-main-network
 
   # phpmyadmin
-  medikal-phpmyadmin:
+  medikall-phpmyadmin:
     #    image: docker.arvancloud.ir/phpmyadmin
     image: phpmyadmin
-    container_name: medikal-phpmyadmin
+    container_name: medikall-phpmyadmin
     restart: unless-stopped
     environment:
-      PMA_HOST: medikal-mysql
+      PMA_HOST: medikall-mysql
       PMA_PORT: 3306
       PMA_ARBITRARY: 1
       UPLOAD_LIMIT: 20g
     depends_on:
-      - medikal-mysql
+      - medikall-mysql
     networks:
-      - medikal-main-network
+      - medikall-main-network
     ports:
       - "8310:80"
 
   #redis service
-  medikal-redis:
+  medikall-redis:
     #    image: docker.arvancloud.ir/redis
     image: redis
-    container_name: medikal-redis
+    container_name: medikall-redis
     restart: unless-stopped
 #    environment:
 #      - REDIS_PASSWORD=password
     ports:
       - 6390:6379
     networks:
-      - medikal-main-network
+      - medikall-main-network
 
   # Frontend (React/Vue)
   front:
@@ -106,7 +106,7 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - medikal-main-network
+      - medikall-main-network
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
@@ -125,7 +125,7 @@ services:
     ports:
       - "3001:3001"
     networks:
-      - medikal-main-network
+      - medikall-main-network
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
@@ -134,8 +134,8 @@ services:
     tty: true
 
   #mongodb service
-  medikal-mongodb:
-    container_name: medikal-mongodb
+  medikall-mongodb:
+    container_name: medikall-mongodb
     image: docker.arvancloud.ir/mongo:latest
     environment:
       - MONGO_INITDB_ROOT_USERNAME=root
@@ -144,16 +144,16 @@ services:
     ports:
       - "28010:27017"
     volumes:
-      - ./medikal_mongodata:/data/db
+      - ./medikall_mongodata:/data/db
       - ./mongodb/scripts:/docker-entrypoint-initdb.d
     networks:
-      - medikal-main-network
+      - medikall-main-network
 
   # اضافه کن به انتهای services بخش
   # Mailpit - Email Testing Tool
-  medikal-mailpit:
+  medikall-mailpit:
     image: axllent/mailpit:latest
-    container_name: medikal-mailpit
+    container_name: medikall-mailpit
     restart: unless-stopped
     ports:
       - "1025:1025"   # SMTP port
@@ -162,7 +162,7 @@ services:
       - MP_SMTP_AUTH_ACCEPT_ANY=true
       - MP_SMTP_AUTH_ALLOW_INSECURE=true
     networks:
-      - medikal-main-network
+      - medikall-main-network
 
 
 #  echo:
@@ -170,17 +170,17 @@ services:
 #    ports:
 #      - 8080:6001
 #    environment:
-#      - "LARAVEL_ECHO_SERVER_DB=medikal-redis"
+#      - "LARAVEL_ECHO_SERVER_DB=medikall-redis"
 #      - "LARAVEL_ECHO_SERVER_AUTH_HOST=http://nginx:8210"
 #      - "LARAVEL_ECHO_SERVER_DEBUG=true"
-#      - "REDIS_HOST=medikal-redis"
+#      - "REDIS_HOST=medikall-redis"
 #      - "REDIS_PORT=6379"
 #      - "REDIS_PASSWORD=null"
 #      - "REDIS_KEY_PREFIX=echo_"
 #      - "REDIS_DB=1"
 #    links:
-#      - medikal-redis
-#      - medikal-webserver
+#      - medikall-redis
+#      - medikall-webserver
 
 #  rabbitmq:
 #    image: "rabbitmq:3-management"
@@ -193,15 +193,15 @@ services:
 #    volumes:
 #      - ./rabbitmq-isolated.conf:/etc/rabbitmq/rabbitmq.config
 #    networks:
-#      - medikal-main-network
+#      - medikall-main-network
 
 #Docker Networks
 networks:
-  medikal-main-network:
+  medikall-main-network:
 #    driver: bridge
     external: true
 
 #Volumes
 volumes:
-  db_medikal_mysql:
+  db_medikall_mysql:
     driver: local

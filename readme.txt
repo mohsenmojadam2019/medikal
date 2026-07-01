@@ -1,5 +1,5 @@
 http://localhost:8210/admin/login
-Email: admin@medikal.com
+Email: admin@medikall.com
 Password: password123
 
 ✅ Roles and Permissions created!
@@ -37,10 +37,10 @@ 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
 
 
 ========================
-docker logs -f multi-vendor-ecommerc-admin-1
+docker logs -f medikall-admin-1
 
 ۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰۰
-god@god:~/Videos/multi-vendor-ecommerc$ curl -X POST http://localhost:8210/admin/login \
+god@god:~/Videos/medikal$ curl -X POST http://localhost:8210/admin/login \
   -H "Content-Type: application/json" \
   -H "Origin: http://localhost:3001" \
   -d '{"email": "admin@example.com", "password": "password"}' \
@@ -49,8 +49,8 @@ god@god:~/Videos/multi-vendor-ecommerc$ curl -X POST http://localhost:8210/admin
 
 
 ----------------------- front
-docker exec -it multi-vendor-ecommerc-front-1 sh
-docker exec -it multi-vendor-ecommerc-admin-1 sh
+docker exec -it medikal-front-1 sh
+docker exec -it medikal-admin-1 sh
 
 EOF
 console.log('Token:', localStorage.getItem('admin_token'));
@@ -58,21 +58,21 @@ console.log(localStorage.getItem('token'));
 
 
 35|9no0j0ALN1avenUZWYJQB68jrS1ELMsRIjCDovhA7d92e3
-docker exec -it medikal-mysql mysql -u root -p cms
+docker exec -it medikall-mysql mysql -u root -p cms
 -----------------------------
-docker exec -it medikal-laravel sh
-docker exec -it medikal-laravel php artisan config:clear
-docker exec -it medikal-laravel php artisan route:clear
-docker exec -it medikal-laravel php artisan view:clear
-docker restart medikal-laravel
-docker restart medikal_front_1
+docker exec -it medikall-laravel sh
+docker exec -it medikall-laravel php artisan config:clear
+docker exec -it medikall-laravel php artisan route:clear
+docker exec -it medikall-laravel php artisan view:clear
+docker restart medikall-laravel
+docker restart medikall_front_1
 
 chown -R www-data:www-data /var/www/storage/logs
 chmod -R 775 /var/www/storage/logs
 chmod 664 /var/www/storage/logs/laravel.log
 ------------------------------------------
 
-cd /home/discord/Videos/medikal
+cd /home/discord/Videos/medikall
 
 # 1. اگر کانتینر در حال اجراست، متوقف کنید
 docker compose down -v
@@ -81,7 +81,7 @@ docker compose down -v
 docker compose build --no-cache
 
 # 3. بالا آوردن سرویس MySQL و Redis ابتدا
-docker compose up -d medikal-mysql medikal-redis
+docker compose up -d medikall-mysql medikall-redis
 
 # 4. منتظر بمانید تا MySQL آماده شود (حدود 30 ثانیه)
 sleep 30
@@ -91,37 +91,37 @@ cd src
 cp .env.example .env 2>/dev/null || echo "فایل env از قبل وجود دارد"
 
 # 6. نصب وابستگی‌های Laravel از طریق کانتینر
-docker compose run --rm medikal-laravel composer install --ignore-platform-reqs
+docker compose run --rm medikall-laravel composer install --ignore-platform-reqs
 
 # 7. تولید کلید اپلیکیشن
-docker compose run --rm medikal-laravel php artisan key:generate
+docker compose run --rm medikall-laravel php artisan key:generate
 
 # 8. نصب Broadcasting و Reverb
-docker compose run --rm medikal-laravel php artisan install:broadcasting
-docker compose run --rm medikal-laravel php artisan reverb:install
+docker compose run --rm medikall-laravel php artisan install:broadcasting
+docker compose run --rm medikall-laravel php artisan reverb:install
 
 # 9. اجرای Migration
-docker compose run --rm medikal-laravel php artisan migrate --force
+docker compose run --rm medikall-laravel php artisan migrate --force
 
 # 10. انتشار فایل‌های Reverb
-docker compose run --rm medikal-laravel php artisan vendor:publish --tag=reverb-config
+docker compose run --rm medikall-laravel php artisan vendor:publish --tag=reverb-config
 
 # 11. تنظیم مجدد Cache
-docker compose run --rm medikal-laravel php artisan optimize:clear
-docker compose run --rm medikal-laravel php artisan config:cache
-docker compose run --rm medikal-laravel php artisan route:cache
-docker compose run --rm medikal-laravel php artisan view:cache
+docker compose run --rm medikall-laravel php artisan optimize:clear
+docker compose run --rm medikall-laravel php artisan config:cache
+docker compose run --rm medikall-laravel php artisan route:cache
+docker compose run --rm medikall-laravel php artisan view:cache
 
 # 12. ایجاد استوریج لینک
-docker compose run --rm medikal-laravel php artisan storage:link
+docker compose run --rm medikall-laravel php artisan storage:link
 
 # 13. راه‌اندازی همه سرویس‌ها
-cd /home/discord/Videos/medikal
+cd /home/discord/Videos/medikall
 docker compose up -d
 
 # 14. بررسی وضعیت Reverb
-docker compose logs medikal-laravel | grep -i reverb
-docker compose exec medikal-laravel supervisorctl status
+docker compose logs medikall-laravel | grep -i reverb
+docker compose exec medikall-laravel supervisorctl status
 
 
 
@@ -142,39 +142,39 @@ docker compose exec medikal-laravel supervisorctl status
 -----------------------------------------------------
 sudo nano /etc/docker/daemon.json
 sudo systemctl restart docker
-docker exec -it medikal-laravel bash
-docker exec -it medikal-laravel php artisan config:clear
-docker exec -it medikal-laravel php artisan cache:clear
-docker exec -it medikal-laravel php artisan view:clear
-docker exec -it medikal-laravel php artisan queue:restart
-docker exec -it medikal-laravel supervisorctl restart all
+docker exec -it medikall-laravel bash
+docker exec -it medikall-laravel php artisan config:clear
+docker exec -it medikall-laravel php artisan cache:clear
+docker exec -it medikall-laravel php artisan view:clear
+docker exec -it medikall-laravel php artisan queue:restart
+docker exec -it medikall-laravel supervisorctl restart all
 --------------------------- nginx restart
-docker restart medikal-webserver
+docker restart medikall-webserver
 
 
 
-discord@discord-Predator-PH315-51:~/Videos/medikal$ docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' medikal-laravel
+discord@discord-Predator-PH315-51:~/Videos/medikall$ docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' medikall-laravel
 172.18.0.7
 
 ---------------------------- kill reverb
 ls -l /proc/*/exe 2>/dev/null | grep -E "php|reverb"
 kill -9 7
 -------------------- supervisor
-docker exec -it medikal-laravel supervisorctl status
-docker exec -it medikal-laravel tail -f /var/log/supervisor/reverb.log
+docker exec -it medikall-laravel supervisorctl status
+docker exec -it medikall-laravel tail -f /var/log/supervisor/reverb.log
 
 ----------------------- front
-docker exec -it multi-vendor-ecommerc-front-1 sh
-docker exec -it multi-vendor-ecommerc-admin-1 sh
+docker exec -it medikal-front-1 sh
+docker exec -it medikal-admin-1 sh
 
 
 
-docker exec -it medikal_front_1 sh
-docker exec -it medikal_admin_1 sh
+docker exec -it medikall_front_1 sh
+docker exec -it medikall_admin_1 sh
 npm install -g wscat
 npm install antd @ant-design/icons moment-jalaali dayjs axios
 -------------------------
-docker-compose build --no-cache medikal-laravel
+docker-compose build --no-cache medikall-laravel
 composer config -g repos.packagist composer https://package-mirror.liara.ir/repository/composer/
 composer i
 "token":"1|cFnj1JouTU5zkcUeFGXk5dLADu4qWZb5BHks0sn2160f3d28"
@@ -196,8 +196,8 @@ composer require shetabit/payment --ignore-platform-reqs --no-interaction
 composer require spatie/laravel-medialibrary --ignore-platform-reqs --no-interaction
 composer require intervention/image --ignore-platform-reqs --no-interaction
 
-docker exec -it medikal-laravel composer require laravel/reverb --ignore-platform-reqs --no-interaction
-docker exec -it medikal-laravel composer require laravel/sanctum --ignore-platform-reqs --no-interaction
+docker exec -it medikall-laravel composer require laravel/reverb --ignore-platform-reqs --no-interaction
+docker exec -it medikall-laravel composer require laravel/sanctum --ignore-platform-reqs --no-interaction
 ----------------------------------------------------
  curl -I https://package-mirror.liara.ir/repository/composer/packages.json
 ----------------------------------------------------- cors
@@ -206,33 +206,33 @@ curl -I -X OPTIONS http://localhost:8210/api/login -H "Origin: http://localhost:
 # نصب در front
 
 
-docker exec -it medikal_front_1 sh -c "cd /app && npm install laravel-echo pusher-js axios"
+docker exec -it medikall_front_1 sh -c "cd /app && npm install laravel-echo pusher-js axios"
 
 # نصب در admin
-docker exec -it medikal_admin_1 sh -c "cd /app && npm install laravel-echo pusher-js axios"or
+docker exec -it medikall_admin_1 sh -c "cd /app && npm install laravel-echo pusher-js axios"or
 ----------------------------------------------------
 # فرانت
-docker exec -it medikal_front_1 sh
-docker restart medikal_front_1
-docker exec -it medikal_admin_1 sh
+docker exec -it medikall_front_1 sh
+docker restart medikall_front_1
+docker exec -it medikall_admin_1 sh
 npm install laravel-echo pusher-js axios
 -----------------------------------------------------
 # پاک کردن همه کش‌ها
-docker exec -it medikal-laravel php artisan optimize:clear
-docker exec -it medikal-laravel php artisan config:clear
-docker exec -it medikal-laravel php artisan route:clear
-docker exec -it medikal-laravel php artisan view:clear
+docker exec -it medikall-laravel php artisan optimize:clear
+docker exec -it medikall-laravel php artisan config:clear
+docker exec -it medikall-laravel php artisan route:clear
+docker exec -it medikall-laravel php artisan view:clear
 
 # دوباره کش کن
-docker exec -it medikal-laravel php artisan route:cache
-docker exec -it medikal-laravel php artisan config:cache
+docker exec -it medikall-laravel php artisan route:cache
+docker exec -it medikall-laravel php artisan config:cache
 
 # ریستارت Nginx
-docker restart medikal-webserver
+docker restart medikall-webserver
 --------------------------------------------------
 php artisan reverb:start --host=0.0.0.0 --port=8080
-docker exec medikal-laravel php artisan reverb:list
-docker exec medikal-laravel curl -I http://localhost:8080
+docker exec medikall-laravel php artisan reverb:list
+docker exec medikall-laravel curl -I http://localhost:8080
 supervisorctl status
 
 ------------------------------------------------------------------ curl
@@ -257,7 +257,7 @@ curl -X POST http://localhost:8210/api/send-message \
   -d '{"receiver_id":1,"message":"سلام ادمین جان!"}'
 
 
-docker exec -it medikal_admin_1 sh
+docker exec -it medikall_admin_1 sh
 ------------------------------------------------------------------
 # داخل کانتینر
 mkdir -p /root/.composer
@@ -274,7 +274,7 @@ composer require laravel/sanctum --ignore-platform-reqs --no-interaction
 
 -----------------------------------------------------------------
 # داخل کانتینر لاراول
-docker exec -it medikal-laravel bash
+docker exec -it medikall-laravel bash
 
 # اجرای migration ها
 php artisan migrate:fresh --seed
@@ -300,12 +300,12 @@ php artisan cms:publish:assets
  sudo systemctl restart docker
 
 sudo docker-compose build
-sudo docker-compose exec medikal-laravel sh
+sudo docker-compose exec medikall-laravel sh
 exit
 php artisan cache:clear
 php artisan storage:link
 
-sudo docker-compose exec medikal-laravel composer i --ignore-platform-req=ext-gd
+sudo docker-compose exec medikall-laravel composer i --ignore-platform-req=ext-gd
 sudo chmod -R 775 src/storage
 sudo chown -R www-data:www-data src/storage
 
@@ -325,7 +325,7 @@ http://localhost:8310/   phpmyadmin
 ------------------------------------------------------------------------------------------------------------------------
 sudo usermod -aG docker $USER
 sudo systemctl restart docker
-sudo docker stop medikal_laravel
+sudo docker stop medikall_laravel
 sudo -i
 docker rm -f $(docker ps -aq)
 sudo docker kill rabbitmq
@@ -359,13 +359,13 @@ platform/themes/shofy/views/ecommerce/includes/product-detail.blade.php
 shift
 locate product-gallery.blade
 ------------------------------------------------------------------------------------------------------------------------
- docker-compose restart medikal-webserver
-docker exec -it medikal-laravel php artisan config:clear
-docker exec -it medikal-laravel php artisan cache:clear
+ docker-compose restart medikall-webserver
+docker exec -it medikall-laravel php artisan config:clear
+docker exec -it medikall-laravel php artisan cache:clear
 
 
 
-discord@discord-Predator-PH315-51:~/Videos/docker-danamedikal$ sudo lsof -i :9000
+discord@discord-Predator-PH315-51:~/Videos/docker-danamedikall$ sudo lsof -i :9000
 COMMAND     PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
 docker-pr 15673 root    4u  IPv4 154621      0t0  TCP *:9000 (LISTEN)
 docker-pr 15684 root    4u  IPv6 155340      0t0  TCP *:9000 (LISTEN)
@@ -399,12 +399,12 @@ npm install @neshan-maps-platform/mapbox-gl-react
 npm install @neshan-maps-platform/mapbox-gl
 npm install @types/mapbox-gl --save-dev
 
- docker exec -it medikal-laravel bash
-docker exec -it medikal-laravel php dump.php
-docker exec -it medikal_front_1 node /app/dump.js
-docker exec -it medikal_admin_1 node /app/dump.js
+ docker exec -it medikall-laravel bash
+docker exec -it medikall-laravel php dump.php
+docker exec -it medikall_front_1 node /app/dump.js
+docker exec -it medikall_admin_1 node /app/dump.js
 node dump.js
-docker exec -it medikal_admin_1 sh
+docker exec -it medikall_admin_1 sh
 
 
 
