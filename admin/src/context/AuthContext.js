@@ -38,7 +38,24 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  const login = async (mobile) => {
+  const loginWithEmail = async (email, password) => {
+    setError(null);
+    try {
+      const response = await authService.loginWithEmail(email, password);
+      const { data } = response;
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+
+      return response;
+    } catch (err) {
+      setError(err.message || 'ایمیل یا رمز عبور اشتباه است');
+      throw err;
+    }
+  };
+
+  const loginWithMobile = async (mobile) => {
     setError(null);
     try {
       const response = await authService.loginWithMobile(mobile);
@@ -83,7 +100,8 @@ export function AuthProvider({ children }) {
     user,
     loading,
     error,
-    login,
+    loginWithEmail,
+    loginWithMobile,
     verifyOtp,
     logout,
     isAuthenticated: !!user,

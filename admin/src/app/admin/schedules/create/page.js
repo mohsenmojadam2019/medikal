@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   Form,
@@ -24,7 +24,6 @@ import {
   SaveOutlined,
   ClockCircleOutlined,
   CalendarOutlined,
-  CopyOutlined,
 } from '@ant-design/icons';
 import { schedulesService, doctorsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -34,15 +33,11 @@ const { Title, Text } = Typography;
 
 export default function CreateSchedulePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const doctorIdParam = searchParams.get('doctor_id');
   const { t } = useLanguage();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
-  const [selectedDoctor, setSelectedDoctor] = useState(doctorIdParam ? parseInt(doctorIdParam) : null);
 
-  // ===== دریافت لیست پزشکان =====
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -56,7 +51,6 @@ export default function CreateSchedulePage() {
     fetchDoctors();
   }, [t]);
 
-  // ===== روزهای هفته =====
   const daysOfWeek = [
     { value: 'saturday', label: t('saturday', 'شنبه') },
     { value: 'sunday', label: t('sunday', 'یکشنبه') },
@@ -70,10 +64,7 @@ export default function CreateSchedulePage() {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      await schedulesService.create({
-        ...values,
-        doctor_id: selectedDoctor,
-      });
+      await schedulesService.create(values);
       message.success(t('schedule_created', 'زمان‌بندی با موفقیت ایجاد شد'));
       router.push('/admin/schedules');
     } catch (error) {
@@ -155,8 +146,6 @@ export default function CreateSchedulePage() {
                       placeholder={t('select_doctor', 'انتخاب پزشک...')}
                       showSearch
                       optionFilterProp="children"
-                      value={selectedDoctor}
-                      onChange={setSelectedDoctor}
                       options={doctors.map((d) => ({
                         value: d.id,
                         label: `${d.full_name} (${d.specialty?.name || ''})`,
@@ -295,22 +284,6 @@ export default function CreateSchedulePage() {
                 >
                   <Switch checkedChildren={t('active', 'فعال')} unCheckedChildren={t('inactive', 'غیرفعال')} />
                 </Form.Item>
-
-                <Divider />
-
-                <div>
-                  <Text type="secondary">{t('doctor', 'پزشک')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {selectedDoctor ? doctors.find(d => d.id === selectedDoctor)?.full_name || '—' : t('not_selected', 'انتخاب نشده')}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <Text type="secondary">{t('day', 'روز')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {form.getFieldValue('day_of_week') ? daysOfWeek.find(d => d.value === form.getFieldValue('day_of_week'))?.label : '—'}
-                  </div>
-                </div>
 
                 <Divider />
 

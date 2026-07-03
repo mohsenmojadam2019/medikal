@@ -48,7 +48,6 @@ export default function EditAppointmentPage() {
   const [loadingPatients, setLoadingPatients] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
 
-  // ===== دریافت لیست پزشکان =====
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoadingDoctors(true);
@@ -64,7 +63,6 @@ export default function EditAppointmentPage() {
     fetchDoctors();
   }, []);
 
-  // ===== دریافت لیست بیماران =====
   useEffect(() => {
     const fetchPatients = async () => {
       setLoadingPatients(true);
@@ -80,7 +78,6 @@ export default function EditAppointmentPage() {
     fetchPatients();
   }, []);
 
-  // ===== دریافت اطلاعات نوبت =====
   useEffect(() => {
     const fetchAppointment = async () => {
       try {
@@ -103,7 +100,6 @@ export default function EditAppointmentPage() {
     }
   }, [appointmentId, form, t]);
 
-  // ===== دریافت زمان‌های موجود =====
   useEffect(() => {
     const fetchAvailableSlots = async () => {
       const doctorId = form.getFieldValue('doctor_id');
@@ -317,9 +313,9 @@ export default function EditAppointmentPage() {
                     label={t('fee', 'هزینه (تومان)')}
                   >
                     <InputNumber
-                      prefix={<DollarOutlined />}
-                      placeholder={t('fee_placeholder', '۱۵۰۰۰۰')}
                       style={{ width: '100%' }}
+                      min={0}
+                      placeholder={t('fee_placeholder', '۱۵۰۰۰۰')}
                       formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                       parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
                     />

@@ -16,16 +16,12 @@ import {
   Divider,
   Space,
   Switch,
-  Tag,
-  InputNumber,
 } from 'antd';
 import {
   ArrowLeftOutlined,
   SaveOutlined,
   UploadOutlined,
   FileTextOutlined,
-  TagOutlined,
-  PlusOutlined,
 } from '@ant-design/icons';
 import { blogService, categoriesService, tagsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -35,7 +31,6 @@ import dynamic from 'next/dynamic';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-// ===== Rich Text Editor (با لودینگ) =====
 const ReactQuill = dynamic(() => import('react-quill'), {
   ssr: false,
   loading: () => <div style={{ height: 200, background: '#f8fafc', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>در حال بارگذاری...</div>,
@@ -53,7 +48,6 @@ export default function CreatePostPage() {
   const [fileList, setFileList] = useState([]);
   const [content, setContent] = useState('');
 
-  // ===== دریافت لیست دسته‌بندی‌ها و تگ‌ها =====
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -121,7 +115,6 @@ export default function CreatePostPage() {
     accept: 'image/*',
   };
 
-  // ===== تنظیمات Editor =====
   const modules = {
     toolbar: [
       [{ 'header': [1, 2, 3, 4, 5, 6, false] }],

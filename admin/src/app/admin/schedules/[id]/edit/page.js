@@ -42,7 +42,6 @@ export default function EditSchedulePage() {
   const [schedule, setSchedule] = useState(null);
   const [doctors, setDoctors] = useState([]);
 
-  // ===== دریافت لیست پزشکان =====
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -55,7 +54,6 @@ export default function EditSchedulePage() {
     fetchDoctors();
   }, []);
 
-  // ===== دریافت اطلاعات زمان‌بندی =====
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
@@ -81,7 +79,6 @@ export default function EditSchedulePage() {
     }
   }, [scheduleId, form, t]);
 
-  // ===== روزهای هفته =====
   const daysOfWeek = [
     { value: 'saturday', label: t('saturday', 'شنبه') },
     { value: 'sunday', label: t('sunday', 'یکشنبه') },
@@ -311,22 +308,6 @@ export default function EditSchedulePage() {
                 >
                   <Switch checkedChildren={t('active', 'فعال')} unCheckedChildren={t('inactive', 'غیرفعال')} />
                 </Form.Item>
-
-                <Divider />
-
-                <div>
-                  <Text type="secondary">{t('doctor', 'پزشک')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {form.getFieldValue('doctor_id') ? doctors.find(d => d.id === form.getFieldValue('doctor_id'))?.full_name || '—' : '—'}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <Text type="secondary">{t('day', 'روز')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {form.getFieldValue('day_of_week') ? daysOfWeek.find(d => d.value === form.getFieldValue('day_of_week'))?.label : '—'}
-                  </div>
-                </div>
 
                 <Divider />
 

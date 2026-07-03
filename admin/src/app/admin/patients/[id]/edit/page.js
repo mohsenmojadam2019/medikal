@@ -29,7 +29,6 @@ import {
 import { patientsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import JalaliDatePicker from '@/components/admin/common/JalaliDatePicker';
-import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -334,6 +333,7 @@ export default function EditPatientPage() {
                 style={{
                   borderRadius: 12,
                   borderColor: '#e8e8f0',
+                  background: '#f8fafc',
                 }}
               >
                 <div style={{ textAlign: 'center' }}>
@@ -343,7 +343,7 @@ export default function EditPatientPage() {
                       height: 120,
                       margin: '0 auto 16px',
                       borderRadius: '50%',
-                      background: '#f0f2f5',
+                      background: '#e2e8f0',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -396,6 +396,14 @@ export default function EditPatientPage() {
                     ]}
                   />
                 </Form.Item>
+
+                <Divider />
+
+                <div style={{ textAlign: 'center' }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {t('patient_edit_help', 'تغییرات روی اطلاعات بیمار اعمال می‌شود')}
+                  </Text>
+                </div>
               </Card>
             </Col>
           </Row>

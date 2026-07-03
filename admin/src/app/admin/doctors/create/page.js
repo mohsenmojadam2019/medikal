@@ -15,6 +15,7 @@ import {
   Typography,
   Divider,
   Space,
+  InputNumber,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -122,6 +123,10 @@ export default function CreateDoctorPage() {
           layout="vertical"
           onFinish={handleSubmit}
           size="large"
+          initialValues={{
+            is_available: true,
+            is_verified: false,
+          }}
         >
           <Row gutter={[24, 0]}>
             <Col xs={24} lg={16}>
@@ -269,6 +274,18 @@ export default function CreateDoctorPage() {
                   placeholder={t('clinic_address_placeholder', 'آدرس کامل مطب...')}
                 />
               </Form.Item>
+
+              <Form.Item
+                name="experience_years"
+                label={t('experience_years', 'سال‌های تجربه')}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={0}
+                  max={100}
+                  placeholder={t('experience_placeholder', 'مثال: ۱۰')}
+                />
+              </Form.Item>
             </Col>
 
             <Col xs={24} lg={8}>
@@ -276,6 +293,7 @@ export default function CreateDoctorPage() {
                 style={{
                   borderRadius: 12,
                   borderColor: '#e8e8f0',
+                  background: '#f8fafc',
                 }}
               >
                 <div style={{ textAlign: 'center' }}>
@@ -285,7 +303,7 @@ export default function CreateDoctorPage() {
                       height: 120,
                       margin: '0 auto 16px',
                       borderRadius: '50%',
-                      background: '#f0f2f5',
+                      background: '#e2e8f0',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -318,7 +336,6 @@ export default function CreateDoctorPage() {
                 <Form.Item
                   name="is_available"
                   label={t('status', 'وضعیت')}
-                  initialValue={true}
                 >
                   <Select
                     options={[
@@ -331,7 +348,6 @@ export default function CreateDoctorPage() {
                 <Form.Item
                   name="is_verified"
                   label={t('verified', 'تایید')}
-                  initialValue={false}
                 >
                   <Select
                     options={[
@@ -340,6 +356,14 @@ export default function CreateDoctorPage() {
                     ]}
                   />
                 </Form.Item>
+
+                <Divider />
+
+                <div style={{ textAlign: 'center' }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {t('doctor_help', 'پس از ایجاد، پزشک در لیست پزشکان نمایش داده می‌شود')}
+                  </Text>
+                </div>
               </Card>
             </Col>
           </Row>

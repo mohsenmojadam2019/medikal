@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Language;
-use App\Services\LanguageService;
+use App\Services\Language\LanguageService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -27,7 +27,7 @@ class LanguageController extends Controller
     public function index()
     {
         $languages = $this->languageService->getActiveLanguages();
-        
+
         return $this->success([
             'languages' => $languages,
             'current' => app()->getLocale(),
@@ -61,7 +61,7 @@ class LanguageController extends Controller
             return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $locale = $request->locale;
+        $locale = $request->input('locale');
         $language = $this->languageService->getLanguageByCode($locale);
 
         if (!$language || !$language->is_active) {
@@ -95,9 +95,9 @@ class LanguageController extends Controller
     public function translations(Request $request)
     {
         $locale = $request->input('locale', app()->getLocale());
-        
+
         $translations = $this->languageService->getFrontendTranslations($locale);
-        
+
         return $this->success([
             'locale' => $locale,
             'translations' => $translations,
@@ -119,10 +119,10 @@ class LanguageController extends Controller
         }
 
         $locale = $request->input('locale', app()->getLocale());
-        $value = $this->languageService->getTranslation($request->key, $locale);
+        $value = $this->languageService->getTranslation($request->input('key'), $locale);
 
         return $this->success([
-            'key' => $request->key,
+            'key' => $request->input('key'),
             'locale' => $locale,
             'value' => $value,
         ]);
@@ -145,9 +145,9 @@ class LanguageController extends Controller
         }
 
         $translation = $this->languageService->setTranslation(
-            $request->group,
-            $request->key,
-            $request->value,
+            $request->input('group'),
+            $request->input('key'),
+            $request->input('value'),
             $request->input('locale', app()->getLocale())
         );
 
@@ -167,11 +167,11 @@ class LanguageController extends Controller
             return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $count = $this->languageService->importFromFiles($request->locale);
+        $count = $this->languageService->importFromFiles($request->input('locale'));
 
         return $this->success([
             'count' => $count,
-            'locale' => $request->locale,
+            'locale' => $request->input('locale'),
         ], "{$count} ترجمه با موفقیت ایمپورت شد");
     }
 
@@ -188,11 +188,11 @@ class LanguageController extends Controller
             return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $count = $this->languageService->exportToFiles($request->locale);
+        $count = $this->languageService->exportToFiles($request->input('locale'));
 
         return $this->success([
             'count' => $count,
-            'locale' => $request->locale,
+            'locale' => $request->input('locale'),
         ], "{$count} ترجمه با موفقیت خروجی گرفته شد");
     }
 
@@ -202,7 +202,7 @@ class LanguageController extends Controller
     public function manage(Request $request)
     {
         $languages = Language::orderBy('sort_order')->get();
-        
+
         return $this->success($languages);
     }
 
@@ -254,7 +254,7 @@ class LanguageController extends Controller
         }
 
         // اگر می‌خواهد این زبان پیش‌فرض شود
-        if ($request->has('is_default') && $request->is_default) {
+        if ($request->has('is_default') && $request->input('is_default')) {
             $this->languageService->setDefaultLanguage($language);
         }
 
@@ -311,8 +311,8 @@ class LanguageController extends Controller
             return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $language = Language::find($request->language_id);
-        $fallback = Language::find($request->fallback_id);
+        $language = Language::find($request->input('language_id'));
+        $fallback = Language::find($request->input('fallback_id'));
 
         $this->languageService->setFallback($language, $fallback);
 

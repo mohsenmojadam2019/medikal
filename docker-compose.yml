@@ -111,6 +111,12 @@ services:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
+      - NEXT_PUBLIC_API_URL=http://localhost:8210
+      - NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
+      - NEXT_PUBLIC_REVERB_APP_KEY=your-app-key
+      - NEXT_PUBLIC_REVERB_HOST=localhost
+      - NEXT_PUBLIC_REVERB_PORT=8082
+      - TZ=Asia/Tehran
     stdin_open: true
     tty: true
 
@@ -130,24 +136,30 @@ services:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
+      - NEXT_PUBLIC_API_URL=http://localhost:8210
+      - NEXT_PUBLIC_FRONTEND_URL=http://localhost:3001
+      - NEXT_PUBLIC_REVERB_APP_KEY=your-app-key
+      - NEXT_PUBLIC_REVERB_HOST=localhost
+      - NEXT_PUBLIC_REVERB_PORT=8082
+      - TZ=Asia/Tehran
     stdin_open: true
     tty: true
 
   #mongodb service
-  medikall-mongodb:
-    container_name: medikall-mongodb
-    image: docker.arvancloud.ir/mongo:latest
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=password
-    restart: unless-stopped
-    ports:
-      - "28010:27017"
-    volumes:
-      - ./medikall_mongodata:/data/db
-      - ./mongodb/scripts:/docker-entrypoint-initdb.d
-    networks:
-      - medikall-main-network
+#  medikall-mongodb:
+#    container_name: medikall-mongodb
+#    image: docker.arvancloud.ir/mongo:latest
+#    environment:
+#      - MONGO_INITDB_ROOT_USERNAME=root
+#      - MONGO_INITDB_ROOT_PASSWORD=password
+#    restart: unless-stopped
+#    ports:
+#      - "28010:27017"
+#    volumes:
+#      - ./medikall_mongodata:/data/db
+#      - ./mongodb/scripts:/docker-entrypoint-initdb.d
+#    networks:
+#      - medikall-main-network
 
   # اضافه کن به انتهای services بخش
   # Mailpit - Email Testing Tool

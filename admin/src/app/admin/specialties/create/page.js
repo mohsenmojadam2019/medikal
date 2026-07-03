@@ -47,10 +47,8 @@ export default function CreateSpecialtyPage() {
         }
       });
       
-      // اضافه کردن رنگ
       formData.append('icon_color', color);
 
-      // آپلود آیکون
       if (fileList.length > 0) {
         formData.append('icon', fileList[0].originFileObj);
       }
@@ -124,6 +122,9 @@ export default function CreateSpecialtyPage() {
           layout="vertical"
           onFinish={handleSubmit}
           size="large"
+          initialValues={{
+            is_active: true,
+          }}
         >
           <Row gutter={[24, 0]}>
             <Col xs={24} lg={16}>
@@ -172,6 +173,7 @@ export default function CreateSpecialtyPage() {
                 style={{
                   borderRadius: 12,
                   borderColor: '#e8e8f0',
+                  background: '#f8fafc',
                 }}
               >
                 <div style={{ textAlign: 'center' }}>
@@ -225,7 +227,6 @@ export default function CreateSpecialtyPage() {
                 <Form.Item
                   name="is_active"
                   label={t('status', 'وضعیت')}
-                  initialValue={true}
                 >
                   <Select
                     options={[
@@ -234,6 +235,14 @@ export default function CreateSpecialtyPage() {
                     ]}
                   />
                 </Form.Item>
+
+                <Divider />
+
+                <div style={{ textAlign: 'center' }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {t('specialty_help', 'پس از ایجاد، تخصص در لیست تخصص‌ها نمایش داده می‌شود')}
+                  </Text>
+                </div>
               </Card>
             </Col>
           </Row>

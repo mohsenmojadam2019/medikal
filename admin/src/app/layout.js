@@ -1,4 +1,5 @@
-import './styles/globals.css';
+import '../styles/globals.css';
+import ClientLayout from './ClientLayout';
 
 export const metadata = {
   title: 'کلینیک‌یار - پنل مدیریت',
@@ -11,7 +12,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="fa" dir="rtl">
-      <body>{children}</body>
+      <body>
+        <ClientLayout>{children}</ClientLayout>
+      </body>
     </html>
   );
 }

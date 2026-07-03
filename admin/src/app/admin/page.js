@@ -17,6 +17,9 @@ import Loading from '@/components/admin/common/Loading';
 import { dashboardService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import dayjs from 'dayjs';
+import jalali from 'dayjs-jalali';
+
+dayjs.extend(jalali);
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -116,22 +119,25 @@ export default function AdminDashboard() {
       title: t('patient', 'بیمار'),
       dataIndex: 'patient',
       key: 'patient',
+      render: (patient) => patient?.full_name || '—',
     },
     {
       title: t('doctor', 'پزشک'),
       dataIndex: 'doctor',
       key: 'doctor',
+      render: (doctor) => doctor?.full_name || '—',
     },
     {
       title: t('date', 'تاریخ'),
       dataIndex: 'date',
       key: 'date',
-      render: (text) => dayjs(text).format('YYYY/MM/DD'),
+      render: (text) => text ? dayjs(text).format('jYYYY/jMM/jDD') : '—',
     },
     {
       title: t('time', 'ساعت'),
-      dataIndex: 'time',
-      key: 'time',
+      dataIndex: 'start_time',
+      key: 'start_time',
+      render: (time) => time || '—',
     },
     {
       title: t('status', 'وضعیت'),

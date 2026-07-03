@@ -14,7 +14,6 @@ import {
   Typography,
   Divider,
   Space,
-  TimePicker,
   InputNumber,
 } from 'antd';
 import {
@@ -28,7 +27,6 @@ import {
 import { appointmentsService, doctorsService, patientsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import JalaliDatePicker from '@/components/admin/common/JalaliDatePicker';
-import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -43,9 +41,7 @@ export default function CreateAppointmentPage() {
   const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [loadingPatients, setLoadingPatients] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(null);
 
-  // ===== دریافت لیست پزشکان =====
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoadingDoctors(true);
@@ -54,15 +50,13 @@ export default function CreateAppointmentPage() {
         setDoctors(response.data || []);
       } catch (error) {
         console.error('Error fetching doctors:', error);
-        message.error(t('fetch_error', 'خطا در دریافت لیست پزشکان'));
       } finally {
         setLoadingDoctors(false);
       }
     };
     fetchDoctors();
-  }, [t]);
+  }, []);
 
-  // ===== دریافت لیست بیماران =====
   useEffect(() => {
     const fetchPatients = async () => {
       setLoadingPatients(true);
@@ -71,15 +65,13 @@ export default function CreateAppointmentPage() {
         setPatients(response.data || []);
       } catch (error) {
         console.error('Error fetching patients:', error);
-        message.error(t('fetch_error', 'خطا در دریافت لیست بیماران'));
       } finally {
         setLoadingPatients(false);
       }
     };
     fetchPatients();
-  }, [t]);
+  }, []);
 
-  // ===== دریافت زمان‌های موجود =====
   useEffect(() => {
     const fetchAvailableSlots = async () => {
       const doctorId = form.getFieldValue('doctor_id');
@@ -161,6 +153,10 @@ export default function CreateAppointmentPage() {
           layout="vertical"
           onFinish={handleSubmit}
           size="large"
+          initialValues={{
+            type: 'in_person',
+            status: 'pending',
+          }}
         >
           <Row gutter={[24, 0]}>
             <Col xs={24} lg={16}>
@@ -216,7 +212,6 @@ export default function CreateAppointmentPage() {
                       format="jYYYY/jMM/jDD"
                       size="large"
                       onChange={(date) => {
-                        setSelectedDate(date);
                         form.setFieldsValue({ date });
                       }}
                     />
@@ -251,7 +246,6 @@ export default function CreateAppointmentPage() {
                   <Form.Item
                     name="type"
                     label={t('type', 'نوع نوبت')}
-                    initialValue="in_person"
                   >
                     <Select
                       options={[
@@ -269,9 +263,9 @@ export default function CreateAppointmentPage() {
                     label={t('fee', 'هزینه (تومان)')}
                   >
                     <InputNumber
-                      prefix={<DollarOutlined />}
-                      placeholder={t('fee_placeholder', '۱۵۰۰۰۰')}
                       style={{ width: '100%' }}
+                      min={0}
+                      placeholder={t('fee_placeholder', '۱۵۰۰۰۰')}
                       formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                       parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
                     />
@@ -311,13 +305,6 @@ export default function CreateAppointmentPage() {
                   <Text type="secondary">{t('status', 'وضعیت')}</Text>
                   <div style={{ fontWeight: 500, marginTop: 4 }}>
                     <Badge color="orange" text={t('pending', 'در انتظار')} />
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <Text type="secondary">{t('created_by', 'ایجادکننده')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {t('admin', 'ادمین')}
                   </div>
                 </div>
 

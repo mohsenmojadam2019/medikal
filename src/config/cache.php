@@ -131,6 +131,16 @@ return [
     |
     */
 
-    'serializable_classes' => false,
+//    'serializable_classes' => false,
+    'serializable_classes' => [
+        Illuminate\Support\Collection::class,
+        Illuminate\Database\Eloquent\Collection::class,
+        // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+        App\Models\Language::class,           // ← مدل اصلی که تو cache می‌ذاری
+        // اگر مدل‌های دیگه‌ای هم داری اضافه کن
+         App\Models\Translation::class,
+         App\Models\TranslationFallback::class,
+        // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+    ],
 
 ];

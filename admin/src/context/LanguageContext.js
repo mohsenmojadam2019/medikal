@@ -16,19 +16,20 @@ export function LanguageProvider({ children }) {
   const [direction, setDirection] = useState('rtl');
   const [translations, setTranslations] = useState({});
   const [loading, setLoading] = useState(true);
-  const [languages, setLanguages] = useState([]);
+  const [languages, setLanguages] = useState(Object.values(SUPPORTED_LANGUAGES));
 
-  const loadTranslations = async (localeCode) => {
+  const loadTranslations = useCallback(async (localeCode) => {
     try {
+      // اگر API در دسترس نبود، از ترجمه‌های پیش‌فرض استفاده کن
       const response = await languageService.getTranslations(localeCode);
       if (response?.data?.translations) {
         setTranslations(response.data.translations);
       }
     } catch (error) {
-      console.error('Error loading translations:', error);
+      console.log('Using default translations');
       setTranslations({});
     }
-  };
+  }, []);
 
   const loadLanguage = useCallback(async () => {
     try {
@@ -41,17 +42,22 @@ export function LanguageProvider({ children }) {
         return;
       }
 
-      const response = await languageService.getCurrent();
-      if (response?.data?.locale) {
-        const localeFromServer = response.data.locale;
-        if (SUPPORTED_LANGUAGES[localeFromServer]) {
-          setLocale(localeFromServer);
-          setDirection(response.data.direction || SUPPORTED_LANGUAGES[localeFromServer].direction);
-          localStorage.setItem('locale', localeFromServer);
-          await loadTranslations(localeFromServer);
-          setLoading(false);
-          return;
+      // اگر API در دسترس نبود، از پیش‌فرض استفاده کن
+      try {
+        const response = await languageService.getCurrent();
+        if (response?.data?.locale) {
+          const localeFromServer = response.data.locale;
+          if (SUPPORTED_LANGUAGES[localeFromServer]) {
+            setLocale(localeFromServer);
+            setDirection(response.data.direction || SUPPORTED_LANGUAGES[localeFromServer].direction);
+            localStorage.setItem('locale', localeFromServer);
+            await loadTranslations(localeFromServer);
+            setLoading(false);
+            return;
+          }
         }
+      } catch (error) {
+        console.log('API not available, using default language');
       }
 
       setLocale('fa');
@@ -59,25 +65,22 @@ export function LanguageProvider({ children }) {
       localStorage.setItem('locale', 'fa');
       await loadTranslations('fa');
     } catch (error) {
-      console.error('Error loading language:', error);
+      console.log('Error loading language, using fallback');
       setLocale('fa');
       setDirection('rtl');
-      await loadTranslations('fa');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadTranslations]);
 
   const loadLanguages = useCallback(async () => {
     try {
       const response = await languageService.getLanguages();
       if (response?.data?.languages) {
         setLanguages(response.data.languages);
-      } else {
-        setLanguages(Object.values(SUPPORTED_LANGUAGES));
       }
     } catch (error) {
-      console.error('Error loading languages:', error);
+      console.log('Using default languages');
       setLanguages(Object.values(SUPPORTED_LANGUAGES));
     }
   }, []);
@@ -104,12 +107,21 @@ export function LanguageProvider({ children }) {
       }
       return false;
     } catch (error) {
-      console.error('Error switching language:', error);
+      console.log('Error switching language, using local');
+      // حتی اگر API کار نکرد، زبان را به‌صورت محلی تغییر بده
+      if (SUPPORTED_LANGUAGES[newLocale]) {
+        setLocale(newLocale);
+        setDirection(SUPPORTED_LANGUAGES[newLocale].direction);
+        localStorage.setItem('locale', newLocale);
+        document.documentElement.dir = SUPPORTED_LANGUAGES[newLocale].direction;
+        document.documentElement.lang = newLocale;
+        return true;
+      }
       return false;
     } finally {
       setLoading(false);
     }
-  }, [locale]);
+  }, [locale, loadTranslations]);
 
   const t = useCallback((key, fallback = '') => {
     const parts = key.split('.');

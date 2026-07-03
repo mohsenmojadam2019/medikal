@@ -213,6 +213,7 @@ export default function EditSpecialtyPage() {
                 style={{
                   borderRadius: 12,
                   borderColor: '#e8e8f0',
+                  background: '#f8fafc',
                 }}
               >
                 <div style={{ textAlign: 'center' }}>
@@ -280,6 +281,14 @@ export default function EditSpecialtyPage() {
                     ]}
                   />
                 </Form.Item>
+
+                <Divider />
+
+                <div style={{ textAlign: 'center' }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {t('specialty_edit_help', 'تغییرات روی اطلاعات تخصص اعمال می‌شود')}
+                  </Text>
+                </div>
               </Card>
             </Col>
           </Row>

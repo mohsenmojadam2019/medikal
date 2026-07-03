@@ -26,12 +26,10 @@ import {
   DeleteOutlined,
   MedicineBoxOutlined,
   UserOutlined,
-  SearchOutlined,
 } from '@ant-design/icons';
 import { prescriptionsService, doctorsService, patientsService, drugsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import JalaliDatePicker from '@/components/admin/common/JalaliDatePicker';
-import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -50,7 +48,6 @@ export default function CreatePrescriptionPage() {
   const [items, setItems] = useState([]);
   const [selectedDrug, setSelectedDrug] = useState(null);
 
-  // ===== دریافت لیست پزشکان =====
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoadingDoctors(true);
@@ -66,7 +63,6 @@ export default function CreatePrescriptionPage() {
     fetchDoctors();
   }, []);
 
-  // ===== دریافت لیست بیماران =====
   useEffect(() => {
     const fetchPatients = async () => {
       setLoadingPatients(true);
@@ -82,7 +78,6 @@ export default function CreatePrescriptionPage() {
     fetchPatients();
   }, []);
 
-  // ===== دریافت لیست داروها =====
   useEffect(() => {
     const fetchDrugs = async () => {
       setLoadingDrugs(true);
@@ -98,7 +93,6 @@ export default function CreatePrescriptionPage() {
     fetchDrugs();
   }, []);
 
-  // ===== افزودن دارو به نسخه =====
   const handleAddDrug = () => {
     if (!selectedDrug) {
       message.warning(t('select_drug', 'لطفاً یک دارو انتخاب کنید'));
@@ -125,7 +119,6 @@ export default function CreatePrescriptionPage() {
       },
     ]);
 
-    // پاک کردن فرم
     form.setFieldsValue({
       dosage: undefined,
       frequency: undefined,
@@ -136,7 +129,6 @@ export default function CreatePrescriptionPage() {
     message.success(t('drug_added', 'دارو به نسخه اضافه شد'));
   };
 
-  // ===== حذف دارو از نسخه =====
   const handleRemoveDrug = (id) => {
     setItems(items.filter(item => item.id !== id));
   };
@@ -175,7 +167,6 @@ export default function CreatePrescriptionPage() {
     router.back();
   };
 
-  // ===== ستون‌های جدول داروها =====
   const columns = [
     {
       title: t('drug_name', 'نام دارو'),
@@ -260,6 +251,9 @@ export default function CreatePrescriptionPage() {
           layout="vertical"
           onFinish={handleSubmit}
           size="large"
+          initialValues={{
+            status: 'pending',
+          }}
         >
           <Row gutter={[24, 0]}>
             <Col xs={24} lg={16}>
@@ -322,7 +316,6 @@ export default function CreatePrescriptionPage() {
                   <Form.Item
                     name="status"
                     label={t('status', 'وضعیت')}
-                    initialValue="pending"
                   >
                     <Select
                       options={[
@@ -347,7 +340,6 @@ export default function CreatePrescriptionPage() {
 
               <Divider />
 
-              {/* ===== بخش افزودن دارو ===== */}
               <Title level={4}>{t('add_drug', 'افزودن دارو')}</Title>
 
               <Row gutter={[16, 0]}>
@@ -415,7 +407,6 @@ export default function CreatePrescriptionPage() {
                 {t('add_to_prescription', 'افزودن به نسخه')}
               </Button>
 
-              {/* ===== جدول داروهای اضافه شده ===== */}
               {items.length > 0 && (
                 <Table
                   dataSource={items}
@@ -451,29 +442,6 @@ export default function CreatePrescriptionPage() {
                   <MedicineBoxOutlined style={{ fontSize: 48, color: '#2563eb' }} />
                   <div style={{ marginTop: 8 }}>
                     <Text type="secondary">{t('prescription_info', 'اطلاعات نسخه')}</Text>
-                  </div>
-                </div>
-
-                <Divider />
-
-                <div>
-                  <Text type="secondary">{t('patient', 'بیمار')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {form.getFieldValue('patient_id') ? patients.find(p => p.id === form.getFieldValue('patient_id'))?.full_name || '—' : t('not_selected', 'انتخاب نشده')}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <Text type="secondary">{t('doctor', 'پزشک')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {form.getFieldValue('doctor_id') ? doctors.find(d => d.id === form.getFieldValue('doctor_id'))?.full_name || '—' : t('not_selected', 'انتخاب نشده')}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <Text type="secondary">{t('drugs_count', 'تعداد داروها')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {items.length} {t('items', 'مورد')}
                   </div>
                 </div>
 

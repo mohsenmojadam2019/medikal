@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LanguageProvider, useLanguage } from '@/context/LanguageContext';
@@ -9,7 +9,7 @@ import AdminLayoutComponent from '@/components/admin/layouts/AdminLayout';
 import Loading from '@/components/admin/common/Loading';
 import faIR from 'antd/locale/fa_IR';
 import dayjs from 'dayjs';
-import jalali from 'dayjs/plugin/jalali';
+import jalali from 'dayjs-jalali';
 import 'dayjs/locale/fa';
 
 dayjs.extend(jalali);
@@ -19,15 +19,24 @@ function AdminLayoutContent({ children }) {
   const { loading, isAuthenticated } = useAuth();
   const { direction } = useLanguage();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // اگر در صفحه لاگین هستیم، Layout ادمین را اعمال نکن
+  const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!loading && !isAuthenticated && !isLoginPage) {
       router.push('/admin/login');
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, isLoginPage]);
 
   if (loading) {
     return <Loading fullScreen />;
+  }
+
+  // اگر در صفحه لاگین هستیم، فقط محتوای صفحه را نشان بده
+  if (isLoginPage) {
+    return children;
   }
 
   if (!isAuthenticated) {

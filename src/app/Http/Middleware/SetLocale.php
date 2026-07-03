@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Language;
-use App\Services\LanguageService;
+use App\Services\Language\LanguageService;
 
 class SetLocale
 {
@@ -82,7 +82,15 @@ class SetLocale
             }
         }
 
-        // اولویت 6: زبان پیش‌فرض سیستم
+        // اولویت 6: Request parameter
+        if ($request->has('locale')) {
+            $locale = $request->input('locale');
+            if ($this->isValidLocale($locale)) {
+                return $locale;
+            }
+        }
+
+        // اولویت 7: زبان پیش‌فرض سیستم
         return config('app.locale', 'fa');
     }
 

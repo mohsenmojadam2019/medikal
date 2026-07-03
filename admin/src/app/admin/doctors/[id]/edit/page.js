@@ -16,6 +16,7 @@ import {
   Divider,
   Space,
   Spin,
+  InputNumber,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -311,6 +312,18 @@ export default function EditDoctorPage() {
                   placeholder={t('clinic_address_placeholder', 'آدرس کامل مطب...')}
                 />
               </Form.Item>
+
+              <Form.Item
+                name="experience_years"
+                label={t('experience_years', 'سال‌های تجربه')}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={0}
+                  max={100}
+                  placeholder={t('experience_placeholder', 'مثال: ۱۰')}
+                />
+              </Form.Item>
             </Col>
 
             <Col xs={24} lg={8}>
@@ -318,6 +331,7 @@ export default function EditDoctorPage() {
                 style={{
                   borderRadius: 12,
                   borderColor: '#e8e8f0',
+                  background: '#f8fafc',
                 }}
               >
                 <div style={{ textAlign: 'center' }}>
@@ -327,7 +341,7 @@ export default function EditDoctorPage() {
                       height: 120,
                       margin: '0 auto 16px',
                       borderRadius: '50%',
-                      background: '#f0f2f5',
+                      background: '#e2e8f0',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -380,6 +394,14 @@ export default function EditDoctorPage() {
                     ]}
                   />
                 </Form.Item>
+
+                <Divider />
+
+                <div style={{ textAlign: 'center' }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {t('doctor_edit_help', 'تغییرات روی اطلاعات پزشک اعمال می‌شود')}
+                  </Text>
+                </div>
               </Card>
             </Col>
           </Row>

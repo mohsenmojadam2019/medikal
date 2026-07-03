@@ -24,12 +24,10 @@ import {
   PhoneOutlined,
   MailOutlined,
   IdcardOutlined,
-  CalendarOutlined,
 } from '@ant-design/icons';
 import { patientsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import JalaliDatePicker from '@/components/admin/common/JalaliDatePicker';
-import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -44,13 +42,9 @@ export default function CreatePatientPage() {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // تبدیل تاریخ شمسی به میلادی برای ذخیره در دیتابیس
       const formData = new FormData();
       Object.keys(values).forEach((key) => {
-        if (key === 'birth_date' && values[key]) {
-          // تاریخ شمسی که از JalaliDatePicker می‌آید به میلادی تبدیل می‌شود
-          formData.append(key, values[key]);
-        } else if (values[key] !== undefined && values[key] !== null) {
+        if (values[key] !== undefined && values[key] !== null) {
           formData.append(key, values[key]);
         }
       });
@@ -128,6 +122,10 @@ export default function CreatePatientPage() {
           layout="vertical"
           onFinish={handleSubmit}
           size="large"
+          initialValues={{
+            is_active: true,
+            is_verified: false,
+          }}
         >
           <Row gutter={[24, 0]}>
             <Col xs={24} lg={16}>
@@ -293,6 +291,7 @@ export default function CreatePatientPage() {
                 style={{
                   borderRadius: 12,
                   borderColor: '#e8e8f0',
+                  background: '#f8fafc',
                 }}
               >
                 <div style={{ textAlign: 'center' }}>
@@ -302,7 +301,7 @@ export default function CreatePatientPage() {
                       height: 120,
                       margin: '0 auto 16px',
                       borderRadius: '50%',
-                      background: '#f0f2f5',
+                      background: '#e2e8f0',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -335,7 +334,6 @@ export default function CreatePatientPage() {
                 <Form.Item
                   name="is_active"
                   label={t('status', 'وضعیت')}
-                  initialValue={true}
                 >
                   <Select
                     options={[
@@ -348,7 +346,6 @@ export default function CreatePatientPage() {
                 <Form.Item
                   name="is_verified"
                   label={t('verified', 'تایید')}
-                  initialValue={false}
                 >
                   <Select
                     options={[
@@ -357,6 +354,14 @@ export default function CreatePatientPage() {
                     ]}
                   />
                 </Form.Item>
+
+                <Divider />
+
+                <div style={{ textAlign: 'center' }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {t('patient_help', 'پس از ایجاد، بیمار در لیست بیماران نمایش داده می‌شود')}
+                  </Text>
+                </div>
               </Card>
             </Col>
           </Row>

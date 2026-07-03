@@ -37,7 +37,6 @@ export default function CreateReferralPage() {
   const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [loadingPatients, setLoadingPatients] = useState(false);
 
-  // ===== دریافت لیست پزشکان =====
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoadingDoctors(true);
@@ -53,7 +52,6 @@ export default function CreateReferralPage() {
     fetchDoctors();
   }, []);
 
-  // ===== دریافت لیست بیماران =====
   useEffect(() => {
     const fetchPatients = async () => {
       setLoadingPatients(true);
@@ -198,7 +196,6 @@ export default function CreateReferralPage() {
                   <Form.Item
                     name="status"
                     label={t('status', 'وضعیت')}
-                    initialValue="pending"
                   >
                     <Select
                       options={[
@@ -246,29 +243,6 @@ export default function CreateReferralPage() {
                   <ArrowRightOutlined style={{ fontSize: 48, color: '#2563eb' }} />
                   <div style={{ marginTop: 8 }}>
                     <Text type="secondary">{t('referral_info', 'اطلاعات ارجاع')}</Text>
-                  </div>
-                </div>
-
-                <Divider />
-
-                <div>
-                  <Text type="secondary">{t('patient', 'بیمار')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {form.getFieldValue('patient_id') ? patients.find(p => p.id === form.getFieldValue('patient_id'))?.full_name || '—' : t('not_selected', 'انتخاب نشده')}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <Text type="secondary">{t('from_doctor', 'پزشک مبدأ')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {form.getFieldValue('from_doctor_id') ? doctors.find(d => d.id === form.getFieldValue('from_doctor_id'))?.full_name || '—' : t('not_selected', 'انتخاب نشده')}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <Text type="secondary">{t('to_doctor', 'پزشک مقصد')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {form.getFieldValue('to_doctor_id') ? doctors.find(d => d.id === form.getFieldValue('to_doctor_id'))?.full_name || '—' : t('not_selected', 'انتخاب نشده')}
                   </div>
                 </div>
 
