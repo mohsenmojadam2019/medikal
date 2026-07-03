@@ -1,3 +1,5 @@
+// src/services/api/index.js
+
 export { default as client } from './client';
 export { default as authService } from './auth';
 export { default as languageService } from './language';
@@ -16,10 +18,15 @@ export { default as walletService } from './admin/wallet';
 export { default as paymentsService } from './admin/payments';
 export { default as chatService } from './admin/chat';
 export { default as notificationsService } from './admin/notifications';
-export { default as blogService } from './admin/blog';
-export { default as categoriesService } from './admin/blog';
-export { default as tagsService } from './admin/blog';
-export { default as commentsService } from './admin/blog';
+export { default as usersService } from './admin/users';
+// ✅ اصلاح: استفاده از Named Export
+export {
+    blogService,
+    categoriesService,
+    tagsService,
+    commentsService
+} from './admin/blog';
+
 export { default as seoService } from './admin/seo';
 export { default as landingService } from './admin/landing';
 export { default as clinicService } from './admin/clinic';

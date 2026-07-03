@@ -69,7 +69,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 // 🔒 PROTECTED ADMIN ROUTES (با احراز هویت)
 // ============================================================
 Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
-    ->prefix('admin')
     ->group(function () {
 
 

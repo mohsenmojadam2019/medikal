@@ -24,6 +24,14 @@ class AdminAuthController extends Controller
      */
     public function loginWithEmail(Request $request)
     {
+//        // تنظیم دستی هدرها برای پاسخ
+//        $response = response()->json();
+//
+//        // تنظیم CORS headers
+//        $response->header('Access-Control-Allow-Origin', 'http://localhost:3001');
+//        $response->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+//        $response->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+//        $response->header('Access-Control-Allow-Credentials', 'true');
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|min:6',

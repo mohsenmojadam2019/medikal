@@ -30,7 +30,7 @@ import {
   EyeOutlined,
   ReloadOutlined,
   ExportOutlined,
-  ReplyOutlined,
+  CommentOutlined,
   StarOutlined,
   UserOutlined,
   CheckCircleOutlined,
@@ -242,7 +242,7 @@ export default function RatingsPage() {
           <Tooltip title={t('reply', 'پاسخ')}>
             <Button
               type="text"
-              icon={<ReplyOutlined />}
+              icon={<CommentOutlined />}
               onClick={() => handleReply(record)}
               size="small"
               style={{ color: '#2563eb' }}
