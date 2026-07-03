@@ -597,3 +597,8 @@ tests/coverage/
 /medikal_mongodata/WiredTigerHS.wt
 /medikal_mongodata/journal/WiredTigerLog.0000000018
 /medikal_mongodata/journal/WiredTigerPreplog.0000000001
+/medikal_mongodata/_tmp/spilldb/WiredTiger
+/medikal_mongodata/_tmp/spilldb/WiredTiger.lock
+/medikal_mongodata/_tmp/spilldb/WiredTiger.turtle
+/medikal_mongodata/_tmp/spilldb/WiredTiger.wt
+/medikal_mongodata/_tmp/spilldb/WiredTigerHS.wt
