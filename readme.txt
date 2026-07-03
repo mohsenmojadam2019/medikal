@@ -1,6 +1,6 @@
 http://localhost:8210/admin/login
-Email: admin@medikall.com
-Password: password123
+Email: admin@clinic-yar.com
+Password: 12345678
 
 ✅ Roles and Permissions created!
 📧 Email: admin@clinic-yar.com
