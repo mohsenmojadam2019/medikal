@@ -1,8 +1,8 @@
 // src/components/admin/common/JalaliDatePicker.js
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Input, Modal, Button, Space, Tooltip } from 'antd';
+import { useState, useEffect, useCallback } from 'react';
+import { Input, Modal, Button, Space, Tooltip, Select } from 'antd';
 import { CalendarOutlined, LeftOutlined, RightOutlined, CloseOutlined } from '@ant-design/icons';
 import moment from 'moment-jalaali';
 
@@ -21,20 +21,21 @@ const JalaliDatePicker = ({
   const [tempSelectedDate, setTempSelectedDate] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(moment());
   const [displayValue, setDisplayValue] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const inputRef = useRef(null);
 
-  // نام ماه‌های جلالی
+  // ===== state برای سلکت‌ها =====
+  const [selectedYear, setSelectedYear] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
+
   const jalaaliMonths = [
     'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
     'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
   ];
 
-  // نام روزهای هفته
   const weekDays = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
   const weekDaysShort = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
 
-  // مقداردهی اولیه
+  // ===== مقداردهی اولیه =====
   useEffect(() => {
     if (value) {
       let parsed = null;
@@ -45,61 +46,91 @@ const JalaliDatePicker = ({
       }
       if (parsed && parsed.isValid()) {
         setSelectedDate(parsed);
-        const formatted = parsed.format(format);
-        setDisplayValue(formatted);
-        setInputValue(formatted);
+        setDisplayValue(parsed.format(format));
         setCurrentMonth(parsed);
+        setSelectedYear(parsed.jYear());
+        setSelectedMonth(parsed.jMonth() + 1);
+        setSelectedDay(parsed.jDate());
       }
     } else {
       setSelectedDate(null);
       setDisplayValue('');
-      setInputValue('');
+      setSelectedYear(null);
+      setSelectedMonth(null);
+      setSelectedDay(null);
     }
   }, [value, format]);
 
-  // گرفتن روزهای ماه جاری
-  const getDaysInMonth = useCallback(() => {
-    const year = currentMonth.jYear();
-    const month = currentMonth.jMonth();
-    const daysInMonth = moment.jDaysInMonth(year, month + 1);
-    const firstDayOfMonth = moment(`${year}/${month + 1}/1`, 'jYYYY/jM/jD');
-    const startDayOfWeek = firstDayOfMonth.day();
+  // ===== گرفتن روزهای ماه =====
+  const getDaysInMonth = (year, month) => {
+    return moment.jDaysInMonth(year, month);
+  };
 
-    const days = [];
-
-    for (let i = 0; i < startDayOfWeek; i++) {
-      days.push(null);
+  // ===== تغییر سال =====
+  const handleYearChange = (year) => {
+    setSelectedYear(year);
+    if (selectedMonth && selectedDay) {
+      const daysInMonth = getDaysInMonth(year, selectedMonth);
+      if (selectedDay > daysInMonth) {
+        setSelectedDay(daysInMonth);
+      }
+      const date = moment(`${year}/${selectedMonth}/${Math.min(selectedDay, daysInMonth)}`, 'jYYYY/jM/jD');
+      if (date.isValid()) {
+        setTempSelectedDate(date);
+        setCurrentMonth(date);
+      }
     }
+  };
 
-    for (let i = 1; i <= daysInMonth; i++) {
-      const date = moment(`${year}/${month + 1}/${i}`, 'jYYYY/jM/jD');
-      const isToday = date.format('jYYYY/jMM/jDD') === moment().format('jYYYY/jMM/jDD');
-      const isSelected = tempSelectedDate && date.format('jYYYY/jMM/jDD') === tempSelectedDate.format('jYYYY/jMM/jDD');
-      const isFriday = date.day() === 6;
-
-      days.push({
-        day: i,
-        date: date,
-        isToday,
-        isSelected,
-        isFriday,
-      });
+  // ===== تغییر ماه =====
+  const handleMonthChange = (month) => {
+    setSelectedMonth(month);
+    if (selectedYear && selectedDay) {
+      const daysInMonth = getDaysInMonth(selectedYear, month);
+      if (selectedDay > daysInMonth) {
+        setSelectedDay(daysInMonth);
+      }
+      const date = moment(`${selectedYear}/${month}/${Math.min(selectedDay, daysInMonth)}`, 'jYYYY/jM/jD');
+      if (date.isValid()) {
+        setTempSelectedDate(date);
+        setCurrentMonth(date);
+      }
+    } else if (selectedYear) {
+      const date = moment(`${selectedYear}/${month}/1`, 'jYYYY/jM/jD');
+      if (date.isValid()) {
+        setTempSelectedDate(date);
+        setCurrentMonth(date);
+        setSelectedDay(1);
+      }
     }
+  };
 
-    return days;
-  }, [currentMonth, tempSelectedDate]);
+  // ===== تغییر روز =====
+  const handleDayChange = (day) => {
+    setSelectedDay(day);
+    if (selectedYear && selectedMonth) {
+      const date = moment(`${selectedYear}/${selectedMonth}/${day}`, 'jYYYY/jM/jD');
+      if (date.isValid()) {
+        setTempSelectedDate(date);
+        setCurrentMonth(date);
+      }
+    }
+  };
 
+  // ===== از تقویم انتخاب کنه =====
   const handleDateSelect = (dayObj) => {
     if (!dayObj) return;
     setTempSelectedDate(dayObj.date);
+    setSelectedYear(dayObj.date.jYear());
+    setSelectedMonth(dayObj.date.jMonth() + 1);
+    setSelectedDay(dayObj.date.jDate());
   };
 
+  // ===== تأیید =====
   const handleConfirm = () => {
-    if (tempSelectedDate) {
+    if (tempSelectedDate && tempSelectedDate.isValid()) {
       setSelectedDate(tempSelectedDate);
-      const formatted = tempSelectedDate.format(format);
-      setDisplayValue(formatted);
-      setInputValue(formatted);
+      setDisplayValue(tempSelectedDate.format(format));
       onChange?.(tempSelectedDate);
     }
     setIsModalOpen(false);
@@ -108,93 +139,91 @@ const JalaliDatePicker = ({
   const goToPrevMonth = () => {
     const newDate = moment(currentMonth).subtract(1, 'jMonth');
     setCurrentMonth(newDate);
+    setSelectedYear(newDate.jYear());
+    setSelectedMonth(newDate.jMonth() + 1);
   };
 
   const goToNextMonth = () => {
     const newDate = moment(currentMonth).add(1, 'jMonth');
     setCurrentMonth(newDate);
+    setSelectedYear(newDate.jYear());
+    setSelectedMonth(newDate.jMonth() + 1);
   };
 
   const goToToday = () => {
     const today = moment();
     setCurrentMonth(today);
     setTempSelectedDate(today);
+    setSelectedYear(today.jYear());
+    setSelectedMonth(today.jMonth() + 1);
+    setSelectedDay(today.jDate());
   };
 
   const clearDate = () => {
     setSelectedDate(null);
     setTempSelectedDate(null);
     setDisplayValue('');
-    setInputValue('');
+    setSelectedYear(null);
+    setSelectedMonth(null);
+    setSelectedDay(null);
     onChange?.(null);
     setIsModalOpen(false);
   };
 
   const openModal = () => {
-    setTempSelectedDate(selectedDate);
     if (selectedDate) {
+      setTempSelectedDate(selectedDate);
       setCurrentMonth(selectedDate);
+      setSelectedYear(selectedDate.jYear());
+      setSelectedMonth(selectedDate.jMonth() + 1);
+      setSelectedDay(selectedDate.jDate());
     } else {
-      setCurrentMonth(moment());
+      const today = moment();
+      setTempSelectedDate(today);
+      setCurrentMonth(today);
+      setSelectedYear(today.jYear());
+      setSelectedMonth(today.jMonth() + 1);
+      setSelectedDay(today.jDate());
     }
     setIsModalOpen(true);
   };
 
-  // ===== مدیریت ورودی دستی =====
-  const handleInputChange = (e) => {
-    const val = e.target.value;
-    setInputValue(val);
+  // ===== ساخت لیست‌ها =====
+  const monthOptions = Array.from({ length: 12 }, (_, i) => ({
+    value: i + 1,
+    label: jalaaliMonths[i]
+  }));
 
-    // اگر مقدار خالی بود
-    if (!val.trim()) {
-      setSelectedDate(null);
-      setDisplayValue('');
-      onChange?.(null);
-      return;
+  const yearOptions = Array.from({ length: 201 }, (_, i) => ({
+    value: 1300 + i,
+    label: (1300 + i).toString()
+  }));
+
+  const getDayOptions = () => {
+    if (!selectedYear || !selectedMonth) {
+      return Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: i + 1 }));
     }
-
-    // بررسی فرمت 1405/01/12
-    const regex = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/;
-    const match = val.match(regex);
-
-    if (match) {
-      const year = parseInt(match[1]);
-      const month = parseInt(match[2]);
-      const day = parseInt(match[3]);
-
-      // بررسی اعتبار سال
-      if (year < 1300 || year > 1500) return;
-      if (month < 1 || month > 12) return;
-      if (day < 1 || day > 31) return;
-
-      const parsed = moment(`${year}/${month}/${day}`, 'jYYYY/jM/jD');
-      if (parsed && parsed.isValid()) {
-        setSelectedDate(parsed);
-        setDisplayValue(parsed.format(format));
-        onChange?.(parsed);
-        return;
-      }
-    }
-
-    // اگر فرمت نامعتبر بود ولی قبلاً تاریخی انتخاب شده بود
-    if (selectedDate) {
-      setSelectedDate(null);
-      setDisplayValue('');
-      onChange?.(null);
-    }
+    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
+    return Array.from({ length: daysInMonth }, (_, i) => ({ value: i + 1, label: i + 1 }));
   };
 
-  const handleInputBlur = () => {
-    if (selectedDate) {
-      setInputValue(selectedDate.format(format));
-    } else {
-      setInputValue('');
-    }
-  };
-
-  const days = getDaysInMonth();
+  // ===== تقویم =====
   const year = currentMonth.jYear();
   const month = currentMonth.jMonth();
+  const daysInMonth = getDaysInMonth(year, month + 1);
+  const firstDayOfMonth = moment(`${year}/${month + 1}/1`, 'jYYYY/jM/jD').day();
+
+  const days = [];
+  for (let i = 0; i < firstDayOfMonth; i++) {
+    days.push(null);
+  }
+  for (let i = 1; i <= daysInMonth; i++) {
+    const date = moment(`${year}/${month + 1}/${i}`, 'jYYYY/jM/jD');
+    const isToday = date.format('jYYYY/jMM/jDD') === moment().format('jYYYY/jMM/jDD');
+    const isSelected = tempSelectedDate && date.format('jYYYY/jMM/jDD') === tempSelectedDate.format('jYYYY/jMM/jDD');
+    const isFriday = date.day() === 6;
+    days.push({ day: i, date, isToday, isSelected, isFriday });
+  }
 
   const weeks = [];
   for (let i = 0; i < days.length; i += 7) {
@@ -204,20 +233,17 @@ const JalaliDatePicker = ({
   return (
       <>
         <Input
-            ref={inputRef}
             placeholder={placeholder}
-            value={inputValue}
-            onChange={handleInputChange}
-            onBlur={handleInputBlur}
+            value={displayValue}
+            readOnly
             disabled={disabled}
             suffix={
               <Space size={4}>
-                {allowClear && inputValue && (
+                {allowClear && displayValue && (
                     <CloseOutlined
                         onClick={(e) => {
                           e.stopPropagation();
                           clearDate();
-                          inputRef.current?.focus();
                         }}
                         style={{ cursor: 'pointer', color: '#999' }}
                     />
@@ -247,18 +273,62 @@ const JalaliDatePicker = ({
             open={isModalOpen}
             onCancel={() => setIsModalOpen(false)}
             footer={null}
-            width={360}
+            width={420}
             centered
-            destroyOnHidden
+            destroyOnClose
         >
-          <div style={{ direction: 'rtl', textAlign: 'center', padding: '8px 0' }}>
-            {/* نمایش تاریخ انتخاب شده */}
-            {tempSelectedDate && (
+          <div style={{ direction: 'rtl', padding: '8px 0' }}>
+            {/* ===== سلکت‌ها ===== */}
+            <div style={{
+              display: 'flex',
+              gap: 12,
+              marginBottom: 16,
+            }}>
+              <div style={{ flex: 2 }}>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>سال</div>
+                <Select
+                    value={selectedYear}
+                    onChange={handleYearChange}
+                    placeholder="سال"
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ width: '100%' }}
+                    options={yearOptions}
+                    filterOption={(input, option) =>
+                        option.label.toString().includes(input)
+                    }
+                />
+              </div>
+              <div style={{ flex: 1.5 }}>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>ماه</div>
+                <Select
+                    value={selectedMonth}
+                    onChange={handleMonthChange}
+                    placeholder="ماه"
+                    style={{ width: '100%' }}
+                    options={monthOptions}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>روز</div>
+                <Select
+                    value={selectedDay}
+                    onChange={handleDayChange}
+                    placeholder="روز"
+                    style={{ width: '100%' }}
+                    options={getDayOptions()}
+                />
+              </div>
+            </div>
+
+            {/* ===== تاریخ انتخاب شده ===== */}
+            {tempSelectedDate && tempSelectedDate.isValid() && (
                 <div style={{
                   marginBottom: 16,
                   padding: 8,
                   background: '#dbeafe',
                   borderRadius: 8,
+                  textAlign: 'center',
                   fontSize: 14,
                   fontWeight: 600,
                   color: '#1e40af'
@@ -267,6 +337,7 @@ const JalaliDatePicker = ({
                 </div>
             )}
 
+            {/* ===== تقویم ===== */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
