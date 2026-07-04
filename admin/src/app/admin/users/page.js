@@ -1,3 +1,5 @@
+// src/app/admin/users/page.js
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,6 +22,8 @@ import {
   Select,
   Avatar,
   Form,
+  Switch, // ✅ اضافه شد
+  App, // ✅ اضافه شد
 } from 'antd';
 import {
   PlusOutlined,
@@ -37,12 +41,17 @@ import { usersService, rolesService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import Loading from '@/components/admin/common/Loading';
 import dayjs from 'dayjs';
+import moment from 'moment-jalaali';
+
+moment.loadPersian({ dialect: 'persian-modern' });
 
 const { Title, Text } = Typography;
 
 export default function UsersPage() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { message } = App.useApp(); // ✅ استفاده از App.useApp()
+
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -59,19 +68,28 @@ export default function UsersPage() {
   const [form] = Form.useForm();
   const [formLoading, setFormLoading] = useState(false);
 
+  // ===== دریافت نقش‌ها =====
   useEffect(() => {
     const fetchRoles = async () => {
       try {
         const response = await rolesService.getAll();
-        setRoles(response.data || []);
+        if (response.data?.success) {
+          const data = response.data.data;
+          const list = data?.data || data || [];
+          setRoles(Array.isArray(list) ? list : []);
+        } else {
+          setRoles([]);
+        }
       } catch (error) {
         console.error('Error fetching roles:', error);
         message.error(t('fetch_error', 'خطا در دریافت نقش‌ها'));
+        setRoles([]);
       }
     };
     fetchRoles();
   }, [t]);
 
+  // ===== دریافت کاربران =====
   const fetchUsers = async (params = {}) => {
     setLoading(true);
     try {
@@ -82,15 +100,27 @@ export default function UsersPage() {
         ...filters,
         ...params,
       });
-      setUsers(response.data || []);
-      setPagination({
-        ...pagination,
-        total: response.meta?.total || 0,
-        current: response.meta?.current_page || 1,
-      });
+
+      if (response.data?.success) {
+        const data = response.data.data;
+        const list = data?.data || data || [];
+        setUsers(Array.isArray(list) ? list : []);
+        setPagination({
+          ...pagination,
+          total: data?.total || (Array.isArray(list) ? list.length : 0),
+          current: data?.current_page || 1,
+        });
+      } else {
+        setUsers([]);
+        setPagination({
+          ...pagination,
+          total: 0,
+        });
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       message.error(t('fetch_error', 'خطا در دریافت اطلاعات'));
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -100,6 +130,7 @@ export default function UsersPage() {
     fetchUsers();
   }, [pagination.current, pagination.pageSize]);
 
+  // ===== ایجاد کاربر =====
   const handleCreate = () => {
     setModalMode('create');
     setSelectedUser(null);
@@ -107,6 +138,7 @@ export default function UsersPage() {
     setIsModalVisible(true);
   };
 
+  // ===== ویرایش کاربر =====
   const handleEdit = (record) => {
     setModalMode('edit');
     setSelectedUser(record);
@@ -114,6 +146,7 @@ export default function UsersPage() {
     setIsModalVisible(true);
   };
 
+  // ===== حذف کاربر =====
   const handleDelete = async (id) => {
     try {
       await usersService.delete(id);
@@ -124,6 +157,7 @@ export default function UsersPage() {
     }
   };
 
+  // ===== تغییر وضعیت =====
   const handleToggleStatus = async (id) => {
     try {
       await usersService.toggleStatus(id);
@@ -134,6 +168,7 @@ export default function UsersPage() {
     }
   };
 
+  // ===== ذخیره کاربر =====
   const handleSubmit = async (values) => {
     setFormLoading(true);
     try {
@@ -154,13 +189,13 @@ export default function UsersPage() {
     }
   };
 
-  const handleAssignRole = async (userId, role) => {
+  // ===== فرمت تاریخ =====
+  const formatJalaliDate = (date) => {
+    if (!date) return '—';
     try {
-      await usersService.assignRole(userId, role);
-      message.success(t('role_assigned', 'نقش با موفقیت اختصاص داده شد'));
-      fetchUsers();
+      return moment(date).format('jYYYY/jMM/jDD HH:mm');
     } catch (error) {
-      message.error(t('error', 'خطا در اختصاص نقش'));
+      return '—';
     }
   };
 
@@ -170,13 +205,13 @@ export default function UsersPage() {
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
-        <Space>
-          <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#2563eb' }} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{text}</div>
-            <div style={{ fontSize: 12, color: '#64748b' }}>{record.email || record.mobile}</div>
-          </div>
-        </Space>
+          <Space>
+            <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#2563eb' }} />
+            <div>
+              <div style={{ fontWeight: 600 }}>{text}</div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>{record.email || record.mobile}</div>
+            </div>
+          </Space>
       ),
     },
     {
@@ -195,11 +230,11 @@ export default function UsersPage() {
       dataIndex: 'roles',
       key: 'roles',
       render: (roles) => (
-        <Space wrap>
-          {roles?.map((role) => (
-            <Tag key={role.id} color="blue">{role.name}</Tag>
-          )) || '—'}
-        </Space>
+          <Space wrap>
+            {roles?.map((role) => (
+                <Tag key={role.id} color="blue">{role.name}</Tag>
+            )) || '—'}
+          </Space>
       ),
     },
     {
@@ -207,272 +242,286 @@ export default function UsersPage() {
       dataIndex: 'is_active',
       key: 'is_active',
       render: (isActive) => (
-        <Badge
-          status={isActive ? 'success' : 'error'}
-          text={isActive ? t('active', 'فعال') : t('inactive', 'غیرفعال')}
-        />
+          <Badge
+              status={isActive ? 'success' : 'error'}
+              text={isActive ? t('active', 'فعال') : t('inactive', 'غیرفعال')}
+          />
       ),
     },
     {
       title: t('last_login', 'آخرین ورود'),
       dataIndex: 'last_login_at',
       key: 'last_login_at',
-      render: (date) => date ? dayjs(date).format('jYYYY/jMM/jDD HH:mm') : '—',
+      render: (date) => formatJalaliDate(date),
     },
     {
       title: t('actions', 'عملیات'),
       key: 'actions',
       width: 220,
       render: (_, record) => (
-        <Space size="small" wrap>
-          <Tooltip title={t('edit', 'ویرایش')}>
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title={t('toggle_status', 'تغییر وضعیت')}>
-            <Button
-              type="text"
-              icon={record.is_active ? <CloseCircleOutlined /> : <CheckCircleOutlined />}
-              onClick={() => handleToggleStatus(record.id)}
-              size="small"
-              style={{ color: record.is_active ? '#ef4444' : '#10b981' }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title={t('delete_confirm', 'آیا از حذف این کاربر اطمینان دارید؟')}
-            onConfirm={() => handleDelete(record.id)}
-            okText={t('yes', 'بله')}
-            cancelText={t('no', 'خیر')}
-          >
-            <Tooltip title={t('delete', 'حذف')}>
-              <Button type="text" icon={<DeleteOutlined />} size="small" danger />
+          <Space size="small" wrap>
+            <Tooltip title={t('edit', 'ویرایش')}>
+              <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  onClick={() => handleEdit(record)}
+                  size="small"
+              />
             </Tooltip>
-          </Popconfirm>
-        </Space>
+            <Tooltip title={t('toggle_status', 'تغییر وضعیت')}>
+              <Button
+                  type="text"
+                  icon={record.is_active ? <CloseCircleOutlined /> : <CheckCircleOutlined />}
+                  onClick={() => handleToggleStatus(record.id)}
+                  size="small"
+                  style={{ color: record.is_active ? '#ef4444' : '#10b981' }}
+              />
+            </Tooltip>
+            <Popconfirm
+                title={t('delete_confirm', 'آیا از حذف این کاربر اطمینان دارید؟')}
+                onConfirm={() => handleDelete(record.id)}
+                okText={t('yes', 'بله')}
+                cancelText={t('no', 'خیر')}
+            >
+              <Tooltip title={t('delete', 'حذف')}>
+                <Button type="text" icon={<DeleteOutlined />} size="small" danger />
+              </Tooltip>
+            </Popconfirm>
+          </Space>
       ),
     },
   ];
 
-  return (
-    <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 24,
-        }}
-      >
-        <div>
-          <Title level={2} style={{ margin: 0 }}>
-            {t('users_management', 'مدیریت کاربران')}
-          </Title>
-          <Text type="secondary">
-            {t('users_subtitle', 'لیست کاربران سیستم')}
-          </Text>
+  // اگر users آرایه نیست
+  if (!Array.isArray(users)) {
+    console.error('⚠️ Users is not an array:', users);
+    return (
+        <div style={{ padding: 24 }}>
+          <Title level={4}>خطا در نمایش داده‌ها</Title>
+          <Text type="danger">داده‌های دریافتی معتبر نیستند.</Text>
         </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleCreate}
-          style={{
-            height: 40,
-            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-            border: 'none',
-          }}
+    );
+  }
+
+  return (
+      <div>
+        <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 24,
+            }}
         >
-          {t('new_user', 'کاربر جدید')}
-        </Button>
-      </div>
-
-      <Card
-        style={{
-          marginBottom: 16,
-          borderRadius: 12,
-          borderColor: '#e8e8f0',
-        }}
-      >
-        <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Input
-              placeholder={t('search_user', 'جستجوی کاربر...')}
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onPressEnter={() => fetchUsers({ page: 1 })}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Select
-              placeholder={t('filter_role', 'فیلتر نقش')}
-              style={{ width: '100%' }}
-              allowClear
-              onChange={(value) => setFilters({ ...filters, role: value })}
-            >
-              {roles.map((role) => (
-                <Select.Option key={role.id} value={role.name}>
-                  {role.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Select
-              placeholder={t('filter_status', 'فیلتر وضعیت')}
-              style={{ width: '100%' }}
-              allowClear
-              onChange={(value) => setFilters({ ...filters, is_active: value })}
-            >
-              <Select.Option value={true}>{t('active', 'فعال')}</Select.Option>
-              <Select.Option value={false}>{t('inactive', 'غیرفعال')}</Select.Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={24} md={24} lg={6}>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />}>
-                {t('search', 'جستجو')}
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={fetchUsers}>
-                {t('refresh', 'بروزرسانی')}
-              </Button>
-              <Button icon={<ExportOutlined />}>{t('export', 'خروجی')}</Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card
-        style={{
-          borderRadius: 12,
-          borderColor: '#e8e8f0',
-        }}
-      >
-        <Table
-          columns={columns}
-          dataSource={users}
-          loading={loading}
-          rowKey="id"
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: true,
-            showTotal: (total) => `${t('total', 'مجموع')} ${total} ${t('items', 'کاربر')}`,
-            onChange: (page, pageSize) => {
-              setPagination({ ...pagination, current: page, pageSize });
-            },
-          }}
-          scroll={{ x: 1100 }}
-          locale={{
-            emptyText: t('no_users', 'هیچ کاربری یافت نشد'),
-          }}
-        />
-      </Card>
-
-      <Modal
-        title={modalMode === 'create' ? t('new_user', 'کاربر جدید') : t('edit_user', 'ویرایش کاربر')}
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        width={500}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          size="large"
-        >
-          <Form.Item
-            name="name"
-            label={t('name', 'نام و نام خانوادگی')}
-            rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-          >
-            <Input placeholder={t('name_placeholder', 'نام کامل...')} />
-          </Form.Item>
-
-          <Form.Item
-            name="mobile"
-            label={t('mobile', 'شماره موبایل')}
-            rules={[
-              { required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') },
-              { pattern: /^09[0-9]{9}$/, message: t('mobile_invalid', 'شماره موبایل نامعتبر است') },
-            ]}
-          >
-            <Input placeholder={t('mobile_placeholder', '۰۹۱۲۳۴۵۶۷۸۹')} />
-          </Form.Item>
-
-          <Form.Item
-            name="email"
-            label={t('email', 'ایمیل')}
-            rules={[
-              { type: 'email', message: t('email_invalid', 'ایمیل نامعتبر است') },
-            ]}
-          >
-            <Input placeholder={t('email_placeholder', 'user@clinic.com')} />
-          </Form.Item>
-
-          <Form.Item
-            name="role"
-            label={t('role', 'نقش')}
-            rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-          >
-            <Select
-              placeholder={t('select_role', 'انتخاب نقش...')}
-              options={roles.map((role) => ({
-                value: role.name,
-                label: role.name,
-              }))}
-            />
-          </Form.Item>
-
-          {modalMode === 'create' && (
-            <Form.Item
-              name="password"
-              label={t('password', 'رمز عبور')}
-              rules={[
-                { required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') },
-                { min: 8, message: t('password_min', 'رمز عبور باید حداقل ۸ کاراکتر باشد') },
-              ]}
-            >
-              <Input.Password placeholder="********" />
-            </Form.Item>
-          )}
-
-          <Form.Item
-            name="is_active"
-            label={t('status', 'وضعیت')}
-            valuePropName="checked"
-            initialValue={true}
-          >
-            <Switch
-              checkedChildren={t('active', 'فعال')}
-              unCheckedChildren={t('inactive', 'غیرفعال')}
-            />
-          </Form.Item>
-
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-            <Button onClick={() => setIsModalVisible(false)}>
-              {t('cancel', 'انصراف')}
-            </Button>
-            <Button
+          <div>
+            <Title level={2} style={{ margin: 0 }}>
+              {t('users_management', 'مدیریت کاربران')}
+            </Title>
+            <Text type="secondary">
+              {t('users_subtitle', 'لیست کاربران سیستم')}
+            </Text>
+          </div>
+          <Button
               type="primary"
-              htmlType="submit"
-              loading={formLoading}
+              icon={<PlusOutlined />}
+              onClick={handleCreate}
               style={{
+                height: 40,
                 background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                 border: 'none',
               }}
+          >
+            {t('new_user', 'کاربر جدید')}
+          </Button>
+        </div>
+
+        <Card
+            style={{
+              marginBottom: 16,
+              borderRadius: 12,
+              borderColor: '#e8e8f0',
+            }}
+        >
+          <Row gutter={[16, 16]} align="middle">
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Input
+                  placeholder={t('search_user', 'جستجوی کاربر...')}
+                  prefix={<SearchOutlined />}
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  onPressEnter={() => fetchUsers({ page: 1 })}
+                  allowClear
+              />
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Select
+                  placeholder={t('filter_role', 'فیلتر نقش')}
+                  style={{ width: '100%' }}
+                  allowClear
+                  onChange={(value) => setFilters({ ...filters, role: value })}
+              >
+                {roles.map((role) => (
+                    <Select.Option key={role.id} value={role.name}>
+                      {role.name}
+                    </Select.Option>
+                ))}
+              </Select>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Select
+                  placeholder={t('filter_status', 'فیلتر وضعیت')}
+                  style={{ width: '100%' }}
+                  allowClear
+                  onChange={(value) => setFilters({ ...filters, is_active: value })}
+              >
+                <Select.Option value={true}>{t('active', 'فعال')}</Select.Option>
+                <Select.Option value={false}>{t('inactive', 'غیرفعال')}</Select.Option>
+              </Select>
+            </Col>
+            <Col xs={24} sm={24} md={24} lg={6}>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={() => fetchUsers({ page: 1 })}>
+                  {t('search', 'جستجو')}
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={() => fetchUsers()}>
+                  {t('refresh', 'بروزرسانی')}
+                </Button>
+                <Button icon={<ExportOutlined />}>{t('export', 'خروجی')}</Button>
+              </Space>
+            </Col>
+          </Row>
+        </Card>
+
+        <Card
+            style={{
+              borderRadius: 12,
+              borderColor: '#e8e8f0',
+            }}
+        >
+          <Table
+              columns={columns}
+              dataSource={users}
+              loading={loading}
+              rowKey="id"
+              pagination={{
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: pagination.total,
+                showSizeChanger: true,
+                showTotal: (total) => `${t('total', 'مجموع')} ${total} ${t('items', 'کاربر')}`,
+                onChange: (page, pageSize) => {
+                  setPagination({ ...pagination, current: page, pageSize });
+                },
+              }}
+              scroll={{ x: 1100 }}
+              locale={{
+                emptyText: t('no_users', 'هیچ کاربری یافت نشد'),
+              }}
+          />
+        </Card>
+
+        {/* ===== مودال ایجاد/ویرایش ===== */}
+        <Modal
+            title={modalMode === 'create' ? t('new_user', 'کاربر جدید') : t('edit_user', 'ویرایش کاربر')}
+            open={isModalVisible}
+            onCancel={() => setIsModalVisible(false)}
+            footer={null}
+            width={500}
+        >
+          <Form
+              form={form} // ✅ این خط اضافه شد
+              layout="vertical"
+              onFinish={handleSubmit}
+              size="large"
+              initialValues={{
+                is_active: true,
+              }}
+          >
+            <Form.Item
+                name="name"
+                label={t('name', 'نام و نام خانوادگی')}
+                rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
             >
-              {t('save', 'ذخیره')}
-            </Button>
-          </div>
-        </Form>
-      </Modal>
-    </div>
+              <Input placeholder={t('name_placeholder', 'نام کامل...')} />
+            </Form.Item>
+
+            <Form.Item
+                name="mobile"
+                label={t('mobile', 'شماره موبایل')}
+                rules={[
+                  { required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') },
+                  { pattern: /^09[0-9]{9}$/, message: t('mobile_invalid', 'شماره موبایل نامعتبر است') },
+                ]}
+            >
+              <Input placeholder={t('mobile_placeholder', '۰۹۱۲۳۴۵۶۷۸۹')} />
+            </Form.Item>
+
+            <Form.Item
+                name="email"
+                label={t('email', 'ایمیل')}
+                rules={[
+                  { type: 'email', message: t('email_invalid', 'ایمیل نامعتبر است') },
+                ]}
+            >
+              <Input placeholder={t('email_placeholder', 'user@clinic.com')} />
+            </Form.Item>
+
+            <Form.Item
+                name="role"
+                label={t('role', 'نقش')}
+                rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
+            >
+              <Select
+                  placeholder={t('select_role', 'انتخاب نقش...')}
+                  options={roles.map((role) => ({
+                    value: role.name,
+                    label: role.name,
+                  }))}
+              />
+            </Form.Item>
+
+            {modalMode === 'create' && (
+                <Form.Item
+                    name="password"
+                    label={t('password', 'رمز عبور')}
+                    rules={[
+                      { required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') },
+                      { min: 8, message: t('password_min', 'رمز عبور باید حداقل ۸ کاراکتر باشد') },
+                    ]}
+                >
+                  <Input.Password placeholder="********" />
+                </Form.Item>
+            )}
+
+            <Form.Item
+                name="is_active"
+                label={t('status', 'وضعیت')}
+                valuePropName="checked"
+            >
+              <Switch
+                  checkedChildren={t('active', 'فعال')}
+                  unCheckedChildren={t('inactive', 'غیرفعال')}
+              />
+            </Form.Item>
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <Button onClick={() => setIsModalVisible(false)}>
+                {t('cancel', 'انصراف')}
+              </Button>
+              <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={formLoading}
+                  style={{
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    border: 'none',
+                  }}
+              >
+                {t('save', 'ذخیره')}
+              </Button>
+            </div>
+          </Form>
+        </Modal>
+      </div>
   );
 }

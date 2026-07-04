@@ -1,4 +1,5 @@
 <?php
+// app/Models/Prescription.php
 
 namespace App\Models;
 
@@ -38,6 +39,7 @@ class Prescription extends Model
         'duration' => 'integer',
         'status' => PrescriptionStatusEnum::class,
         'metadata' => 'array',
+        'tenant_id' => 'integer',
     ];
 
     // ========== Relationships ==========
@@ -207,15 +209,12 @@ class Prescription extends Model
 
     public function getDrugInteractions(): array
     {
-        // دریافت داروهای دیگر بیمار
         $otherDrugs = Prescription::where('patient_id', $this->patient_id)
             ->where('id', '!=', $this->id)
             ->where('status', PrescriptionStatusEnum::ACTIVE)
             ->pluck('drug_name')
             ->toArray();
 
-        // اینجا می‌تونی با یک API یا دیتابیس تداخل دارویی چک کنی
-        // فعلاً یک نمونه ساده
         $interactions = [];
         $knownInteractions = [
             'آموکسی‌سیلین' => ['متفورمین', 'لوزارتان'],
@@ -252,6 +251,10 @@ class Prescription extends Model
             }
             if (empty($prescription->end_date) && !empty($prescription->duration)) {
                 $prescription->end_date = now()->addDays($prescription->duration)->toDateString();
+            }
+            // ✅ مقداردهی پیش‌فرض tenant_id
+            if (empty($prescription->tenant_id)) {
+                $prescription->tenant_id = session('tenant_id', 1);
             }
         });
     }

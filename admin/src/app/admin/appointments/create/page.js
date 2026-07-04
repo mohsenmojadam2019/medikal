@@ -1,3 +1,5 @@
+// src/app/admin/appointments/create/page.js
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,6 +17,7 @@ import {
   Divider,
   Space,
   InputNumber,
+  Badge,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -42,14 +45,22 @@ export default function CreateAppointmentPage() {
   const [loadingPatients, setLoadingPatients] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
 
+  // ===== دریافت لیست پزشکان =====
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoadingDoctors(true);
       try {
         const response = await doctorsService.getAll({ per_page: 100 });
-        setDoctors(response.data || []);
+        // ✅ بررسی ساختار پاسخ
+        if (response.data?.success) {
+          const data = response.data.data;
+          setDoctors(data?.data || data || []);
+        } else {
+          setDoctors([]);
+        }
       } catch (error) {
         console.error('Error fetching doctors:', error);
+        setDoctors([]);
       } finally {
         setLoadingDoctors(false);
       }
@@ -57,14 +68,22 @@ export default function CreateAppointmentPage() {
     fetchDoctors();
   }, []);
 
+  // ===== دریافت لیست بیماران =====
   useEffect(() => {
     const fetchPatients = async () => {
       setLoadingPatients(true);
       try {
         const response = await patientsService.getAll({ per_page: 100 });
-        setPatients(response.data || []);
+        // ✅ بررسی ساختار پاسخ
+        if (response.data?.success) {
+          const data = response.data.data;
+          setPatients(data?.data || data || []);
+        } else {
+          setPatients([]);
+        }
       } catch (error) {
         console.error('Error fetching patients:', error);
+        setPatients([]);
       } finally {
         setLoadingPatients(false);
       }
@@ -72,11 +91,12 @@ export default function CreateAppointmentPage() {
     fetchPatients();
   }, []);
 
+  // ===== دریافت زمان‌های خالی =====
+  const doctorId = Form.useWatch('doctor_id', form);
+  const date = Form.useWatch('date', form);
+
   useEffect(() => {
     const fetchAvailableSlots = async () => {
-      const doctorId = form.getFieldValue('doctor_id');
-      const date = form.getFieldValue('date');
-      
       if (!doctorId || !date) {
         setAvailableSlots([]);
         return;
@@ -84,7 +104,11 @@ export default function CreateAppointmentPage() {
 
       try {
         const response = await appointmentsService.getAvailableSlots(doctorId, date);
-        setAvailableSlots(response.data || []);
+        if (response.data?.success) {
+          setAvailableSlots(response.data.data || []);
+        } else {
+          setAvailableSlots([]);
+        }
       } catch (error) {
         console.error('Error fetching available slots:', error);
         setAvailableSlots([]);
@@ -92,7 +116,7 @@ export default function CreateAppointmentPage() {
     };
 
     fetchAvailableSlots();
-  }, [form.getFieldValue('doctor_id'), form.getFieldValue('date')]);
+  }, [doctorId, date]);
 
   const handleSubmit = async (values) => {
     setLoading(true);
@@ -113,233 +137,233 @@ export default function CreateAppointmentPage() {
   };
 
   return (
-    <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 24,
-        }}
-      >
-        <div>
-          <Space>
-            <Button
-              type="text"
-              icon={<ArrowLeftOutlined />}
-              onClick={handleBack}
-              style={{ fontSize: 18 }}
-            />
-            <div>
-              <Title level={2} style={{ margin: 0 }}>
-                {t('new_appointment', 'نوبت جدید')}
-              </Title>
-              <Text type="secondary">
-                {t('create_appointment_subtitle', 'رزرو نوبت جدید در کلینیک')}
-              </Text>
-            </div>
-          </Space>
-        </div>
-      </div>
-
-      <Card
-        style={{
-          borderRadius: 12,
-          borderColor: '#e8e8f0',
-        }}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          size="large"
-          initialValues={{
-            type: 'in_person',
-            status: 'pending',
-          }}
+      <div>
+        <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 24,
+            }}
         >
-          <Row gutter={[24, 0]}>
-            <Col xs={24} lg={16}>
-              <Row gutter={[16, 0]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="patient_id"
-                    label={t('patient', 'بیمار')}
-                    rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-                  >
-                    <Select
-                      placeholder={t('select_patient', 'انتخاب بیمار...')}
-                      loading={loadingPatients}
-                      showSearch
-                      optionFilterProp="children"
-                      options={patients.map((p) => ({
-                        value: p.id,
-                        label: `${p.full_name} (${p.national_code || p.phone})`,
-                      }))}
-                    />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="doctor_id"
-                    label={t('doctor', 'پزشک')}
-                    rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-                  >
-                    <Select
-                      placeholder={t('select_doctor', 'انتخاب پزشک...')}
-                      loading={loadingDoctors}
-                      showSearch
-                      optionFilterProp="children"
-                      options={doctors.map((d) => ({
-                        value: d.id,
-                        label: `${d.full_name} (${d.specialty?.name || ''})`,
-                      }))}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={[16, 0]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="date"
-                    label={t('date', 'تاریخ')}
-                    rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-                  >
-                    <JalaliDatePicker
-                      placeholder={t('select_date', 'انتخاب تاریخ')}
-                      format="jYYYY/jMM/jDD"
-                      size="large"
-                      onChange={(date) => {
-                        form.setFieldsValue({ date });
-                      }}
-                    />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="start_time"
-                    label={t('time', 'ساعت')}
-                    rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-                  >
-                    <Select
-                      placeholder={t('select_time', 'انتخاب ساعت...')}
-                      options={availableSlots.map((slot) => ({
-                        value: slot,
-                        label: slot,
-                      }))}
-                      disabled={!form.getFieldValue('doctor_id') || !form.getFieldValue('date')}
-                    />
-                  </Form.Item>
-                  {availableSlots.length === 0 && form.getFieldValue('doctor_id') && form.getFieldValue('date') && (
-                    <Text type="danger" style={{ fontSize: 12 }}>
-                      {t('no_available_slots', 'هیچ زمان خالی برای این تاریخ و پزشک وجود ندارد')}
-                    </Text>
-                  )}
-                </Col>
-              </Row>
-
-              <Row gutter={[16, 0]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="type"
-                    label={t('type', 'نوع نوبت')}
-                  >
-                    <Select
-                      options={[
-                        { value: 'in_person', label: t('in_person', 'حضوری') },
-                        { value: 'online', label: t('online', 'آنلاین') },
-                        { value: 'home_visit', label: t('home_visit', 'ویزیت در منزل') },
-                      ]}
-                    />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="fee"
-                    label={t('fee', 'هزینه (تومان)')}
-                  >
-                    <InputNumber
-                      style={{ width: '100%' }}
-                      min={0}
-                      placeholder={t('fee_placeholder', '۱۵۰۰۰۰')}
-                      formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Form.Item
-                name="description"
-                label={t('description', 'توضیحات')}
-              >
-                <TextArea
-                  rows={3}
-                  placeholder={t('description_placeholder', 'توضیحات نوبت...')}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} lg={8}>
-              <Card
-                style={{
-                  borderRadius: 12,
-                  borderColor: '#e8e8f0',
-                  background: '#f8fafc',
-                }}
-              >
-                <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                  <CalendarOutlined style={{ fontSize: 48, color: '#2563eb' }} />
-                  <div style={{ marginTop: 8 }}>
-                    <Text type="secondary">{t('appointment_info', 'اطلاعات نوبت')}</Text>
-                  </div>
-                </div>
-
-                <Divider />
-
-                <div>
-                  <Text type="secondary">{t('status', 'وضعیت')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    <Badge color="orange" text={t('pending', 'در انتظار')} />
-                  </div>
-                </div>
-
-                <Divider />
-
-                <div style={{ textAlign: 'center' }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {t('appointment_help', 'پس از ایجاد نوبت، پیام تایید برای بیمار ارسال می‌شود')}
-                  </Text>
-                </div>
-              </Card>
-            </Col>
-          </Row>
-
-          <Divider />
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-            <Button onClick={handleBack} size="large">
-              {t('cancel', 'انصراف')}
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-              icon={<SaveOutlined />}
-              size="large"
-              style={{
-                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                border: 'none',
-              }}
-            >
-              {t('save', 'ذخیره')}
-            </Button>
+          <div>
+            <Space>
+              <Button
+                  type="text"
+                  icon={<ArrowLeftOutlined />}
+                  onClick={handleBack}
+                  style={{ fontSize: 18 }}
+              />
+              <div>
+                <Title level={2} style={{ margin: 0 }}>
+                  {t('new_appointment', 'نوبت جدید')}
+                </Title>
+                <Text type="secondary">
+                  {t('create_appointment_subtitle', 'رزرو نوبت جدید در کلینیک')}
+                </Text>
+              </div>
+            </Space>
           </div>
-        </Form>
-      </Card>
-    </div>
+        </div>
+
+        <Card
+            style={{
+              borderRadius: 12,
+              borderColor: '#e8e8f0',
+            }}
+        >
+          <Form
+              form={form}
+              layout="vertical"
+              onFinish={handleSubmit}
+              size="large"
+              initialValues={{
+                type: 'in_person',
+                status: 'pending',
+              }}
+          >
+            <Row gutter={[24, 0]}>
+              <Col xs={24} lg={16}>
+                <Row gutter={[16, 0]}>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                        name="patient_id"
+                        label={t('patient', 'بیمار')}
+                        rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
+                    >
+                      <Select
+                          placeholder={t('select_patient', 'انتخاب بیمار...')}
+                          loading={loadingPatients}
+                          showSearch
+                          optionFilterProp="children"
+                          options={Array.isArray(patients) ? patients.map((p) => ({
+                            value: p.id,
+                            label: `${p.full_name} (${p.national_code || p.phone})`,
+                          })) : []}
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                        name="doctor_id"
+                        label={t('doctor', 'پزشک')}
+                        rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
+                    >
+                      <Select
+                          placeholder={t('select_doctor', 'انتخاب پزشک...')}
+                          loading={loadingDoctors}
+                          showSearch
+                          optionFilterProp="children"
+                          options={Array.isArray(doctors) ? doctors.map((d) => ({
+                            value: d.id,
+                            label: `${d.full_name} (${d.specialty?.name || ''})`,
+                          })) : []}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={[16, 0]}>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                        name="date"
+                        label={t('date', 'تاریخ')}
+                        rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
+                    >
+                      <JalaliDatePicker
+                          placeholder={t('select_date', 'انتخاب تاریخ')}
+                          format="jYYYY/jMM/jDD"
+                          size="large"
+                          onChange={(date) => {
+                            form.setFieldsValue({ date });
+                          }}
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                        name="start_time"
+                        label={t('time', 'ساعت')}
+                        rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
+                    >
+                      <Select
+                          placeholder={t('select_time', 'انتخاب ساعت...')}
+                          options={Array.isArray(availableSlots) ? availableSlots.map((slot) => ({
+                            value: slot,
+                            label: slot,
+                          })) : []}
+                          disabled={!doctorId || !date}
+                      />
+                    </Form.Item>
+                    {availableSlots.length === 0 && doctorId && date && (
+                        <Text type="danger" style={{ fontSize: 12 }}>
+                          {t('no_available_slots', 'هیچ زمان خالی برای این تاریخ و پزشک وجود ندارد')}
+                        </Text>
+                    )}
+                  </Col>
+                </Row>
+
+                <Row gutter={[16, 0]}>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                        name="type"
+                        label={t('type', 'نوع نوبت')}
+                    >
+                      <Select
+                          options={[
+                            { value: 'in_person', label: t('in_person', 'حضوری') },
+                            { value: 'online', label: t('online', 'آنلاین') },
+                            { value: 'home_visit', label: t('home_visit', 'ویزیت در منزل') },
+                          ]}
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                        name="fee"
+                        label={t('fee', 'هزینه (تومان)')}
+                    >
+                      <InputNumber
+                          style={{ width: '100%' }}
+                          min={0}
+                          placeholder={t('fee_placeholder', '۱۵۰۰۰۰')}
+                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Form.Item
+                    name="description"
+                    label={t('description', 'توضیحات')}
+                >
+                  <TextArea
+                      rows={3}
+                      placeholder={t('description_placeholder', 'توضیحات نوبت...')}
+                  />
+                </Form.Item>
+              </Col>
+
+              <Col xs={24} lg={8}>
+                <Card
+                    style={{
+                      borderRadius: 12,
+                      borderColor: '#e8e8f0',
+                      background: '#f8fafc',
+                    }}
+                >
+                  <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                    <CalendarOutlined style={{ fontSize: 48, color: '#2563eb' }} />
+                    <div style={{ marginTop: 8 }}>
+                      <Text type="secondary">{t('appointment_info', 'اطلاعات نوبت')}</Text>
+                    </div>
+                  </div>
+
+                  <Divider />
+
+                  <div>
+                    <Text type="secondary">{t('status', 'وضعیت')}</Text>
+                    <div style={{ fontWeight: 500, marginTop: 4 }}>
+                      <Badge color="orange" text={t('pending', 'در انتظار')} />
+                    </div>
+                  </div>
+
+                  <Divider />
+
+                  <div style={{ textAlign: 'center' }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {t('appointment_help', 'پس از ایجاد نوبت، پیام تایید برای بیمار ارسال می‌شود')}
+                    </Text>
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+
+            <Divider />
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <Button onClick={handleBack} size="large">
+                {t('cancel', 'انصراف')}
+              </Button>
+              <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  icon={<SaveOutlined />}
+                  size="large"
+                  style={{
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    border: 'none',
+                  }}
+              >
+                {t('save', 'ذخیره')}
+              </Button>
+            </div>
+          </Form>
+        </Card>
+      </div>
   );
 }

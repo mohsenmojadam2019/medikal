@@ -41,7 +41,25 @@ class Post extends Model implements HasMedia
         'meta_tags' => 'array',
         'settings' => 'array',
     ];
+    public function seo()
+    {
+        return $this->morphOne(Seo::class, 'seoable');
+    }
 
+    public function getSeoTitleAttribute()
+    {
+        return $this->title ?? null;
+    }
+
+    public function getSeoDescriptionAttribute()
+    {
+        return $this->summary ?? $this->excerpt ?? null;
+    }
+
+    public function getSeoKeywordsAttribute()
+    {
+        return isset($this->meta_tags['keywords']) ? implode(', ', $this->meta_tags['keywords']) : null;
+    }
     // ========== Media Library ==========
     public function registerMediaCollections(): void
     {

@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/PrescriptionController.php (اصلاح شده)
 
 namespace App\Http\Controllers\Api;
 
@@ -22,9 +23,6 @@ class PrescriptionController extends Controller
         $this->prescriptionService = $prescriptionService;
     }
 
-    /**
-     * لیست نسخه‌ها
-     */
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -36,9 +34,6 @@ class PrescriptionController extends Controller
         return $this->success($prescriptions);
     }
 
-    /**
-     * ایجاد نسخه جدید
-     */
     public function store(StorePrescriptionRequest $request)
     {
         try {
@@ -56,9 +51,6 @@ class PrescriptionController extends Controller
         }
     }
 
-    /**
-     * نمایش نسخه
-     */
     public function show($id)
     {
         try {
@@ -71,7 +63,6 @@ class PrescriptionController extends Controller
                 return $this->error('شما دسترسی به این نسخه ندارید', 403);
             }
 
-            // بررسی تداخل دارویی
             $interactions = $this->prescriptionService->checkInteractions($prescription);
 
             return $this->success([
@@ -84,9 +75,6 @@ class PrescriptionController extends Controller
         }
     }
 
-    /**
-     * به‌روزرسانی نسخه
-     */
     public function update(UpdatePrescriptionRequest $request, $id)
     {
         try {
@@ -104,9 +92,6 @@ class PrescriptionController extends Controller
         }
     }
 
-    /**
-     * تغییر وضعیت نسخه
-     */
     public function changeStatus(Request $request, $id)
     {
         $request->validate([
@@ -128,9 +113,6 @@ class PrescriptionController extends Controller
         }
     }
 
-    /**
-     * حذف نسخه
-     */
     public function destroy($id)
     {
         try {
@@ -148,9 +130,6 @@ class PrescriptionController extends Controller
         }
     }
 
-    /**
-     * نسخه‌های من (بیمار)
-     */
     public function myPrescriptions(Request $request)
     {
         $user = auth()->user();
@@ -168,9 +147,6 @@ class PrescriptionController extends Controller
         return $this->success($prescriptions);
     }
 
-    /**
-     * نسخه‌های پزشک جاری
-     */
     public function myDoctorPrescriptions(Request $request)
     {
         $user = auth()->user();
@@ -188,14 +164,10 @@ class PrescriptionController extends Controller
         return $this->success($prescriptions);
     }
 
-    /**
-     * نسخه‌های یک بیمار (ادمین/پزشک)
-     */
     public function patientPrescriptions(Request $request, $patientId)
     {
         $user = auth()->user();
 
-        // بررسی دسترسی
         $patient = \App\Models\Patient::find($patientId);
         if (!$patient) {
             return $this->error('بیمار یافت نشد', 404);
@@ -213,9 +185,6 @@ class PrescriptionController extends Controller
         return $this->success($prescriptions);
     }
 
-    /**
-     * بررسی تداخل دارویی
-     */
     public function checkInteractions($id)
     {
         try {
@@ -227,9 +196,6 @@ class PrescriptionController extends Controller
         }
     }
 
-    /**
-     * چاپ نسخه
-     */
     public function print($id)
     {
         try {
@@ -249,9 +215,6 @@ class PrescriptionController extends Controller
         }
     }
 
-    /**
-     * آمار نسخه‌ها
-     */
     public function stats(Request $request)
     {
         $user = auth()->user();

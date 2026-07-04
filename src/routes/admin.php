@@ -2,6 +2,19 @@
 // routes/admin.php
 
 use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AppointmentController;
+use App\Http\Controllers\Admin\BlogController;
+use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\ReminderController;
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\WebhookController;
+use App\Http\Controllers\Api\Dashboard\ManagementDashboardController;
+use App\Http\Controllers\Api\InsuranceController;
+use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\PharmacyController;
+use App\Http\Controllers\Api\SurveyController;
+use App\Http\Controllers\Api\VaccinationController;
+use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\ClinicController;
 use App\Http\Controllers\Admin\DoctorController;
@@ -18,25 +31,7 @@ use App\Http\Controllers\Admin\SystemController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SuperAdmin\TenantController;
 
-use App\Http\Controllers\Api\Dashboard\ManagementDashboardController;
-use App\Http\Controllers\Api\BI\BIController;
-use App\Http\Controllers\Api\ReportController;
-use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\BlogController;
-use App\Http\Controllers\Api\WalletController;
-use App\Http\Controllers\Api\InsuranceController;
-use App\Http\Controllers\Api\VaccinationController;
-use App\Http\Controllers\Api\SurveyController;
-use App\Http\Controllers\Api\EventController;
-use App\Http\Controllers\Api\CampaignController;
-use App\Http\Controllers\Api\MedicalNoteController;
-use App\Http\Controllers\Api\LabController;
-use App\Http\Controllers\Api\HospitalController;
-use App\Http\Controllers\Api\FormController;
-use App\Http\Controllers\Api\InstallmentController;
-use App\Http\Controllers\Api\WebhookController;
-use App\Http\Controllers\Api\LocationController;
-use App\Http\Controllers\Api\PharmacyController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -130,6 +125,36 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
             Route::post('/{id}/verify', [DoctorController::class, 'verify']);
         });
 
+
+// -------- 6.5. APPOINTMENT MANAGEMENT (ADMIN) --------
+        Route::prefix('appointments')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\AppointmentController::class, 'index']);
+            Route::post('/', [App\Http\Controllers\Admin\AppointmentController::class, 'store']);
+            Route::get('/{id}', [App\Http\Controllers\Admin\AppointmentController::class, 'show']);
+            Route::put('/{id}', [App\Http\Controllers\Admin\AppointmentController::class, 'update']);
+            Route::delete('/{id}', [App\Http\Controllers\Admin\AppointmentController::class, 'destroy']);
+            Route::post('/{id}/status', [App\Http\Controllers\Admin\AppointmentController::class, 'changeStatus']);
+            Route::post('/{id}/confirm', [App\Http\Controllers\Admin\AppointmentController::class, 'confirm']);
+            Route::post('/{id}/cancel', [App\Http\Controllers\Admin\AppointmentController::class, 'cancel']);
+            Route::post('/{id}/start', [App\Http\Controllers\Admin\AppointmentController::class, 'start']);
+            Route::post('/{id}/complete', [App\Http\Controllers\Admin\AppointmentController::class, 'complete']);
+            Route::get('/stats', [App\Http\Controllers\Admin\AppointmentController::class, 'stats']);
+            Route::get('/doctors/{doctorId}/available-slots', [App\Http\Controllers\Admin\AppointmentController::class, 'getAvailableSlots']);
+        });
+
+        // 💊 PRESCRIPTION MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('prescriptions')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\PrescriptionController::class, 'index']);
+            Route::post('/', [App\Http\Controllers\Admin\PrescriptionController::class, 'store']);
+            Route::get('/{id}', [App\Http\Controllers\Admin\PrescriptionController::class, 'show']);
+            Route::put('/{id}', [App\Http\Controllers\Admin\PrescriptionController::class, 'update']);
+            Route::delete('/{id}', [App\Http\Controllers\Admin\PrescriptionController::class, 'destroy']);
+            Route::post('/{id}/status', [App\Http\Controllers\Admin\PrescriptionController::class, 'changeStatus']);
+            Route::get('/stats', [App\Http\Controllers\Admin\PrescriptionController::class, 'stats']);
+        });
+// -------- 7. DOCTOR PROFILE MANAGEMENT --------
+// ... ادامه
         // -------- 7. DOCTOR PROFILE MANAGEMENT --------
         Route::prefix('doctors/profile')->group(function () {
             Route::put('/{id}', [DoctorProfileController::class, 'update']);
@@ -346,7 +371,176 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
             // Stats
             Route::get('/stats', [SurveyController::class, 'stats']);
         });
+// ==========================================
+        // ⏰ REMINDER MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('reminders')->controller(ReminderController::class)->group(function () {
+            // ===== مسیرهای ثابت (بدون ID) - اول =====
+            Route::get('/settings', 'settings');
+            Route::put('/settings', 'updateSettings');
+            Route::post('/process', 'process');
+            Route::get('/stats', 'stats');
+            Route::get('/', 'index');
+            Route::post('/', 'store');
 
+            // ===== مسیرهای با ID - بعد از مسیرهای ثابت =====
+            Route::get('/{id}', 'show');
+            Route::put('/{id}', 'update');
+            Route::delete('/{id}', 'destroy');
+        });
+        // ==========================================
+        // 📊 REPORTS MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('reports')->controller(ReportController::class)->group(function () {
+            Route::get('/types', 'types');
+            Route::post('/generate', 'generate');
+            Route::post('/export-excel', 'exportExcel');
+            Route::post('/export-pdf', 'exportPdf');
+            Route::post('/stream-pdf', 'streamPdf');
+        });
+
+        // ==========================================
+        // 🔗 WEBHOOK MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('webhook')->controller(WebhookController::class)->group(function () {
+            Route::get('/status', 'status');
+            Route::post('/toggle', 'toggle');
+            Route::get('/logs', 'logs');
+            Route::get('/settings', 'settings'); // ✅ متد settings
+            Route::put('/settings', 'updateSettings');
+            Route::post('/test', 'test');
+        });
+        // ==========================================
+        // 📝 BLOG MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('blog')->controller(BlogController::class)->group(function () {
+            // Posts
+            Route::get('/posts', 'posts');
+            Route::post('/posts', 'storePost');
+            Route::get('/posts/{id}', 'adminShowPost');
+            Route::post('/posts/{id}?_method=PUT', 'updatePost');
+            Route::put('/posts/{id}', 'updatePost');
+            Route::delete('/posts/{id}', 'deletePost');
+            Route::post('/posts/{id}/publish', 'publishPost');
+            Route::post('/posts/{id}/unpublish', 'unpublishPost');
+
+            // Categories
+            Route::get('/categories', 'adminCategories');
+            Route::post('/categories', 'storeCategory');
+            Route::put('/categories/{id}', 'updateCategory');
+            Route::delete('/categories/{id}', 'deleteCategory');
+
+            // Tags
+            Route::get('/tags', 'adminTags');
+            Route::post('/tags', 'storeTag');
+            Route::put('/tags/{id}', 'updateTag');
+            Route::delete('/tags/{id}', 'deleteTag');
+
+            // Comments
+            Route::get('/comments', 'adminComments');
+            Route::post('/comments/{id}/approve', 'approveComment');
+            Route::post('/comments/{id}/reject', 'rejectComment');
+            Route::delete('/comments/{id}', 'deleteComment');
+
+            // Stats
+            Route::get('/stats', 'stats');
+        });
+        // ==========================================
+        // 🔔 NOTIFICATION MANAGEMENT (ADMIN)
+        // ==========================================
+        // routes/admin.php
+
+        Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
+            // ===== مسیرهای ثابت (بدون ID) =====
+            Route::get('/', 'index');
+            Route::get('/stats', 'stats');
+            Route::get('/recent', 'recent');
+            Route::post('/mark-all-as-read', 'markAllAsRead');
+            Route::delete('/delete-all-read', 'deleteAllRead');
+
+            // ===== مسیرهای ارسال =====
+            Route::post('/send-to-all', 'sendToAll');
+            Route::post('/send-to-doctors', 'sendToDoctors');
+            Route::post('/send-to-patients', 'sendToPatients');
+            Route::post('/send-to-user', 'sendToUser');
+            Route::post('/send-to-doctor-patients/{doctorId}', 'sendToDoctorPatients');
+
+            // ===== مسیرهای با ID (بعد از مسیرهای ثابت) =====
+            Route::get('/{id}', 'show');
+            Route::delete('/{id}', 'destroy');
+            Route::post('/{id}/mark-as-read', 'markAsRead');
+        });
+        // ==========================================
+        // ⏰ REMINDER MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('reminders')->controller(ReminderController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::post('/', 'store');
+            Route::get('/{id}', 'show');
+            Route::put('/{id}', 'update');
+            Route::delete('/{id}', 'destroy');
+            Route::post('/process', 'process');
+            Route::get('/settings', 'settings');
+            Route::put('/settings', 'updateSettings');
+            Route::get('/stats', 'stats');
+        });
+        // ==========================================
+        // 🔔 NOTIFICATION MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\NotificationController::class, 'index']);
+            Route::post('/', [App\Http\Controllers\Admin\NotificationController::class, 'store']);
+            Route::get('/{id}', [App\Http\Controllers\Admin\NotificationController::class, 'show']);
+            Route::delete('/{id}', [App\Http\Controllers\Admin\NotificationController::class, 'destroy']);
+            Route::post('/{id}/mark-as-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead']);
+            Route::post('/mark-all-as-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead']);
+            Route::delete('/delete-all-read', [App\Http\Controllers\Admin\NotificationController::class, 'deleteAllRead']);
+            Route::get('/stats', [App\Http\Controllers\Admin\NotificationController::class, 'stats']);
+
+            // ارسال اعلان
+            Route::post('/send-to-all', [App\Http\Controllers\Admin\NotificationController::class, 'sendToAll']);
+            Route::post('/send-to-doctors', [App\Http\Controllers\Admin\NotificationController::class, 'sendToDoctors']);
+            Route::post('/send-to-patients', [App\Http\Controllers\Admin\NotificationController::class, 'sendToPatients']);
+        });
+        // ==========================================
+        // 📄 INVOICE MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('invoices')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\InvoiceController::class, 'index']);
+            Route::post('/', [App\Http\Controllers\Admin\InvoiceController::class, 'store']);
+            Route::get('/{id}', [App\Http\Controllers\Admin\InvoiceController::class, 'show']);
+            Route::put('/{id}', [App\Http\Controllers\Admin\InvoiceController::class, 'update']);
+            Route::delete('/{id}', [App\Http\Controllers\Admin\InvoiceController::class, 'destroy']);
+            Route::post('/{id}/status', [App\Http\Controllers\Admin\InvoiceController::class, 'changeStatus']);
+            Route::get('/{id}/print', [App\Http\Controllers\Admin\InvoiceController::class, 'print']);
+            Route::get('/stats', [App\Http\Controllers\Admin\InvoiceController::class, 'stats']);
+        });
+        // ==========================================
+        // ⭐ RATINGS MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('ratings')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\RatingController::class, 'index']);
+            Route::get('/{id}', [App\Http\Controllers\Admin\RatingController::class, 'show']);
+            Route::delete('/{id}', [App\Http\Controllers\Admin\RatingController::class, 'destroy']);
+            Route::post('/{id}/approve', [App\Http\Controllers\Admin\RatingController::class, 'approve']);
+            Route::post('/{id}/reject', [App\Http\Controllers\Admin\RatingController::class, 'reject']);
+            Route::post('/{id}/reply', [App\Http\Controllers\Admin\RatingController::class, 'reply']);
+            Route::get('/stats', [App\Http\Controllers\Admin\RatingController::class, 'stats']);
+        });
+        // ==========================================
+        // 🔄 REFERRAL MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('referrals')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\ReferralController::class, 'index']);
+            Route::post('/', [App\Http\Controllers\Admin\ReferralController::class, 'store']);
+            Route::get('/{id}', [App\Http\Controllers\Admin\ReferralController::class, 'show']);
+            Route::put('/{id}', [App\Http\Controllers\Admin\ReferralController::class, 'update']);
+            Route::delete('/{id}', [App\Http\Controllers\Admin\ReferralController::class, 'destroy']);
+            Route::post('/{id}/accept', [App\Http\Controllers\Admin\ReferralController::class, 'accept']);
+            Route::post('/{id}/reject', [App\Http\Controllers\Admin\ReferralController::class, 'reject']);
+            Route::post('/{id}/complete', [App\Http\Controllers\Admin\ReferralController::class, 'complete']);
+            Route::get('/stats', [App\Http\Controllers\Admin\ReferralController::class, 'stats']);
+        });
         // -------- 21. EVENT MANAGEMENT --------
         Route::prefix('events')->group(function () {
             Route::get('/', [EventController::class, 'index']);

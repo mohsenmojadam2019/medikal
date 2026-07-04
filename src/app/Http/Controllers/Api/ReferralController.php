@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Referral;
 use App\Services\Referral\ReferralService;
 use App\Models\Patient;
 use App\Models\Doctor;
@@ -19,7 +20,6 @@ class ReferralController extends Controller
     public function __construct(ReferralService $referralService)
     {
         $this->referralService = $referralService;
-        $this->middleware(['auth:sanctum']);
     }
 
     /**

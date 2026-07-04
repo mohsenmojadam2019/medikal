@@ -1,373 +1,386 @@
+// src/app/admin/schedules/page.js
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Table,
-  Button,
-  Input,
-  Space,
   Card,
-  Typography,
-  Tag,
-  Modal,
+  Form,
+  Input,
+  Button,
+  Select,
   message,
-  Popconfirm,
-  Tooltip,
   Row,
   Col,
-  Badge,
-  Select,
-  DatePicker,
+  Typography,
+  Divider,
+  Space,
   TimePicker,
-  Form,
   Switch,
-  Tabs,
+  Table,
+  Popconfirm,
+  Tooltip,
+  Tag,
+  App,
 } from 'antd';
 import {
+  ArrowLeftOutlined,
+  SaveOutlined,
   PlusOutlined,
-  SearchOutlined,
-  EditOutlined,
   DeleteOutlined,
-  EyeOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  CalendarOutlined,
-  ReloadOutlined,
-  CopyOutlined,
+  EditOutlined,
   ClockCircleOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { schedulesService, doctorsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
-import Loading from '@/components/admin/common/Loading';
-import JalaliDatePicker from '@/components/admin/common/JalaliDatePicker';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
 
 export default function SchedulesPage() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { message } = App.useApp();
+
   const [loading, setLoading] = useState(false);
-  const [schedules, setSchedules] = useState([]);
   const [doctors, setDoctors] = useState([]);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('view');
+  const [schedules, setSchedules] = useState([]);
+  const [form] = Form.useForm();
 
   // ===== دریافت لیست پزشکان =====
   useEffect(() => {
     const fetchDoctors = async () => {
+      setLoadingDoctors(true);
       try {
         const response = await doctorsService.getAll({ per_page: 100 });
-        setDoctors(response.data || []);
+        // ✅ بررسی ساختار پاسخ
+        if (response.data?.success) {
+          const data = response.data.data;
+          const list = data?.data || data || [];
+          setDoctors(Array.isArray(list) ? list : []);
+        } else {
+          setDoctors([]);
+        }
       } catch (error) {
         console.error('Error fetching doctors:', error);
-        message.error(t('fetch_error', 'خطا در دریافت لیست پزشکان'));
+        setDoctors([]);
+      } finally {
+        setLoadingDoctors(false);
       }
     };
     fetchDoctors();
-  }, [t]);
+  }, []);
 
-  // ===== دریافت زمان‌بندی پزشک انتخاب شده =====
+  // ===== دریافت ساعات کاری پزشک =====
   const fetchSchedules = async (doctorId) => {
     if (!doctorId) {
       setSchedules([]);
       return;
     }
-    
+
     setLoading(true);
     try {
-      const response = await schedulesService.getWeekly(doctorId);
-      setSchedules(response.data || []);
+      const response = await schedulesService.getByDoctor(doctorId);
+      // ✅ بررسی ساختار پاسخ
+      if (response.data?.success) {
+        const data = response.data.data;
+        const list = data?.data || data || [];
+        setSchedules(Array.isArray(list) ? list : []);
+      } else {
+        setSchedules([]);
+      }
     } catch (error) {
       console.error('Error fetching schedules:', error);
-      message.error(t('fetch_error', 'خطا در دریافت زمان‌بندی'));
+      message.error(t('fetch_error', 'خطا در دریافت اطلاعات'));
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (selectedDoctor) {
-      fetchSchedules(selectedDoctor);
-    }
-  }, [selectedDoctor]);
-
-  const handleDoctorChange = (doctorId) => {
+  // ===== انتخاب پزشک =====
+  const handleDoctorSelect = (doctorId) => {
     setSelectedDoctor(doctorId);
+    if (doctorId) {
+      fetchSchedules(doctorId);
+    } else {
+      setSchedules([]);
+    }
   };
 
-  const handleView = (record) => {
-    setModalMode('view');
-    setIsModalVisible(true);
-  };
-
-  const handleEdit = (record) => {
-    router.push(`/admin/schedules/${record.id}/edit`);
-  };
-
-  const handleCreate = () => {
+  // ===== ذخیره ساعات کاری =====
+  const handleSubmit = async (values) => {
     if (!selectedDoctor) {
-      message.warning(t('select_doctor_first', 'لطفاً ابتدا یک پزشک انتخاب کنید'));
+      message.warning(t('select_doctor_first', 'لطفاً ابتدا پزشک را انتخاب کنید'));
       return;
     }
-    router.push(`/admin/schedules/create?doctor_id=${selectedDoctor}`);
-  };
 
-  const handleDelete = async (id) => {
+    setLoading(true);
     try {
-      await schedulesService.delete(id);
-      message.success(t('deleted', 'زمان‌بندی با موفقیت حذف شد'));
-      if (selectedDoctor) {
-        fetchSchedules(selectedDoctor);
-      }
-    } catch (error) {
-      message.error(t('error', 'خطا در حذف زمان‌بندی'));
-    }
-  };
+      const data = {
+        doctor_id: selectedDoctor,
+        schedules: values.schedules.map((item) => ({
+          day_of_week: item.day_of_week,
+          start_time: item.start_time?.format('HH:mm'),
+          end_time: item.end_time?.format('HH:mm'),
+          is_working: item.is_working !== false,
+          break_start: item.break_start?.format('HH:mm'),
+          break_end: item.break_end?.format('HH:mm'),
+        })),
+      };
 
-  const handleToggleStatus = async (id, isActive) => {
-    try {
-      await schedulesService.toggleStatus(id, !isActive);
-      message.success(t('status_changed', 'وضعیت با موفقیت تغییر کرد'));
-      if (selectedDoctor) {
-        fetchSchedules(selectedDoctor);
-      }
-    } catch (error) {
-      message.error(t('error', 'خطا در تغییر وضعیت'));
-    }
-  };
-
-  const handleCopyPreviousWeek = async () => {
-    if (!selectedDoctor) {
-      message.warning(t('select_doctor_first', 'لطفاً ابتدا یک پزشک انتخاب کنید'));
-      return;
-    }
-    
-    try {
-      await schedulesService.copyFromPreviousWeek(selectedDoctor);
-      message.success(t('copied', 'زمان‌بندی از هفته قبل کپی شد'));
+      await schedulesService.save(data);
+      message.success(t('saved', 'ساعات کاری با موفقیت ذخیره شد'));
       fetchSchedules(selectedDoctor);
     } catch (error) {
-      message.error(t('error', 'خطا در کپی زمان‌بندی'));
+      console.error('Error saving schedules:', error);
+      message.error(t('save_error', 'خطا در ذخیره ساعات کاری'));
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ===== روزهای هفته =====
-  const daysOfWeek = [
-    { value: 'saturday', label: t('saturday', 'شنبه') },
-    { value: 'sunday', label: t('sunday', 'یکشنبه') },
-    { value: 'monday', label: t('monday', 'دوشنبه') },
-    { value: 'tuesday', label: t('tuesday', 'سه‌شنبه') },
-    { value: 'wednesday', label: t('wednesday', 'چهارشنبه') },
-    { value: 'thursday', label: t('thursday', 'پنج‌شنبه') },
-    { value: 'friday', label: t('friday', 'جمعه') },
-  ];
-
+  // ===== ستون‌های جدول ساعات کاری =====
   const columns = [
     {
       title: t('day', 'روز'),
       dataIndex: 'day_of_week',
       key: 'day_of_week',
       render: (day) => {
-        const found = daysOfWeek.find(d => d.value === day);
-        return found?.label || day;
+        const days = {
+          saturday: 'شنبه',
+          sunday: 'یکشنبه',
+          monday: 'دوشنبه',
+          tuesday: 'سه‌شنبه',
+          wednesday: 'چهارشنبه',
+          thursday: 'پنجشنبه',
+          friday: 'جمعه',
+        };
+        return days[day] || day;
       },
     },
     {
       title: t('start_time', 'ساعت شروع'),
       dataIndex: 'start_time',
       key: 'start_time',
-      render: (time) => time || '—',
     },
     {
       title: t('end_time', 'ساعت پایان'),
       dataIndex: 'end_time',
       key: 'end_time',
-      render: (time) => time || '—',
-    },
-    {
-      title: t('break_time', 'زمان استراحت'),
-      dataIndex: 'break_start',
-      key: 'break_start',
-      render: (breakStart, record) => {
-        if (breakStart && record.break_end) {
-          return `${breakStart} - ${record.break_end}`;
-        }
-        return '—';
-      },
-    },
-    {
-      title: t('slot_duration', 'مدت هر نوبت'),
-      dataIndex: 'slot_duration',
-      key: 'slot_duration',
-      render: (duration) => duration ? `${duration} ${t('minutes', 'دقیقه')}` : '—',
-    },
-    {
-      title: t('max_appointments', 'حداکثر نوبت'),
-      dataIndex: 'max_appointments',
-      key: 'max_appointments',
-      render: (max) => max || '—',
     },
     {
       title: t('status', 'وضعیت'),
-      dataIndex: 'is_active',
-      key: 'is_active',
-      render: (isActive) => (
-        <Badge
-          status={isActive ? 'success' : 'error'}
-          text={isActive ? t('active', 'فعال') : t('inactive', 'غیرفعال')}
-        />
-      ),
-    },
-    {
-      title: t('actions', 'عملیات'),
-      key: 'actions',
-      width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title={t('edit', 'ویرایش')}>
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title={t('toggle_status', 'تغییر وضعیت')}>
-            <Button
-              type="text"
-              icon={record.is_active ? <CloseCircleOutlined /> : <CheckCircleOutlined />}
-              onClick={() => handleToggleStatus(record.id, record.is_active)}
-              size="small"
-              style={{ color: record.is_active ? '#ef4444' : '#10b981' }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title={t('delete_confirm', 'آیا از حذف این زمان‌بندی اطمینان دارید؟')}
-            onConfirm={() => handleDelete(record.id)}
-            okText={t('yes', 'بله')}
-            cancelText={t('no', 'خیر')}
-          >
-            <Tooltip title={t('delete', 'حذف')}>
-              <Button type="text" icon={<DeleteOutlined />} size="small" danger />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+      dataIndex: 'is_working',
+      key: 'is_working',
+      render: (isWorking) => (
+          <Tag color={isWorking ? 'green' : 'red'}>
+            {isWorking ? t('working', 'فعال') : t('not_working', 'غیرفعال')}
+          </Tag>
       ),
     },
   ];
 
-  return (
-    <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 24,
-        }}
-      >
-        <div>
-          <Title level={2} style={{ margin: 0 }}>
-            {t('schedules_management', 'مدیریت زمان‌بندی')}
-          </Title>
-          <Text type="secondary">
-            {t('schedules_subtitle', 'تنظیم زمان‌بندی پزشکان')}
-          </Text>
+  // اگر doctors آرایه نیست
+  if (!Array.isArray(doctors)) {
+    console.error('⚠️ Doctors is not an array:', doctors);
+    return (
+        <div style={{ padding: 24 }}>
+          <Title level={4}>خطا در نمایش داده‌ها</Title>
+          <Text type="danger">داده‌های دریافتی معتبر نیستند.</Text>
         </div>
-        <Space>
-          <Button
-            icon={<CopyOutlined />}
-            onClick={handleCopyPreviousWeek}
-          >
-            {t('copy_previous_week', 'کپی از هفته قبل')}
-          </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreate}
+    );
+  }
+
+  return (
+      <div>
+        <div
             style={{
-              height: 40,
-              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-              border: 'none',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 24,
             }}
-          >
-            {t('new_schedule', 'زمان‌بندی جدید')}
-          </Button>
-        </Space>
+        >
+          <div>
+            <Space>
+              <Button
+                  type="text"
+                  icon={<ArrowLeftOutlined />}
+                  onClick={() => router.back()}
+                  style={{ fontSize: 18 }}
+              />
+              <div>
+                <Title level={2} style={{ margin: 0 }}>
+                  {t('schedules_management', 'مدیریت ساعات کاری')}
+                </Title>
+                <Text type="secondary">
+                  {t('schedules_subtitle', 'تنظیم ساعات کاری پزشکان')}
+                </Text>
+              </div>
+            </Space>
+          </div>
+        </div>
+
+        <Card
+            style={{
+              borderRadius: 12,
+              borderColor: '#e8e8f0',
+            }}
+        >
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={8}>
+              <Form.Item label={t('select_doctor', 'انتخاب پزشک')}>
+                <Select
+                    placeholder={t('select_doctor', 'انتخاب پزشک...')}
+                    loading={loadingDoctors}
+                    showSearch
+                    optionFilterProp="children"
+                    onChange={handleDoctorSelect}
+                    style={{ width: '100%' }}
+                    options={doctors.map((d) => ({
+                      value: d.id,
+                      label: `${d.full_name} (${d.specialty?.name || ''})`,
+                    }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {selectedDoctor && (
+              <div style={{ marginTop: 24 }}>
+                <Divider>
+                  <Space>
+                    <ClockCircleOutlined />
+                    <span>{t('working_hours', 'ساعات کاری')}</span>
+                  </Space>
+                </Divider>
+
+                <Table
+                    columns={columns}
+                    dataSource={schedules}
+                    loading={loading}
+                    rowKey="id"
+                    pagination={false}
+                    locale={{
+                      emptyText: t('no_schedules', 'هیچ ساعات کاری ثبت نشده است'),
+                    }}
+                />
+
+                <Divider />
+
+                <Title level={5}>{t('edit_schedules', 'ویرایش ساعات کاری')}</Title>
+
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleSubmit}
+                    size="large"
+                >
+                  <Form.List name="schedules">
+                    {(fields, { add, remove }) => (
+                        <>
+                          {fields.map(({ key, name, ...restField }) => (
+                              <Row key={key} gutter={[16, 16]} align="middle">
+                                <Col xs={24} sm={6}>
+                                  <Form.Item
+                                      {...restField}
+                                      name={[name, 'day_of_week']}
+                                      label={t('day', 'روز')}
+                                      rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
+                                  >
+                                    <Select
+                                        options={[
+                                          { value: 'saturday', label: 'شنبه' },
+                                          { value: 'sunday', label: 'یکشنبه' },
+                                          { value: 'monday', label: 'دوشنبه' },
+                                          { value: 'tuesday', label: 'سه‌شنبه' },
+                                          { value: 'wednesday', label: 'چهارشنبه' },
+                                          { value: 'thursday', label: 'پنجشنبه' },
+                                          { value: 'friday', label: 'جمعه' },
+                                        ]}
+                                    />
+                                  </Form.Item>
+                                </Col>
+                                <Col xs={24} sm={5}>
+                                  <Form.Item
+                                      {...restField}
+                                      name={[name, 'start_time']}
+                                      label={t('start_time', 'ساعت شروع')}
+                                      rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
+                                  >
+                                    <TimePicker format="HH:mm" style={{ width: '100%' }} />
+                                  </Form.Item>
+                                </Col>
+                                <Col xs={24} sm={5}>
+                                  <Form.Item
+                                      {...restField}
+                                      name={[name, 'end_time']}
+                                      label={t('end_time', 'ساعت پایان')}
+                                      rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
+                                  >
+                                    <TimePicker format="HH:mm" style={{ width: '100%' }} />
+                                  </Form.Item>
+                                </Col>
+                                <Col xs={24} sm={4}>
+                                  <Form.Item
+                                      {...restField}
+                                      name={[name, 'is_working']}
+                                      label={t('status', 'وضعیت')}
+                                      valuePropName="checked"
+                                  >
+                                    <Switch checkedChildren="فعال" unCheckedChildren="غیرفعال" />
+                                  </Form.Item>
+                                </Col>
+                                <Col xs={24} sm={4}>
+                                  <Button
+                                      type="text"
+                                      danger
+                                      icon={<DeleteOutlined />}
+                                      onClick={() => remove(name)}
+                                  />
+                                </Col>
+                              </Row>
+                          ))}
+                          <Button
+                              type="dashed"
+                              onClick={() => add()}
+                              icon={<PlusOutlined />}
+                              style={{ width: '100%', marginTop: 16 }}
+                          >
+                            {t('add_schedule', 'افزودن ساعات کاری')}
+                          </Button>
+                        </>
+                    )}
+                  </Form.List>
+
+                  <Divider />
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                    <Button onClick={() => router.back()} size="large">
+                      {t('cancel', 'انصراف')}
+                    </Button>
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={loading}
+                        icon={<SaveOutlined />}
+                        size="large"
+                        style={{
+                          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                          border: 'none',
+                        }}
+                    >
+                      {t('save', 'ذخیره')}
+                    </Button>
+                  </div>
+                </Form>
+              </div>
+          )}
+        </Card>
       </div>
-
-      <Card
-        style={{
-          marginBottom: 16,
-          borderRadius: 12,
-          borderColor: '#e8e8f0',
-        }}
-      >
-        <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Select
-              placeholder={t('select_doctor', 'انتخاب پزشک...')}
-              style={{ width: '100%' }}
-              showSearch
-              optionFilterProp="children"
-              onChange={handleDoctorChange}
-              value={selectedDoctor}
-              options={doctors.map((d) => ({
-                value: d.id,
-                label: `${d.full_name} (${d.specialty?.name || ''})`,
-              }))}
-            />
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Button icon={<ReloadOutlined />} onClick={() => selectedDoctor && fetchSchedules(selectedDoctor)}>
-              {t('refresh', 'بروزرسانی')}
-            </Button>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card
-        style={{
-          borderRadius: 12,
-          borderColor: '#e8e8f0',
-        }}
-      >
-        <Table
-          columns={columns}
-          dataSource={schedules}
-          loading={loading}
-          rowKey="id"
-          pagination={false}
-          locale={{
-            emptyText: selectedDoctor 
-              ? t('no_schedules', 'هیچ زمان‌بندی برای این پزشک یافت نشد') 
-              : t('select_doctor_first', 'لطفاً ابتدا یک پزشک انتخاب کنید'),
-          }}
-        />
-      </Card>
-
-      <Modal
-        title={t('schedule_details', 'جزئیات زمان‌بندی')}
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setIsModalVisible(false)}>
-            {t('close', 'بستن')}
-          </Button>,
-        ]}
-        width={600}
-      >
-        {/* محتوای مودال */}
-      </Modal>
-    </div>
   );
 }

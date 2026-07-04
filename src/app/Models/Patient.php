@@ -28,7 +28,25 @@ class Patient extends Model
         'verified_at' => 'datetime',
         'metadata' => 'array',
     ];
+    public function seo()
+    {
+        return $this->morphOne(Seo::class, 'seoable');
+    }
 
+    public function getSeoTitleAttribute()
+    {
+        return $this->full_name ?? null;
+    }
+
+    public function getSeoDescriptionAttribute()
+    {
+        return null;
+    }
+
+    public function getSeoKeywordsAttribute()
+    {
+        return null;
+    }
     // ========== Relationships ==========
     public function user()
     {

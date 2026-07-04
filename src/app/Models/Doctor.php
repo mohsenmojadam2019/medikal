@@ -56,7 +56,25 @@ class Doctor extends Model implements HasMedia
         'working_hours' => 'array',
         'metadata' => 'array',
     ];
+    public function seo()
+    {
+        return $this->morphOne(Seo::class, 'seoable');
+    }
 
+    public function getSeoTitleAttribute()
+    {
+        return $this->full_name ?? null;
+    }
+
+    public function getSeoDescriptionAttribute()
+    {
+        return $this->bio ?? $this->biography ?? null;
+    }
+
+    public function getSeoKeywordsAttribute()
+    {
+        return $this->specialty?->name ?? null;
+    }
     // ========== Media Library ==========
     public function registerMediaCollections(): void
     {

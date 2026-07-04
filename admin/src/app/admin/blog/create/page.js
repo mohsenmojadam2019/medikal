@@ -1,3 +1,5 @@
+// src/app/admin/blog/create/page.js
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,66 +11,76 @@ import {
   Button,
   Select,
   Upload,
-  message,
   Row,
   Col,
   Typography,
   Divider,
   Space,
   Switch,
+  App,
+  Image,
 } from 'antd';
 import {
   ArrowLeftOutlined,
   SaveOutlined,
   UploadOutlined,
   FileTextOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { blogService, categoriesService, tagsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
-import JalaliDatePicker from '@/components/admin/common/JalaliDatePicker';
-import dynamic from 'next/dynamic';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-const ReactQuill = dynamic(() => import('react-quill'), {
-  ssr: false,
-  loading: () => <div style={{ height: 200, background: '#f8fafc', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>در حال بارگذاری...</div>,
-});
-
-import 'react-quill/dist/quill.snow.css';
-
 export default function CreatePostPage() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
   const [fileList, setFileList] = useState([]);
-  const [content, setContent] = useState('');
+  const [previewImage, setPreviewImage] = useState(null);
 
+  // ===== دریافت دسته‌بندی‌ها و تگ‌ها =====
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await categoriesService.getAll();
-        setCategories(response.data || []);
+        if (response.data?.success) {
+          const data = response.data.data;
+          const list = data?.data || data || [];
+          setCategories(Array.isArray(list) ? list : []);
+        } else {
+          setCategories([]);
+        }
       } catch (error) {
         console.error('Error fetching categories:', error);
+        setCategories([]);
       }
     };
     const fetchTags = async () => {
       try {
         const response = await tagsService.getAll();
-        setTags(response.data || []);
+        if (response.data?.success) {
+          const data = response.data.data;
+          const list = data?.data || data || [];
+          setTags(Array.isArray(list) ? list : []);
+        } else {
+          setTags([]);
+        }
       } catch (error) {
         console.error('Error fetching tags:', error);
+        setTags([]);
       }
     };
     fetchCategories();
     fetchTags();
   }, []);
 
+  // ===== ارسال فرم =====
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
@@ -80,19 +92,23 @@ export default function CreatePostPage() {
           formData.append(key, values[key]);
         }
       });
-      
-      formData.append('content', content);
 
-      if (fileList.length > 0) {
+      if (fileList.length > 0 && fileList[0].originFileObj) {
         formData.append('featured_image', fileList[0].originFileObj);
       }
 
-      await blogService.create(formData);
-      message.success(t('post_created', 'مقاله با موفقیت ایجاد شد'));
-      router.push('/admin/blog');
+      const response = await blogService.create(formData);
+
+      if (response.data?.success) {
+        message.success(t('post_created', 'مقاله با موفقیت ایجاد شد'));
+        router.push('/admin/blog');
+      } else {
+        message.error(response.data?.message || t('create_error', 'خطا در ایجاد مقاله'));
+      }
     } catch (error) {
       console.error('Error creating post:', error);
-      message.error(t('create_error', 'خطا در ایجاد مقاله'));
+      const errorMessage = error?.response?.data?.message || error?.message || t('create_error', 'خطا در ایجاد مقاله');
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -102,35 +118,65 @@ export default function CreatePostPage() {
     router.back();
   };
 
+  // ===== آپلود تصویر با پیش‌نمایش =====
   const uploadProps = {
     onRemove: () => {
       setFileList([]);
+      setPreviewImage(null);
     },
     beforeUpload: (file) => {
+      // بررسی نوع فایل
+      if (!file.type.startsWith('image/')) {
+        message.error(t('invalid_image', 'لطفاً یک فایل تصویری انتخاب کنید'));
+        return false;
+      }
+
+      // بررسی حجم فایل (حداکثر 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        message.error(t('file_too_large', 'حجم فایل نباید بیشتر از ۵ مگابایت باشد'));
+        return false;
+      }
+
+      // ایجاد پیش‌نمایش
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreviewImage(e.target.result);
+      };
+      reader.readAsDataURL(file);
+
       setFileList([file]);
       return false;
     },
-    fileList,
+    fileList: fileList.map((file) => ({
+      uid: file.uid || '-1',
+      name: file.name,
+      status: 'done',
+      url: previewImage || URL.createObjectURL(file),
+    })),
     maxCount: 1,
     accept: 'image/*',
   };
 
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['link', 'image', 'video'],
-      ['clean']
-    ],
-  };
+  // ===== دکمه‌های ویرایشگر =====
+  const insertTag = (tag) => {
+    const textarea = document.getElementById('content-editor');
+    if (!textarea) return;
 
-  const formats = [
-    'header',
-    'bold', 'italic', 'underline', 'strike',
-    'list', 'bullet',
-    'link', 'image', 'video',
-  ];
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    
+    const newText = before + tag + after;
+    form.setFieldsValue({ content: newText });
+    
+    // قرار دادن cursor بعد از تگ
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + tag.length, start + tag.length);
+    }, 10);
+  };
 
   return (
     <div>
@@ -192,27 +238,45 @@ export default function CreatePostPage() {
               </Form.Item>
 
               <Form.Item
-                name="excerpt"
-                label={t('excerpt', 'خلاصه مقاله')}
+                name="summary"
+                label={t('summary', 'خلاصه مقاله')}
               >
                 <TextArea
                   rows={3}
-                  placeholder={t('excerpt_placeholder', 'خلاصه مقاله...')}
+                  placeholder={t('summary_placeholder', 'خلاصه مقاله...')}
                 />
               </Form.Item>
 
+              {/* ===== دکمه‌های ویرایشگر ===== */}
+              <div style={{ marginBottom: 8 }}>
+                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                  {t('formatting_tools', 'ابزارهای قالب‌بندی')}:
+                </Text>
+                <Space wrap size="small">
+                  <Button size="small" onClick={() => insertTag('# ')}>H1</Button>
+                  <Button size="small" onClick={() => insertTag('## ')}>H2</Button>
+                  <Button size="small" onClick={() => insertTag('### ')}>H3</Button>
+                  <Button size="small" onClick={() => insertTag('**متن**')}>پررنگ</Button>
+                  <Button size="small" onClick={() => insertTag('*متن*')}>کج</Button>
+                  <Button size="small" onClick={() => insertTag('- ')}>لیست</Button>
+                  <Button size="small" onClick={() => insertTag('1. ')}>لیست شماره‌دار</Button>
+                  <Button size="small" onClick={() => insertTag('> ')}>نقل قول</Button>
+                  <Button size="small" onClick={() => insertTag('```\nکد\n```')}>کد</Button>
+                  <Button size="small" onClick={() => insertTag('[متن](لینک)')}>لینک</Button>
+                  <Button size="small" onClick={() => insertTag('---')}>خط جداکننده</Button>
+                </Space>
+              </div>
+
               <Form.Item
+                name="content"
                 label={t('content', 'محتوا')}
-                required
+                rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
               >
-                <ReactQuill
-                  theme="snow"
-                  value={content}
-                  onChange={setContent}
-                  modules={modules}
-                  formats={formats}
+                <TextArea
+                  id="content-editor"
+                  rows={15}
                   placeholder={t('content_placeholder', 'محتوا...')}
-                  style={{ height: 300, marginBottom: 40 }}
+                  style={{ fontFamily: 'monospace', fontSize: 14 }}
                 />
               </Form.Item>
 
@@ -254,12 +318,12 @@ export default function CreatePostPage() {
               </Row>
 
               <Form.Item
-                name="meta_description"
-                label={t('meta_description', 'توضیحات متا')}
+                name="meta_tags"
+                label={t('meta_tags', 'تگ‌های متا')}
               >
                 <TextArea
                   rows={2}
-                  placeholder={t('meta_description_placeholder', 'توضیحات برای سئو...')}
+                  placeholder={t('meta_tags_placeholder', 'تگ‌های متا برای سئو...')}
                 />
               </Form.Item>
             </Col>
@@ -273,10 +337,11 @@ export default function CreatePostPage() {
                 }}
               >
                 <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                  {/* ===== پیش‌نمایش تصویر ===== */}
                   <div
                     style={{
                       width: '100%',
-                      height: 150,
+                      height: 200,
                       background: '#e2e8f0',
                       borderRadius: 8,
                       display: 'flex',
@@ -284,14 +349,33 @@ export default function CreatePostPage() {
                       justifyContent: 'center',
                       overflow: 'hidden',
                       marginBottom: 16,
+                      position: 'relative',
                     }}
                   >
-                    {fileList.length > 0 ? (
-                      <img
-                        src={URL.createObjectURL(fileList[0].originFileObj)}
-                        alt="تصویر شاخص"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
+                    {previewImage ? (
+                      <>
+                        <img
+                          src={previewImage}
+                          alt="تصویر شاخص"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => {
+                            setFileList([]);
+                            setPreviewImage(null);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            background: 'rgba(255,255,255,0.9)',
+                            borderRadius: '50%',
+                          }}
+                        />
+                      </>
                     ) : (
                       <FileTextOutlined style={{ fontSize: 48, color: '#94a3b8' }} />
                     )}
@@ -299,11 +383,11 @@ export default function CreatePostPage() {
 
                   <Upload {...uploadProps}>
                     <Button icon={<UploadOutlined />}>
-                      {t('upload_featured_image', 'آپلود تصویر شاخص')}
+                      {previewImage ? t('change_image', 'تغییر تصویر') : t('upload_featured_image', 'آپلود تصویر شاخص')}
                     </Button>
                   </Upload>
                   <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
-                    {t('image_size', 'حداکثر ۵ مگابایت')}
+                    {t('image_size', 'حداکثر ۵ مگابایت - فرمت‌های JPG, PNG, WebP')}
                   </Text>
                 </div>
 

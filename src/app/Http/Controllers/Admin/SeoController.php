@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Admin/SeoController.php
 
 namespace App\Http\Controllers\Admin;
 
@@ -6,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Seo;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class SeoController extends Controller
 {
@@ -13,17 +15,48 @@ class SeoController extends Controller
 
     public function index(Request $request)
     {
-        $seo = Seo::with(['seoable'])
-            ->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 20));
+        try {
+            $tenantId = session('tenant_id', 1);
 
-        return $this->success($seo);
+            $query = Seo::where('tenant_id', $tenantId)
+                ->with(['seoable']);
+
+            // جستجو
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('keywords', 'like', "%{$search}%")
+                        ->orWhereHas('seoable', function ($q2) use ($search) {
+                            $q2->where('name', 'like', "%{$search}%")
+                                ->orWhere('title', 'like', "%{$search}%")
+                                ->orWhere('full_name', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            // فیلتر بر اساس نوع
+            if ($request->has('seoable_type') && !empty($request->seoable_type)) {
+                $query->where('seoable_type', $request->seoable_type);
+            }
+
+            $seo = $query->orderBy('created_at', 'desc')
+                ->paginate($request->get('per_page', 20));
+
+            return $this->success($seo);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
     }
 
     public function show($id)
     {
         try {
-            $seo = Seo::with(['seoable'])->findOrFail($id);
+            $tenantId = session('tenant_id', 1);
+            $seo = Seo::where('tenant_id', $tenantId)
+                ->with(['seoable'])
+                ->findOrFail($id);
             return $this->success($seo);
         } catch (\Exception $e) {
             return $this->error('SEO یافت نشد', 404);
@@ -32,35 +65,55 @@ class SeoController extends Controller
 
     public function getByModel(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'type' => 'required|string',
             'id' => 'required|integer',
         ]);
 
-        $modelClass = 'App\\Models\\' . ucfirst($request->type);
-        $model = $modelClass::find($request->id);
-
-        if (!$model) {
-            return $this->error('مدل یافت نشد', 404);
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $seo = $model->seo;
+        try {
+            $modelClass = 'App\\Models\\' . ucfirst($request->type);
 
-        if (!$seo) {
-            $seo = $model->seo()->create([
-                'title' => $model->getSeoTitleAttribute(),
-                'description' => $model->getSeoDescriptionAttribute(),
-                'keywords' => $model->getSeoKeywordsAttribute(),
-                'robots' => 'index, follow',
-            ]);
+            if (!class_exists($modelClass)) {
+                return $this->error('مدل یافت نشد', 404);
+            }
+
+            $model = $modelClass::find($request->id);
+
+            if (!$model) {
+                return $this->error('مدل یافت نشد', 404);
+            }
+
+            // بررسی وجود تریل seo
+            if (!method_exists($model, 'seo')) {
+                return $this->error('مدل تریل seo ندارد', 400);
+            }
+
+            $seo = $model->seo;
+
+            if (!$seo) {
+                // ایجاد سئو پیش‌فرض
+                $seo = $model->seo()->create([
+                    'tenant_id' => session('tenant_id', 1),
+                    'title' => method_exists($model, 'getSeoTitleAttribute') ? $model->getSeoTitleAttribute() : null,
+                    'description' => method_exists($model, 'getSeoDescriptionAttribute') ? $model->getSeoDescriptionAttribute() : null,
+                    'keywords' => method_exists($model, 'getSeoKeywordsAttribute') ? $model->getSeoKeywordsAttribute() : null,
+                    'robots' => 'index, follow',
+                ]);
+            }
+
+            return $this->success($seo);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
         }
-
-        return $this->success($seo);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'seoable_type' => 'required|string',
             'seoable_id' => 'required|integer',
             'title' => 'nullable|string|max:255',
@@ -78,20 +131,35 @@ class SeoController extends Controller
             'meta_tags' => 'nullable|array',
         ]);
 
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
         try {
             $modelClass = 'App\\Models\\' . ucfirst($request->seoable_type);
+
+            if (!class_exists($modelClass)) {
+                return $this->error('مدل یافت نشد', 404);
+            }
+
             $model = $modelClass::find($request->seoable_id);
 
             if (!$model) {
                 return $this->error('مدل یافت نشد', 404);
             }
 
+            $data = $request->all();
+            $data['tenant_id'] = session('tenant_id', 1);
+
             $seo = $model->seo()->updateOrCreate(
-                ['seoable_type' => $request->seoable_type, 'seoable_id' => $request->seoable_id],
-                $request->except(['seoable_type', 'seoable_id'])
+                [
+                    'seoable_type' => $request->seoable_type,
+                    'seoable_id' => $request->seoable_id,
+                ],
+                $data
             );
 
-            return $this->success($seo, 'SEO با موفقیت ذخیره شد');
+            return $this->success($seo, 'SEO با موفقیت ذخیره شد', 201);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -100,9 +168,10 @@ class SeoController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $seo = Seo::findOrFail($id);
+            $tenantId = session('tenant_id', 1);
+            $seo = Seo::where('tenant_id', $tenantId)->findOrFail($id);
 
-            $request->validate([
+            $validator = Validator::make($request->all(), [
                 'title' => 'nullable|string|max:255',
                 'description' => 'nullable|string|max:500',
                 'keywords' => 'nullable|string|max:255',
@@ -118,9 +187,13 @@ class SeoController extends Controller
                 'meta_tags' => 'nullable|array',
             ]);
 
+            if ($validator->fails()) {
+                return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+            }
+
             $seo->update($request->all());
 
-            return $this->success($seo, 'SEO با موفقیت به‌روزرسانی شد');
+            return $this->success($seo->fresh(), 'SEO با موفقیت به‌روزرسانی شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -129,7 +202,8 @@ class SeoController extends Controller
     public function destroy($id)
     {
         try {
-            $seo = Seo::findOrFail($id);
+            $tenantId = session('tenant_id', 1);
+            $seo = Seo::where('tenant_id', $tenantId)->findOrFail($id);
             $seo->delete();
             return $this->success(null, 'SEO با موفقیت حذف شد');
         } catch (\Exception $e) {

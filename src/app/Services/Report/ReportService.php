@@ -23,7 +23,16 @@ class ReportService
     {
         $this->tenantId = session('tenant_id');
     }
-
+    public function getReportData(string $type, array $filters = [])
+    {
+        return match ($type) {
+            'appointments' => $this->getAppointmentsData($filters),
+            'patients' => $this->getPatientsData($filters),
+            'doctors' => $this->getDoctorsData($filters),
+            'revenue' => $this->getRevenueData($filters),
+            default => collect(),
+        };
+    }
     public function getAvailableReports(): array
     {
         return [
@@ -125,17 +134,6 @@ class ReportService
             ]);
             throw $e;
         }
-    }
-
-    protected function getReportData(string $type, array $filters)
-    {
-        return match ($type) {
-            ReportTypeEnum::APPOINTMENTS->value => $this->getAppointmentsData($filters),
-            ReportTypeEnum::PATIENTS->value => $this->getPatientsData($filters),
-            ReportTypeEnum::DOCTORS->value => $this->getDoctorsData($filters),
-            ReportTypeEnum::REVENUE->value => $this->getRevenueData($filters),
-            default => collect(),
-        };
     }
 
     protected function getAppointmentsData(array $filters)

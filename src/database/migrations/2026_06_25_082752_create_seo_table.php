@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('seo', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tenant_id')->nullable()->constrained('tenants')->onDelete('cascade');
             $table->morphs('seoable');
             $table->string('title')->nullable();
             $table->text('description')->nullable();

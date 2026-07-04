@@ -55,24 +55,32 @@ class Drug extends Model
         return $query->where('requires_prescription', true);
     }
 
+    // ✅ اضافه کردن scopeOverTheCounter
     public function scopeOverTheCounter($query)
     {
         return $query->where('requires_prescription', false);
     }
 
-    public function scopeSearch($query, string $term)
+    public function scopeByCategory($query, $category)
     {
+        if (empty($category)) {
+            return $query;
+        }
+        return $query->where('category', $category);
+    }
+
+    public function scopeSearch($query, $term)
+    {
+        if (empty($term)) {
+            return $query;
+        }
+
         return $query->where(function ($q) use ($term) {
             $q->where('name', 'LIKE', "%{$term}%")
                 ->orWhere('generic_name', 'LIKE', "%{$term}%")
                 ->orWhere('code', 'LIKE', "%{$term}%")
                 ->orWhere('manufacturer', 'LIKE', "%{$term}%");
         });
-    }
-
-    public function scopeByCategory($query, string $category)
-    {
-        return $query->where('category', $category);
     }
 
     // ========== Accessors ==========
@@ -132,6 +140,9 @@ class Drug extends Model
         static::creating(function ($drug) {
             if (empty($drug->code)) {
                 $drug->code = $drug->generateCode();
+            }
+            if (empty($drug->tenant_id)) {
+                $drug->tenant_id = session('tenant_id', 1);
             }
         });
     }

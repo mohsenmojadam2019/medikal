@@ -1,11 +1,14 @@
 <?php
+// app/Models/Rating.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Rating extends Model
 {
+
     protected $fillable = [
         'tenant_id',
         'doctor_id',
@@ -15,13 +18,15 @@ class Rating extends Model
         'comment',
         'categories',
         'is_anonymous',
-        'reply',           // ✅ پاسخ پزشک
-        'replied_at',      // ✅ تاریخ پاسخ
+        'is_approved', // ✅ اضافه کن
+        'reply',
+        'replied_at',
     ];
 
     protected $casts = [
         'score' => 'integer',
         'is_anonymous' => 'boolean',
+        'is_approved' => 'boolean',
         'categories' => 'array',
         'replied_at' => 'datetime',
     ];

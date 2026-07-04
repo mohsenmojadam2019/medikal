@@ -275,7 +275,7 @@ const JalaliDatePicker = ({
             footer={null}
             width={420}
             centered
-            destroyOnClose
+            destroyOnHidden
         >
           <div style={{ direction: 'rtl', padding: '8px 0' }}>
             {/* ===== سلکت‌ها ===== */}

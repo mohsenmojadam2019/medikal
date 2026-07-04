@@ -1,3 +1,5 @@
+// src/app/admin/invoices/create/page.js
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,17 +17,25 @@ import {
   Divider,
   Space,
   InputNumber,
+  App,
 } from 'antd';
 import {
   ArrowLeftOutlined,
   SaveOutlined,
   UserOutlined,
   DollarOutlined,
-  FileInvoiceOutlined,
+  // ❌ حذف FileInvoiceOutlined
+  // FileInvoiceOutlined,
+  // ✅ جایگزین
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { invoicesService, patientsService, appointmentsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import JalaliDatePicker from '@/components/admin/common/JalaliDatePicker';
+import dayjs from 'dayjs';
+import moment from 'moment-jalaali'; // ✅ برای تاریخ شمسی
+
+moment.loadPersian({ dialect: 'persian-modern' });
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -33,6 +43,7 @@ const { TextArea } = Input;
 export default function CreateInvoicePage() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { message } = App.useApp(); // ✅ استفاده از App.useApp()
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState([]);
@@ -46,9 +57,17 @@ export default function CreateInvoicePage() {
       setLoadingPatients(true);
       try {
         const response = await patientsService.getAll({ per_page: 100 });
-        setPatients(response.data || []);
+        // ✅ بررسی ساختار پاسخ
+        if (response.data?.success) {
+          const data = response.data.data;
+          const list = data?.data || data || [];
+          setPatients(Array.isArray(list) ? list : []);
+        } else {
+          setPatients([]);
+        }
       } catch (error) {
         console.error('Error fetching patients:', error);
+        setPatients([]);
       } finally {
         setLoadingPatients(false);
       }
@@ -68,9 +87,16 @@ export default function CreateInvoicePage() {
       setLoadingAppointments(true);
       try {
         const response = await appointmentsService.getByPatient(patientId);
-        setAppointments(response.data || []);
+        if (response.data?.success) {
+          const data = response.data.data;
+          const list = data?.data || data || [];
+          setAppointments(Array.isArray(list) ? list : []);
+        } else {
+          setAppointments([]);
+        }
       } catch (error) {
         console.error('Error fetching appointments:', error);
+        setAppointments([]);
       } finally {
         setLoadingAppointments(false);
       }
@@ -81,10 +107,20 @@ export default function CreateInvoicePage() {
 
   // ===== محاسبه مبلغ کل =====
   const calculateTotal = () => {
-    const amount = form.getFieldValue('amount') || 0;
-    const tax = form.getFieldValue('tax') || 0;
-    const discount = form.getFieldValue('discount') || 0;
+    const amount = parseFloat(form.getFieldValue('amount')) || 0;
+    const tax = parseFloat(form.getFieldValue('tax')) || 0;
+    const discount = parseFloat(form.getFieldValue('discount')) || 0;
     return amount + tax - discount;
+  };
+
+  // ===== فرمت تاریخ شمسی =====
+  const formatJalaliDate = (date) => {
+    if (!date) return '';
+    try {
+      return moment(date).format('jYYYY/jMM/jDD');
+    } catch (error) {
+      return '';
+    }
   };
 
   const handleSubmit = async (values) => {
@@ -95,7 +131,7 @@ export default function CreateInvoicePage() {
       router.push('/admin/invoices');
     } catch (error) {
       console.error('Error creating invoice:', error);
-      message.error(t('create_error', 'خطا در ایجاد فاکتور'));
+      message.error(error?.response?.data?.message || t('create_error', 'خطا در ایجاد فاکتور'));
     } finally {
       setLoading(false);
     }
@@ -108,236 +144,237 @@ export default function CreateInvoicePage() {
   const totalAmount = calculateTotal();
 
   return (
-    <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 24,
-        }}
-      >
-        <div>
-          <Space>
-            <Button
-              type="text"
-              icon={<ArrowLeftOutlined />}
-              onClick={handleBack}
-              style={{ fontSize: 18 }}
-            />
-            <div>
-              <Title level={2} style={{ margin: 0 }}>
-                {t('new_invoice', 'فاکتور جدید')}
-              </Title>
-              <Text type="secondary">
-                {t('create_invoice_subtitle', 'ایجاد فاکتور جدید')}
-              </Text>
-            </div>
-          </Space>
-        </div>
-      </div>
-
-      <Card
-        style={{
-          borderRadius: 12,
-          borderColor: '#e8e8f0',
-        }}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          size="large"
-          initialValues={{
-            status: 'draft',
-            tax: 0,
-            discount: 0,
-          }}
-          onValuesChange={() => form.setFieldsValue({ total_amount: calculateTotal() })}
+      <div>
+        <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 24,
+            }}
         >
-          <Row gutter={[24, 0]}>
-            <Col xs={24} lg={16}>
-              <Row gutter={[16, 0]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="patient_id"
-                    label={t('patient', 'بیمار')}
-                    rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-                  >
-                    <Select
-                      placeholder={t('select_patient', 'انتخاب بیمار...')}
-                      loading={loadingPatients}
-                      showSearch
-                      optionFilterProp="children"
-                      options={patients.map((p) => ({
-                        value: p.id,
-                        label: `${p.full_name} (${p.national_code || p.phone})`,
-                      }))}
-                    />
-                  </Form.Item>
-                </Col>
+          <div>
+            <Space>
+              <Button
+                  type="text"
+                  icon={<ArrowLeftOutlined />}
+                  onClick={handleBack}
+                  style={{ fontSize: 18 }}
+              />
+              <div>
+                <Title level={2} style={{ margin: 0 }}>
+                  {t('new_invoice', 'فاکتور جدید')}
+                </Title>
+                <Text type="secondary">
+                  {t('create_invoice_subtitle', 'ایجاد فاکتور جدید')}
+                </Text>
+              </div>
+            </Space>
+          </div>
+        </div>
 
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="appointment_id"
-                    label={t('appointment', 'نوبت')}
-                  >
-                    <Select
-                      placeholder={t('select_appointment', 'انتخاب نوبت...')}
-                      loading={loadingAppointments}
-                      options={appointments.map((a) => ({
-                        value: a.id,
-                        label: `${a.code} - ${dayjs(a.date).format('jYYYY/jMM/jDD')}`,
-                      }))}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
+        <Card
+            style={{
+              borderRadius: 12,
+              borderColor: '#e8e8f0',
+            }}
+        >
+          <Form
+              form={form}
+              layout="vertical"
+              onFinish={handleSubmit}
+              size="large"
+              initialValues={{
+                status: 'draft',
+                tax: 0,
+                discount: 0,
+              }}
+              onValuesChange={() => form.setFieldsValue({ total_amount: calculateTotal() })}
+          >
+            <Row gutter={[24, 0]}>
+              <Col xs={24} lg={16}>
+                <Row gutter={[16, 0]}>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                        name="patient_id"
+                        label={t('patient', 'بیمار')}
+                        rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
+                    >
+                      <Select
+                          placeholder={t('select_patient', 'انتخاب بیمار...')}
+                          loading={loadingPatients}
+                          showSearch
+                          optionFilterProp="children"
+                          options={patients.map((p) => ({
+                            value: p.id,
+                            label: p.full_name || p.name || `بیمار ${p.id}`,
+                          }))}
+                      />
+                    </Form.Item>
+                  </Col>
 
-              <Row gutter={[16, 0]}>
-                <Col xs={24} md={8}>
-                  <Form.Item
-                    name="amount"
-                    label={t('amount', 'مبلغ (تومان)')}
-                    rules={[
-                      { required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') },
-                      { type: 'number', min: 0, message: t('min_0', 'مبلغ باید بیشتر از ۰ باشد') },
-                    ]}
-                  >
-                    <InputNumber
-                      prefix={<DollarOutlined />}
-                      style={{ width: '100%' }}
-                      placeholder={t('amount_placeholder', '۱۵۰۰۰۰')}
-                      formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-                    />
-                  </Form.Item>
-                </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                        name="appointment_id"
+                        label={t('appointment', 'نوبت')}
+                    >
+                      <Select
+                          placeholder={t('select_appointment', 'انتخاب نوبت...')}
+                          loading={loadingAppointments}
+                          options={appointments.map((a) => ({
+                            value: a.id,
+                            label: `${a.code} - ${formatJalaliDate(a.date)}`,
+                          }))}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
 
-                <Col xs={24} md={8}>
-                  <Form.Item
-                    name="tax"
-                    label={t('tax', 'مالیات (تومان)')}
-                  >
-                    <InputNumber
-                      prefix={<DollarOutlined />}
-                      style={{ width: '100%' }}
-                      placeholder={t('tax_placeholder', '۰')}
-                      min={0}
-                      formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-                    />
-                  </Form.Item>
-                </Col>
+                <Row gutter={[16, 0]}>
+                  <Col xs={24} md={8}>
+                    <Form.Item
+                        name="amount"
+                        label={t('amount', 'مبلغ (تومان)')}
+                        rules={[
+                          { required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') },
+                          { type: 'number', min: 0, message: t('min_0', 'مبلغ باید بیشتر از ۰ باشد') },
+                        ]}
+                    >
+                      <InputNumber
+                          prefix={<DollarOutlined />}
+                          style={{ width: '100%' }}
+                          placeholder={t('amount_placeholder', '۱۵۰۰۰۰')}
+                          min={0}
+                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
+                      />
+                    </Form.Item>
+                  </Col>
 
-                <Col xs={24} md={8}>
-                  <Form.Item
-                    name="discount"
-                    label={t('discount', 'تخفیف (تومان)')}
-                  >
-                    <InputNumber
-                      prefix={<DollarOutlined />}
-                      style={{ width: '100%' }}
-                      placeholder={t('discount_placeholder', '۰')}
-                      min={0}
-                      formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
+                  <Col xs={24} md={8}>
+                    <Form.Item
+                        name="tax"
+                        label={t('tax', 'مالیات (تومان)')}
+                    >
+                      <InputNumber
+                          prefix={<DollarOutlined />}
+                          style={{ width: '100%' }}
+                          placeholder={t('tax_placeholder', '۰')}
+                          min={0}
+                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
+                      />
+                    </Form.Item>
+                  </Col>
 
-              <Form.Item
-                name="description"
-                label={t('description', 'توضیحات')}
-              >
-                <TextArea
-                  rows={3}
-                  placeholder={t('description_placeholder', 'توضیحات فاکتور...')}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} lg={8}>
-              <Card
-                style={{
-                  borderRadius: 12,
-                  borderColor: '#e8e8f0',
-                  background: '#f8fafc',
-                }}
-              >
-                <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                  <FileInvoiceOutlined style={{ fontSize: 48, color: '#2563eb' }} />
-                  <div style={{ marginTop: 8 }}>
-                    <Text type="secondary">{t('invoice_summary', 'خلاصه فاکتور')}</Text>
-                  </div>
-                </div>
-
-                <Divider />
-
-                <div>
-                  <Text type="secondary">{t('patient', 'بیمار')}</Text>
-                  <div style={{ fontWeight: 500, marginTop: 4 }}>
-                    {form.getFieldValue('patient_id') ? patients.find(p => p.id === form.getFieldValue('patient_id'))?.full_name || '—' : t('not_selected', 'انتخاب نشده')}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <Text type="secondary">{t('total_amount', 'مبلغ کل')}</Text>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#2563eb', marginTop: 4 }}>
-                    {Number(totalAmount).toLocaleString()} تومان
-                  </div>
-                </div>
-
-                <Divider />
+                  <Col xs={24} md={8}>
+                    <Form.Item
+                        name="discount"
+                        label={t('discount', 'تخفیف (تومان)')}
+                    >
+                      <InputNumber
+                          prefix={<DollarOutlined />}
+                          style={{ width: '100%' }}
+                          placeholder={t('discount_placeholder', '۰')}
+                          min={0}
+                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
 
                 <Form.Item
-                  name="status"
-                  label={t('status', 'وضعیت')}
-                  initialValue="draft"
+                    name="description"
+                    label={t('description', 'توضیحات')}
                 >
-                  <Select
-                    options={[
-                      { value: 'draft', label: t('draft', 'پیش‌نویس') },
-                      { value: 'issued', label: t('issued', 'صادر شده') },
-                      { value: 'paid', label: t('paid', 'پرداخت شده') },
-                      { value: 'cancelled', label: t('cancelled', 'لغو شده') },
-                    ]}
+                  <TextArea
+                      rows={3}
+                      placeholder={t('description_placeholder', 'توضیحات فاکتور...')}
                   />
                 </Form.Item>
+              </Col>
 
-                <Divider />
+              <Col xs={24} lg={8}>
+                <Card
+                    style={{
+                      borderRadius: 12,
+                      borderColor: '#e8e8f0',
+                      background: '#f8fafc',
+                    }}
+                >
+                  <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                    <FileTextOutlined style={{ fontSize: 48, color: '#2563eb' }} />
+                    <div style={{ marginTop: 8 }}>
+                      <Text type="secondary">{t('invoice_summary', 'خلاصه فاکتور')}</Text>
+                    </div>
+                  </div>
 
-                <div style={{ textAlign: 'center' }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {t('invoice_help', 'پس از ایجاد، فاکتور قابل چاپ و ارسال برای بیمار است')}
-                  </Text>
-                </div>
-              </Card>
-            </Col>
-          </Row>
+                  <Divider />
 
-          <Divider />
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-            <Button onClick={handleBack} size="large">
-              {t('cancel', 'انصراف')}
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-              icon={<SaveOutlined />}
-              size="large"
-              style={{
-                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                border: 'none',
-              }}
-            >
-              {t('save', 'ذخیره')}
-            </Button>
-          </div>
-        </Form>
-      </Card>
-    </div>
+                  <div>
+                    <Text type="secondary">{t('patient', 'بیمار')}</Text>
+                    <div style={{ fontWeight: 500, marginTop: 4 }}>
+                      {form.getFieldValue('patient_id') ? patients.find(p => p.id === form.getFieldValue('patient_id'))?.full_name || '—' : t('not_selected', 'انتخاب نشده')}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 12 }}>
+                    <Text type="secondary">{t('total_amount', 'مبلغ کل')}</Text>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#2563eb', marginTop: 4 }}>
+                      {Number(totalAmount).toLocaleString()} تومان
+                    </div>
+                  </div>
+
+                  <Divider />
+
+                  <Form.Item
+                      name="status"
+                      label={t('status', 'وضعیت')}
+                      initialValue="draft"
+                  >
+                    <Select
+                        options={[
+                          { value: 'draft', label: t('draft', 'پیش‌نویس') },
+                          { value: 'issued', label: t('issued', 'صادر شده') },
+                          { value: 'paid', label: t('paid', 'پرداخت شده') },
+                          { value: 'cancelled', label: t('cancelled', 'لغو شده') },
+                        ]}
+                    />
+                  </Form.Item>
+
+                  <Divider />
+
+                  <div style={{ textAlign: 'center' }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {t('invoice_help', 'پس از ایجاد، فاکتور قابل چاپ و ارسال برای بیمار است')}
+                    </Text>
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+
+            <Divider />
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <Button onClick={handleBack} size="large">
+                {t('cancel', 'انصراف')}
+              </Button>
+              <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  icon={<SaveOutlined />}
+                  size="large"
+                  style={{
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    border: 'none',
+                  }}
+              >
+                {t('save', 'ذخیره')}
+              </Button>
+            </div>
+          </Form>
+        </Card>
+      </div>
   );
 }

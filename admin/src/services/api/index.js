@@ -1,5 +1,5 @@
 // src/services/api/index.js
-
+export { default as remindersService } from './admin/reminders';
 export { default as client } from './client';
 export { default as authService } from './auth';
 export { default as languageService } from './language';
@@ -19,6 +19,9 @@ export { default as paymentsService } from './admin/payments';
 export { default as chatService } from './admin/chat';
 export { default as notificationsService } from './admin/notifications';
 export { default as usersService } from './admin/users';
+export { default as rolesService } from './admin/roles';
+export { default as reportsService } from './admin/reports';
+export { default as webhookService } from './admin/webhook';
 // ✅ اصلاح: استفاده از Named Export
 export {
     blogService,
