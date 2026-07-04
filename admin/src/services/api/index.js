@@ -22,6 +22,7 @@ export { default as usersService } from './admin/users';
 export { default as rolesService } from './admin/roles';
 export { default as reportsService } from './admin/reports';
 export { default as webhookService } from './admin/webhook';
+export { default as profileService } from './admin/profile';
 // ✅ اصلاح: استفاده از Named Export
 export {
     blogService,

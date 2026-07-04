@@ -1,12 +1,14 @@
+// src/components/admin/Header.js
+
 'use client';
 
 import { useState } from 'react';
-import { Layout, Input, Badge, Avatar, Dropdown, Space, Button, Modal, Form, Select } from 'antd';
+import { useRouter } from 'next/navigation';
+import { Layout, Input, Avatar, Dropdown, Space, Button, Modal, Form, Select, Badge } from 'antd';
 import {
     MenuUnfoldOutlined,
     MenuFoldOutlined,
     SearchOutlined,
-    BellOutlined,
     MessageOutlined,
     UserOutlined,
     LogoutOutlined,
@@ -15,10 +17,12 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import NotificationBell from '@/components/admin/NotificationBell'; // ✅ اضافه کن
 
 const { Header: AntHeader } = Layout;
 
 export default function Header({ collapsed, onToggle }) {
+    const router = useRouter();
     const { user, logout } = useAuth();
     const { locale, languages, switchLanguage, t } = useLanguage();
     const [searchValue, setSearchValue] = useState('');
@@ -28,12 +32,14 @@ export default function Header({ collapsed, onToggle }) {
         {
             key: 'profile',
             icon: <UserOutlined />,
-            label: t('profile', 'پروفایل'),
+            label: t('profile', 'پروفایل من'),
+            onClick: () => router.push('/admin/profile'),
         },
         {
             key: 'settings',
             icon: <SettingOutlined />,
             label: t('settings', 'تنظیمات'),
+            onClick: () => router.push('/admin/settings'),
         },
         {
             type: 'divider',
@@ -47,7 +53,7 @@ export default function Header({ collapsed, onToggle }) {
     ];
 
     const userName = user?.name || t('user', 'کاربر');
-    const userAvatar = userName.charAt(0);
+    const userAvatar = user?.avatar ? user.avatar : userName.charAt(0);
 
     const currentLanguage = languages.find((lang) => lang.code === locale) || {
         code: 'fa',
@@ -94,8 +100,8 @@ export default function Header({ collapsed, onToggle }) {
                                     display: 'block',
                                 }}
                             >
-                {t('admin_panel', 'پنل مدیریت کلینیک')}
-              </span>
+                                {t('admin_panel', 'پنل مدیریت کلینیک')}
+                            </span>
                         </h1>
                     </div>
                 </div>
@@ -127,13 +133,8 @@ export default function Header({ collapsed, onToggle }) {
                         {currentLanguage.nativeName || currentLanguage.name}
                     </Button>
 
-                    <Badge count={5} size="small" offset={[-4, 4]}>
-                        <Button
-                            type="text"
-                            icon={<BellOutlined style={{ fontSize: 18 }} />}
-                            style={{ width: 40, height: 40 }}
-                        />
-                    </Badge>
+                    {/* ✅ زنگوله داینامیک */}
+                    <NotificationBell />
 
                     <Badge count={3} size="small" offset={[-4, 4]}>
                         <Button
@@ -150,8 +151,9 @@ export default function Header({ collapsed, onToggle }) {
                     >
                         <Space style={{ cursor: 'pointer', marginRight: 8 }}>
                             <Avatar
+                                src={user?.avatar_url || user?.avatar}
                                 style={{
-                                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                                    background: !user?.avatar_url && !user?.avatar ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : undefined,
                                     boxShadow: '0 2px 8px rgba(37,99,235,0.2)',
                                     width: 40,
                                     height: 40,
@@ -163,7 +165,7 @@ export default function Header({ collapsed, onToggle }) {
                                     color: '#ffffff',
                                 }}
                             >
-                                {userAvatar}
+                                {!user?.avatar_url && !user?.avatar && userAvatar}
                             </Avatar>
                             <span style={{ fontWeight: 600, color: '#0f172a' }}>{userName}</span>
                         </Space>

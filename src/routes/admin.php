@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AppointmentController;
 use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\PaymentController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ReminderController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\WebhookController;
@@ -65,7 +67,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
 // ============================================================
 Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
     ->group(function () {
-
+        // ==========================================
+        // 👤 PROFILE MANAGEMENT
+        // ==========================================
+        Route::prefix('profile')->controller(ProfileController::class)->group(function () {
+            Route::get('/', 'show');
+            Route::put('/', 'update');
+            Route::post('/avatar', 'uploadAvatar');
+            Route::delete('/avatar', 'deleteAvatar');
+            Route::post('/change-password', 'changePassword');
+            Route::get('/activities', 'activities');
+        });
 
         // -------- 1. DASHBOARD MANAGEMENT --------
         Route::prefix('dashboard/management')->group(function () {
@@ -243,17 +255,35 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
         });
 
         // -------- 15. NOTIFICATIONS --------
-        Route::prefix('notifications')->group(function () {
-            Route::post('/send-to-user', [NotificationController::class, 'sendToUser']);
-            Route::post('/send-to-users', [NotificationController::class, 'sendToUsers']);
-            Route::post('/send-to-role', [NotificationController::class, 'sendToRole']);
-            Route::post('/send-to-all', [NotificationController::class, 'sendToAll']);
-            Route::post('/send-to-doctors', [NotificationController::class, 'sendToAllDoctors']);
-            Route::post('/send-to-patients', [NotificationController::class, 'sendToAllPatients']);
-            Route::post('/send-to-doctor-patients/{doctorId}', [NotificationController::class, 'sendToDoctorPatients']);
-            Route::post('/send-filtered', [NotificationController::class, 'sendFiltered']);
-            Route::get('/user/{userId}', [NotificationController::class, 'userNotifications']);
+        Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
+            // ===== مسیرهای GET =====
+            Route::get('/', 'index');
+            Route::get('/stats', 'stats');
+            Route::get('/recent', 'recent');
+            Route::get('/unread', 'unread');           // ✅ دریافت اعلان‌های خوانده نشده
+            Route::get('/unread/count', 'unreadCount'); // ✅ تعداد اعلان‌های خوانده نشده
+            Route::get('/user/{userId}', 'userNotifications');
+
+            // ===== مسیرهای با ID (بعد از مسیرهای ثابت) =====
+            Route::get('/{id}', 'show');
+            Route::delete('/{id}', 'destroy');
+            Route::post('/{id}/mark-as-read', 'markAsRead');
+
+            // ===== مسیرهای POST =====
+            Route::post('/mark-all-as-read', 'markAllAsRead');
+            Route::delete('/delete-all-read', 'deleteAllRead');
+
+            // ===== مسیرهای ارسال =====
+            Route::post('/send-to-all', 'sendToAll');
+            Route::post('/send-to-doctors', 'sendToDoctors');
+            Route::post('/send-to-patients', 'sendToPatients');
+            Route::post('/send-to-user', 'sendToUser');
+            Route::post('/send-to-doctor-patients/{doctorId}', 'sendToDoctorPatients');
+            Route::post('/send-filtered', 'sendFiltered');
+            Route::post('/send-to-users', 'sendToUsers');
+            Route::post('/send-to-role', 'sendToRole');
         });
+
 
         // -------- 16. BLOG MANAGEMENT --------
         Route::prefix('blog')->group(function () {
@@ -389,6 +419,17 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
             Route::delete('/{id}', 'destroy');
         });
         // ==========================================
+        // 👛 WALLET MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('wallet')->controller(WalletController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::get('/stats', 'stats');
+            Route::get('/{userId}', 'show');
+            Route::get('/{userId}/transactions', 'transactions');
+            Route::post('/{userId}/toggle-status', 'toggleStatus');
+            Route::post('/{userId}/add-bonus', 'addBonus');
+        });
+        // ==========================================
         // 📊 REPORTS MANAGEMENT (ADMIN)
         // ==========================================
         Route::prefix('reports')->controller(ReportController::class)->group(function () {
@@ -398,7 +439,16 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
             Route::post('/export-pdf', 'exportPdf');
             Route::post('/stream-pdf', 'streamPdf');
         });
-
+        // ==========================================
+        // 💳 PAYMENT MANAGEMENT (ADMIN)
+        // ==========================================
+        Route::prefix('payments')->controller(PaymentController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::get('/stats', 'stats');
+            Route::get('/gateways', 'gateways');
+            Route::get('/{id}', 'show');
+            Route::post('/{id}/refund', 'refund');
+        });
         // ==========================================
         // 🔗 WEBHOOK MANAGEMENT (ADMIN)
         // ==========================================

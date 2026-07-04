@@ -70,6 +70,48 @@ class NotificationController extends Controller
     }
 
     /**
+     * دریافت اعلان‌های خوانده نشده کاربر جاری
+     */
+    public function unread(Request $request)
+    {
+        try {
+            $userId = auth()->id();
+            $tenantId = session('tenant_id', 1);
+
+            $notifications = Notification::where('tenant_id', $tenantId)
+                ->where('user_id', $userId)
+                ->where('is_read', false)
+                ->orderBy('created_at', 'desc')
+                ->limit(20)
+                ->get();
+
+            return $this->success($notifications);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * دریافت تعداد اعلان‌های خوانده نشده کاربر جاری
+     */
+    public function unreadCount(Request $request)
+    {
+        try {
+            $userId = auth()->id();
+            $tenantId = session('tenant_id', 1);
+
+            $count = Notification::where('tenant_id', $tenantId)
+                ->where('user_id', $userId)
+                ->where('is_read', false)
+                ->count();
+
+            return $this->success(['count' => $count]);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
+    }
+
+    /**
      * نمایش اعلان
      */
     public function show($id)
