@@ -27,31 +27,92 @@ class AppointmentController extends Controller
             return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
         }
 
-        $doctor = Doctor::find($doctorId);
+        $doctor = Doctor::with('specialty')->find($doctorId);
         if (!$doctor) {
             return $this->error('پزشک یافت نشد', 404);
         }
 
         $date = $request->date;
         
-        $startHour = 9;
-        $endHour = 17;
-        $slotDuration = 30;
+        $workingHours = null;
+        if ($doctor->working_hours) {
+            $workingHours = is_array($doctor->working_hours) 
+                ? $doctor->working_hours 
+                : json_decode($doctor->working_hours, true);
+        }
+
+        $defaultWorkingHours = [
+            'start' => '09:00',
+            'end' => '17:00',
+            'break_start' => '13:00',
+            'break_end' => '14:00',
+            'slot_duration' => 30,
+            'days' => ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday']
+        ];
+
+        $config = $workingHours ? array_merge($defaultWorkingHours, $workingHours) : $defaultWorkingHours;
+        
+        $dayOfWeek = Carbon::parse($date)->format('l');
+        $dayMapping = [
+            'Saturday' => 'saturday',
+            'Sunday' => 'sunday',
+            'Monday' => 'monday',
+            'Tuesday' => 'tuesday',
+            'Wednesday' => 'wednesday',
+            'Thursday' => 'thursday',
+            'Friday' => 'friday',
+        ];
+        
+        $persianDay = $dayMapping[$dayOfWeek] ?? 'saturday';
+        
+        if (isset($config['days']) && !in_array($persianDay, $config['days'])) {
+            return $this->success([
+                'available' => false,
+                'date' => $date,
+                'doctor' => [
+                    'id' => $doctor->id,
+                    'name' => $doctor->full_name ?? $doctor->name ?? 'پزشک',
+                    'specialty' => $doctor->specialty->name ?? 'عمومی',
+                    'consultation_fee' => $doctor->consultation_fee ?? 0,
+                ],
+                'slots' => [],
+                'total_slots' => 0,
+                'available_slots' => 0,
+                'message' => 'پزشک در این روز حضور ندارد',
+                'is_working_day' => false,
+            ]);
+        }
+
+        $startHour = (int) substr($config['start'], 0, 2);
+        $startMinute = (int) substr($config['start'], 3, 2);
+        $endHour = (int) substr($config['end'], 0, 2);
+        $endMinute = (int) substr($config['end'], 3, 2);
+        $slotDuration = $config['slot_duration'] ?? 30;
 
         $allSlots = [];
-        $currentTime = Carbon::parse($date . ' ' . sprintf('%02d:00:00', $startHour));
-        $endTime = Carbon::parse($date . ' ' . sprintf('%02d:00:00', $endHour));
+        $currentTime = Carbon::parse($date . ' ' . sprintf('%02d:%02d:00', $startHour, $startMinute));
+        $endTime = Carbon::parse($date . ' ' . sprintf('%02d:%02d:00', $endHour, $endMinute));
+
+        $breakStart = null;
+        $breakEnd = null;
+        if (isset($config['break_start']) && isset($config['break_end']) && $config['break_start'] && $config['break_end']) {
+            $breakStartHour = (int) substr($config['break_start'], 0, 2);
+            $breakStartMinute = (int) substr($config['break_start'], 3, 2);
+            $breakEndHour = (int) substr($config['break_end'], 0, 2);
+            $breakEndMinute = (int) substr($config['break_end'], 3, 2);
+            $breakStart = Carbon::parse($date . ' ' . sprintf('%02d:%02d:00', $breakStartHour, $breakStartMinute));
+            $breakEnd = Carbon::parse($date . ' ' . sprintf('%02d:%02d:00', $breakEndHour, $breakEndMinute));
+        }
 
         while ($currentTime < $endTime) {
             $slotEnd = clone $currentTime;
             $slotEnd->addMinutes($slotDuration);
             
             $isBreak = false;
-            $breakStart = Carbon::parse($date . ' 12:30:00');
-            $breakEnd = Carbon::parse($date . ' 14:00:00');
-            
-            if ($currentTime >= $breakStart && $currentTime < $breakEnd) {
-                $isBreak = true;
+            if ($breakStart && $breakEnd) {
+                if ($currentTime >= $breakStart && $currentTime < $breakEnd) {
+                    $isBreak = true;
+                }
             }
 
             if (!$isBreak) {
@@ -95,10 +156,12 @@ class AppointmentController extends Controller
                 'name' => $doctor->full_name ?? $doctor->name ?? 'پزشک',
                 'specialty' => $doctor->specialty->name ?? 'عمومی',
                 'consultation_fee' => $doctor->consultation_fee ?? 0,
+                'working_hours' => $config,
             ],
             'slots' => array_values($allSlots),
             'total_slots' => count($allSlots),
             'available_slots' => count($availableSlots),
+            'is_working_day' => true,
         ]);
     }
 
@@ -133,11 +196,48 @@ class AppointmentController extends Controller
             return $this->error('بیمار یافت نشد. لطفاً ابتدا ثبت نام کنید.', 404);
         }
 
+        // ✅ بررسی اینکه پزشک در این روز کار میکند
+        $doctor = Doctor::find($request->doctor_id);
+        if (!$doctor) {
+            return $this->error('پزشک یافت نشد', 404);
+        }
+
+        $workingHours = null;
+        if ($doctor->working_hours) {
+            $workingHours = is_array($doctor->working_hours) 
+                ? $doctor->working_hours 
+                : json_decode($doctor->working_hours, true);
+        }
+
+        $defaultWorkingHours = [
+            'days' => ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday']
+        ];
+
+        $config = $workingHours ? array_merge($defaultWorkingHours, $workingHours) : $defaultWorkingHours;
+        
+        $dayOfWeek = Carbon::parse($request->date)->format('l');
+        $dayMapping = [
+            'Saturday' => 'saturday',
+            'Sunday' => 'sunday',
+            'Monday' => 'monday',
+            'Tuesday' => 'tuesday',
+            'Wednesday' => 'wednesday',
+            'Thursday' => 'thursday',
+            'Friday' => 'friday',
+        ];
+        
+        $persianDay = $dayMapping[$dayOfWeek] ?? 'saturday';
+        
+        // ✅ اگر پزشک در این روز کار نمیکند، خطا بده
+        if (isset($config['days']) && !in_array($persianDay, $config['days'])) {
+            return $this->error('پزشک در این روز حضور ندارد', 400);
+        }
+
         $startTime = Carbon::parse($request->date . ' ' . $request->start_time);
         $endTime = clone $startTime;
         $endTime->addMinutes(30);
 
-        // ✅ بررسی اینکه آیا کاربر قبلاً برای این زمان نوبت گرفته است
+        // بررسی اینکه آیا کاربر قبلاً برای این زمان نوبت گرفته است
         $userExistingAppointment = Appointment::where('patient_id', $patient->id)
             ->where('doctor_id', $request->doctor_id)
             ->whereDate('date', $request->date)
@@ -155,7 +255,7 @@ class AppointmentController extends Controller
             ]);
         }
 
-        // ✅ بررسی تداخل با سایر کاربران
+        // بررسی تداخل با سایر کاربران
         $existingAppointment = Appointment::where('doctor_id', $request->doctor_id)
             ->whereDate('date', $request->date)
             ->where(function ($query) use ($startTime, $endTime) {
@@ -194,7 +294,6 @@ class AppointmentController extends Controller
         $appointment->notes = $request->notes;
         $appointment->save();
 
-        $doctor = Doctor::find($request->doctor_id);
         $fee = $doctor->consultation_fee ?? 0;
         
         $invoice = new Invoice();
@@ -295,6 +394,7 @@ class AppointmentController extends Controller
             }
 
             $appointment->status = 'cancelled';
+            $appointment->cancelled_at = now();
             $appointment->save();
 
             $invoice = Invoice::where('appointment_id', $appointment->id)->first();

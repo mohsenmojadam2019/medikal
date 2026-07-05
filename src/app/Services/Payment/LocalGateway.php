@@ -4,6 +4,7 @@ namespace App\Services\Payment;
 
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Appointment;
 use Illuminate\Http\Request;
 
 class LocalGateway extends BaseGateway
@@ -16,11 +17,9 @@ class LocalGateway extends BaseGateway
 
     public function initiate(Invoice $invoice): array
     {
-        // ایجاد transaction_id یکتا
         $transactionId = 'LOCAL-' . time() . '-' . rand(1000, 9999);
         $referenceCode = 'REF-' . time() . '-' . rand(1000, 9999);
 
-        // ایجاد یک پرداخت تست
         $payment = Payment::create([
             'invoice_id' => $invoice->id,
             'patient_id' => $invoice->patient_id,
@@ -37,12 +36,24 @@ class LocalGateway extends BaseGateway
             ]),
         ]);
 
-        // آپدیت وضعیت فاکتور
+        // ✅ آپدیت وضعیت فاکتور
         $invoice->update([
             'is_paid' => true,
             'paid_at' => now(),
             'status' => 'paid',
         ]);
+
+        // ✅ آپدیت وضعیت نوبت از pending به confirmed
+        $appointment = Appointment::where('id', $invoice->appointment_id)->first();
+        if ($appointment && $appointment->status === 'pending') {
+            $appointment->status = 'confirmed';
+            $appointment->save();
+            
+            \Log::info('✅ Appointment confirmed after local payment', [
+                'appointment_id' => $appointment->id,
+                'invoice_id' => $invoice->id,
+            ]);
+        }
 
         return [
             'success' => true,
@@ -57,7 +68,6 @@ class LocalGateway extends BaseGateway
 
     public function verify(Request $request): array
     {
-        // برای درگاه local نیازی به verify نیست
         return [
             'success' => true,
             'message' => 'پرداخت تایید شد',

@@ -128,12 +128,11 @@ export default function NewAppointmentPage() {
         const slots = data.data?.slots || [];
         setAvailableSlots(slots);
         
+        // ✅ فقط اگر هیچ زمانی موجود نبود، پیام نمایش بده
         if (slots.length === 0) {
           appMessage.info('هیچ زمانی برای این تاریخ موجود نیست');
-        } else {
-          const availableCount = slots.filter(s => s.is_available !== false).length;
-          appMessage.success(`${availableCount} زمان موجود برای انتخاب`);
         }
+        // ✅ حذف پیام موفقیت با تعداد زمان‌ها
       } else {
         appMessage.error(data.message || 'خطا در دریافت زمان‌ها');
         setAvailableSlots([]);
@@ -198,6 +197,8 @@ export default function NewAppointmentPage() {
         notes: '',
       };
 
+      console.log('📝 Booking data:', bookData);
+
       const res = await fetch(`${API_URL}/api/appointments`, {
         method: 'POST',
         headers: {
@@ -208,24 +209,26 @@ export default function NewAppointmentPage() {
       });
 
       const data = await res.json();
+      console.log('📦 Booking response:', data);
 
       if (data.success) {
         const appointment = data.data;
+        const appointmentId = appointment.id;
         
-        // ✅ فقط اطلاعات نوبت رو ذخیره کن، نه دوباره رزرو
-        localStorage.setItem('appointmentData', JSON.stringify({
+        const appointmentData = {
           doctorId: doctorId,
           doctorName: doctor?.name || doctor?.full_name || 'پزشک',
           doctorSpecialty: doctor?.specialty?.name || 'عمومی',
           date: dateStr,
           time: timeStr,
           doctorFee: parseFloat(doctor?.consultation_fee) || 0,
-          appointmentId: appointment.id,  // ✅ مهم: ID نوبت برای پرداخت
+          appointmentId: appointmentId,
           status: appointment.status,
-        }));
+        };
+        
+        localStorage.setItem('appointmentData', JSON.stringify(appointmentData));
         
         appMessage.success('نوبت با موفقیت رزرو شد');
-        // ✅ هدایت به صفحه پرداخت با ID نوبت
         router.push(`/${locale}/appointments/checkout`);
       } else {
         let errorMsg = data.message || 'خطا در رزرو نوبت';

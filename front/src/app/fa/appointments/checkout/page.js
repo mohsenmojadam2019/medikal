@@ -123,15 +123,22 @@ export default function CheckoutPage() {
     }
   };
 
+  // دریافت فاکتور با استفاده از appointmentId
   const fetchInvoice = async (appointmentId) => {
-    if (!appointmentId) return null;
+    if (!appointmentId) {
+      console.error('❌ No appointmentId provided');
+      return null;
+    }
 
     console.log('🔍 Fetching invoice for appointment:', appointmentId);
     
     setFetchingInvoice(true);
     try {
       const token = getToken();
-      console.log('🔑 Token:', token ? 'Exists' : 'Missing');
+      if (!token) {
+        console.error('❌ No token found');
+        return null;
+      }
       
       const url = `${API_URL}/api/invoices/appointment/${appointmentId}`;
       console.log('🌐 URL:', url);
@@ -148,16 +155,16 @@ export default function CheckoutPage() {
       const data = await res.json();
       console.log('📦 Full response:', JSON.stringify(data, null, 2));
 
-      if (data.success) {
+      if (data.success && data.data) {
         console.log('✅ Invoice found:', data.data);
         setInvoice(data.data);
         return data.data;
       } else {
-        console.log('❌ Error:', data.message);
+        console.log('❌ Invoice not found:', data.message);
         return null;
       }
     } catch (error) {
-      console.error('Error fetching invoice:', error);
+      console.error('❌ Error fetching invoice:', error);
       return null;
     } finally {
       setFetchingInvoice(false);
@@ -169,20 +176,19 @@ export default function CheckoutPage() {
     console.log('📋 Stored appointmentData:', stored);
     
     if (!stored) {
-      console.warn('⚠️ No appointmentData found in localStorage');
+      console.warn('⚠️ No appointmentData found');
       appMessage.warning('اطلاعات نوبت یافت نشد. لطفاً از صفحه انتخاب نوبت اقدام کنید.');
-      // هدایت به صفحه انتخاب نوبت
       router.push(`/${locale}/doctors`);
       return;
     }
     
     try {
       const data = JSON.parse(stored);
-      console.log('📋 Parsed appointmentData:', data);
+      console.log('📋 Parsed data:', data);
       
       if (!data.appointmentId) {
         console.error('❌ No appointmentId in data');
-        appMessage.error('شناسه نوبت یافت نشد. لطفاً دوباره تلاش کنید.');
+        appMessage.error('شناسه نوبت یافت نشد.');
         router.push(`/${locale}/doctors`);
         return;
       }
@@ -192,7 +198,7 @@ export default function CheckoutPage() {
       // دریافت فاکتور
       fetchInvoice(data.appointmentId);
     } catch (error) {
-      console.error('Error parsing appointment data:', error);
+      console.error('❌ Error parsing data:', error);
       router.push(`/${locale}/doctors`);
     }
   }, [locale, router, appMessage]);
@@ -315,6 +321,7 @@ export default function CheckoutPage() {
         return;
       }
 
+      // اگر فاکتور وجود ندارد، دوباره تلاش کن
       let currentInvoice = invoice;
       if (!currentInvoice) {
         currentInvoice = await fetchInvoice(appointmentId);

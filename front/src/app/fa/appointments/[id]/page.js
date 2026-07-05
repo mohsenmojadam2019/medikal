@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { 
   Card, Row, Col, Button, Typography, Spin, Tag, 
-  Space, Divider, Avatar, Descriptions, App, Timeline,
-  Alert
+  Space, Divider, Avatar, Descriptions, App, Alert
 } from 'antd';
 import { 
   CalendarOutlined, ClockCircleOutlined, 
@@ -64,6 +63,7 @@ export default function AppointmentDetailPage() {
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
   
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
@@ -74,60 +74,60 @@ export default function AppointmentDetailPage() {
     return null;
   };
 
-  useEffect(() => {
-    const fetchAppointment = async () => {
-      if (!id) {
-        setError('شناسه نوبت یافت نشد');
-        setLoading(false);
+  const fetchAppointment = async () => {
+    if (!id) {
+      setError('شناسه نوبت یافت نشد');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const token = getToken();
+      if (!token) {
+        router.push(`/${locale}/login`);
         return;
       }
 
-      try {
-        const token = getToken();
-        if (!token) {
-          router.push(`/${locale}/login`);
-          return;
-        }
+      const res = await fetch(`${API_URL}/api/appointments/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-        const res = await fetch(`${API_URL}/api/appointments/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+      const data = await res.json();
+      console.log('📋 Appointment detail:', data);
 
-        const data = await res.json();
-        console.log('📦 Appointment detail:', data);
-
-        if (data.success) {
-          setAppointment(data.data);
-        } else {
-          setError(data.message || 'خطا در دریافت اطلاعات نوبت');
-          appMessage.error(data.message || 'خطا در دریافت اطلاعات نوبت');
-        }
-      } catch (error) {
-        console.error('Error fetching appointment:', error);
-        setError('خطا در ارتباط با سرور');
-        appMessage.error('خطا در ارتباط با سرور');
-      } finally {
-        setLoading(false);
+      if (data.success) {
+        setAppointment(data.data);
+      } else {
+        setError(data.message || 'خطا در دریافت اطلاعات نوبت');
+        appMessage.error(data.message || 'خطا در دریافت اطلاعات نوبت');
       }
-    };
+    } catch (error) {
+      console.error('Error fetching appointment:', error);
+      setError('خطا در ارتباط با سرور');
+      appMessage.error('خطا در ارتباط با سرور');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchAppointment();
   }, [id, locale, router, appMessage]);
 
   const getStatusConfig = (status) => {
     const configs = {
-      pending: { color: 'warning', text: 'در انتظار پرداخت', icon: <ClockCircleOutlined />, action: 'pay' },
-      confirmed: { color: 'success', text: 'تایید شده', icon: <CheckCircleOutlined />, action: 'view' },
-      arrived: { color: 'primary', text: 'حاضر در مطب', icon: <UserOutlined />, action: 'view' },
-      in_progress: { color: 'blue', text: 'در حال ویزیت', icon: <InfoCircleOutlined />, action: 'view' },
-      completed: { color: 'green', text: 'انجام شده', icon: <CheckCircleOutlined />, action: 'view' },
-      cancelled: { color: 'danger', text: 'لغو شده', icon: <CloseCircleOutlined />, action: 'view' },
-      no_show: { color: 'secondary', text: 'حاضر نشده', icon: <CloseCircleOutlined />, action: 'view' },
+      pending: { color: 'warning', text: 'در انتظار پرداخت', icon: <ClockCircleOutlined /> },
+      confirmed: { color: 'success', text: 'پرداخت و تایید شده', icon: <CheckCircleOutlined /> },
+      arrived: { color: 'primary', text: 'حاضر در مطب', icon: <UserOutlined /> },
+      in_progress: { color: 'blue', text: 'در حال ویزیت', icon: <InfoCircleOutlined /> },
+      completed: { color: 'green', text: 'انجام شده', icon: <CheckCircleOutlined /> },
+      cancelled: { color: 'danger', text: 'لغو شده', icon: <CloseCircleOutlined /> },
+      no_show: { color: 'secondary', text: 'حاضر نشده', icon: <CloseCircleOutlined /> },
     };
-    return configs[status] || { color: 'default', text: status, icon: null, action: 'view' };
+    return configs[status] || { color: 'default', text: status, icon: null };
   };
 
   const handleBack = () => {
@@ -137,6 +137,7 @@ export default function AppointmentDetailPage() {
   const handleCancel = async () => {
     if (!appointment) return;
     
+    setCancelling(true);
     try {
       const token = getToken();
       const res = await fetch(`${API_URL}/api/appointments/${appointment.id}/cancel`, {
@@ -149,15 +150,15 @@ export default function AppointmentDetailPage() {
       const data = await res.json();
       if (data.success) {
         appMessage.success('نوبت با موفقیت لغو شد');
-        setAppointment({ ...appointment, status: 'cancelled' });
-        // رفرش صفحه
-        fetchAppointment();
+        await fetchAppointment(); // رفرش صفحه
       } else {
         appMessage.error(data.message || 'خطا در لغو نوبت');
       }
     } catch (error) {
       console.error('Error cancelling appointment:', error);
       appMessage.error('خطا در ارتباط با سرور');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -228,7 +229,11 @@ export default function AppointmentDetailPage() {
   const fee = appointment.fee || appointment.doctor?.consultation_fee || 0;
   const doctorName = appointment.doctor?.name || appointment.doctor?.full_name || 'پزشک';
   const doctorSpecialty = appointment.doctor?.specialty?.name || 'عمومی';
+  
+  // ✅ فقط در صورتی که نوبت pending باشد، دکمه‌های پرداخت و لغو نمایش داده شوند
   const isPending = appointment.status === 'pending';
+  const isConfirmed = appointment.status === 'confirmed' || appointment.status === 'completed';
+  const isCancelled = appointment.status === 'cancelled';
 
   return (
     <>
@@ -295,8 +300,8 @@ export default function AppointmentDetailPage() {
                     </Space>
                   </Descriptions.Item>
                   <Descriptions.Item label="وضعیت پرداخت">
-                    <Tag color={appointment.payment_status === 'paid' ? 'success' : 'warning'}>
-                      {appointment.payment_status === 'paid' ? 'پرداخت شده' : 'در انتظار پرداخت'}
+                    <Tag color={isConfirmed ? 'success' : (isPending ? 'warning' : 'default')}>
+                      {isConfirmed ? 'پرداخت شده' : (isPending ? 'در انتظار پرداخت' : '—')}
                     </Tag>
                   </Descriptions.Item>
                   {appointment.notes && (
@@ -319,6 +324,7 @@ export default function AppointmentDetailPage() {
                     <Button 
                       danger
                       onClick={handleCancel}
+                      loading={cancelling}
                       style={{ borderRadius: '8px' }}
                     >
                       لغو نوبت
@@ -326,29 +332,18 @@ export default function AppointmentDetailPage() {
                   </div>
                 )}
 
-                {!isPending && appointment.status === 'confirmed' && (
+                {isConfirmed && (
                   <div style={{ marginTop: '16px' }}>
                     <Alert
-                      title="✅ نوبت تایید شده"
-                      description="پرداخت این نوبت با موفقیت انجام شده است."
+                      title="✅ نوبت پرداخت و تایید شده"
+                      description="پرداخت این نوبت با موفقیت انجام شده است. نیازی به اقدام دیگری نیست."
                       type="success"
                       showIcon
                     />
                   </div>
                 )}
 
-                {!isPending && appointment.status === 'completed' && (
-                  <div style={{ marginTop: '16px' }}>
-                    <Alert
-                      title="✅ نوبت انجام شده"
-                      description="این نوبت به پایان رسیده است."
-                      type="success"
-                      showIcon
-                    />
-                  </div>
-                )}
-
-                {!isPending && appointment.status === 'cancelled' && (
+                {isCancelled && (
                   <div style={{ marginTop: '16px' }}>
                     <Alert
                       title="❌ نوبت لغو شده"

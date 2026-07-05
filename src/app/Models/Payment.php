@@ -64,9 +64,4 @@ class Payment extends Model
     {
         return $query->where('status', self::STATUS_PENDING);
     }
-
-    public function getReferenceIdAttribute()
-    {
-        return $this->reference_code ?? $this->transaction_id;
-    }
 }

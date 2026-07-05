@@ -4,6 +4,7 @@ namespace App\Services\Payment;
 
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Appointment;
 use App\Enums\PaymentStatusEnum;
 use Illuminate\Http\Request;
 
@@ -11,23 +12,9 @@ class PaymentService
 {
     protected PaymentManager $paymentManager;
 
-    // لیست درگاه‌های فعال (دستی)
     protected array $activeGateways = [
         'local',
         'zarinpal',
-        // 'asanpardakht',
-        // 'behpardakht',
-        // 'paypal',
-        // 'idpay',
-        // 'payir',
-        // 'zibal',
-        // 'nextpay',
-        // 'sadad',
-        // 'parsian',
-        // 'pasargad',
-        // 'saman',
-        // 'payping',
-        // 'vandar',
     ];
 
     public function __construct(PaymentManager $paymentManager)
@@ -35,69 +22,28 @@ class PaymentService
         $this->paymentManager = $paymentManager;
     }
 
-    /**
-     * دریافت لیست درگاه‌های موجود (فقط درگاه‌های فعال)
-     */
     public function getAvailableGateways(): array
     {
         $allGateways = $this->paymentManager->getAvailableGateways();
-        
-        // فیلتر کردن بر اساس لیست فعال
         return array_filter($allGateways, function ($gateway) {
             return in_array($gateway, $this->activeGateways);
         });
     }
 
-    /**
-     * دریافت درگاه پیش‌فرض
-     */
     public function getDefaultGateway(): string
     {
-        // اگر درگاه پیش‌فرض در لیست فعال نیست، اولین درگاه فعال را برگردان
         $default = $this->paymentManager->getDefaultGateway();
-        
         if (in_array($default, $this->activeGateways)) {
             return $default;
         }
-        
-        // برگرداندن اولین درگاه فعال
         $activeGateways = $this->getAvailableGateways();
         return !empty($activeGateways) ? $activeGateways[0] : 'local';
-    }
-
-    /**
-     * تنظیم درگاه‌های فعال (برای استفاده در صورت نیاز)
-     */
-    public function setActiveGateways(array $gateways): void
-    {
-        $this->activeGateways = $gateways;
-    }
-
-    /**
-     * اضافه کردن درگاه به لیست فعال
-     */
-    public function addActiveGateway(string $gateway): void
-    {
-        if (!in_array($gateway, $this->activeGateways)) {
-            $this->activeGateways[] = $gateway;
-        }
-    }
-
-    /**
-     * حذف درگاه از لیست فعال
-     */
-    public function removeActiveGateway(string $gateway): void
-    {
-        $this->activeGateways = array_filter($this->activeGateways, function ($g) use ($gateway) {
-            return $g !== $gateway;
-        });
     }
 
     public function initiatePayment(Invoice $invoice, ?string $gateway = null): array
     {
         $gateway = $gateway ?? $this->getDefaultGateway();
 
-        // بررسی اینکه درگاه در لیست فعال باشد
         if (!in_array($gateway, $this->activeGateways)) {
             throw new \Exception("درگاه {$gateway} فعال نیست");
         }
@@ -115,7 +61,25 @@ class PaymentService
 
     public function verifyPayment(string $gateway, Request $request): array
     {
-        return $this->paymentManager->verify($gateway, $request);
+        $result = $this->paymentManager->verify($gateway, $request);
+
+        // ✅ اگر پرداخت موفق بود، وضعیت نوبت را آپدیت کن
+        if ($result['success'] && isset($result['invoice'])) {
+            $invoice = $result['invoice'];
+            $appointment = Appointment::where('id', $invoice->appointment_id)->first();
+            
+            if ($appointment && $appointment->status === 'pending') {
+                $appointment->status = 'confirmed';
+                $appointment->save();
+                
+                \Log::info('✅ Appointment confirmed after payment', [
+                    'appointment_id' => $appointment->id,
+                    'invoice_id' => $invoice->id,
+                ]);
+            }
+        }
+
+        return $result;
     }
 
     public function getPaymentStatus(Invoice $invoice): array
