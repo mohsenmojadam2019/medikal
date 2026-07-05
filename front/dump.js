@@ -45,7 +45,7 @@ function readDirRecursive(dir) {
 readDirRecursive(process.cwd());
 
 // ذخیره فایل خروجی
-const outputFile = 'front.txt';
+const outputFile = 'code_dump_nextjs.txt';
 fs.writeFileSync(outputFile, output);
 
 console.log(`✅ فایل '${outputFile}' با موفقیت ایجاد شد.`);
