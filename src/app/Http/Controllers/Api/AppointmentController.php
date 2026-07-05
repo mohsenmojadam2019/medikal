@@ -7,11 +7,9 @@ use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Patient;
 use App\Services\Appointment\AppointmentService;
-use App\Http\Requests\Api\StoreAppointmentRequest;
-use App\Http\Requests\Api\UpdateAppointmentRequest;
-use App\Http\Requests\Api\RescheduleAppointmentRequest;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class AppointmentController extends Controller
 {
@@ -25,7 +23,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * دریافت زمان‌های آزاد پزشک
+     * دریافت زمان‌های آزاد پزشک (فقط زمان‌های خالی)
      */
     public function availableSlots(Request $request, $doctorId)
     {
@@ -44,16 +42,36 @@ class AppointmentController extends Controller
             return $this->error($result['message'], 400);
         }
 
+        // فقط زمان‌های خالی رو برگردون (is_available = true)
+        $availableSlots = array_filter($result['slots'], function($slot) {
+            return $slot['is_available'] === true;
+        });
+
+        $result['slots'] = array_values($availableSlots);
+        $result['available_slots'] = count($availableSlots);
+
         return $this->success($result);
     }
 
     /**
      * رزرو نوبت جدید
      */
-    public function store(StoreAppointmentRequest $request)
+    public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'doctor_id' => 'required|exists:doctors,id',
+            'date' => 'required|date|after_or_equal:today',
+            'start_time' => 'required|date_format:H:i:s',
+            'type' => 'nullable|string|max:50',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('اطلاعات وارد شده نامعتبر است', 422, $validator->errors());
+        }
+
         try {
-            $appointment = $this->appointmentService->bookAppointment($request->validated());
+            $appointment = $this->appointmentService->bookAppointment($request->all());
             return $this->success($appointment, 'نوبت با موفقیت رزرو شد', 201);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
@@ -88,7 +106,7 @@ class AppointmentController extends Controller
     /**
      * به‌روزرسانی نوبت
      */
-    public function update(UpdateAppointmentRequest $request, $id)
+    public function update(Request $request, $id)
     {
         $appointment = Appointment::find($id);
         if (!$appointment) {
@@ -100,8 +118,18 @@ class AppointmentController extends Controller
             return $this->error('شما دسترسی به این نوبت ندارید', 403);
         }
 
+        $validator = Validator::make($request->all(), [
+            'date' => 'sometimes|date|after_or_equal:today',
+            'start_time' => 'sometimes|date_format:H:i:s',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('اطلاعات وارد شده نامعتبر است', 422, $validator->errors());
+        }
+
         try {
-            $appointment->update($request->validated());
+            $appointment->update($request->only(['date', 'start_time', 'notes']));
             return $this->success($appointment->fresh(), 'نوبت با موفقیت به‌روزرسانی شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
@@ -166,7 +194,7 @@ class AppointmentController extends Controller
     /**
      * تغییر زمان نوبت
      */
-    public function reschedule(RescheduleAppointmentRequest $request, $id)
+    public function reschedule(Request $request, $id)
     {
         $appointment = Appointment::find($id);
         if (!$appointment) {
@@ -180,10 +208,19 @@ class AppointmentController extends Controller
             return $this->error('شما دسترسی به این نوبت ندارید', 403);
         }
 
+        $validator = Validator::make($request->all(), [
+            'date' => 'required|date|after_or_equal:today',
+            'start_time' => 'required|date_format:H:i:s',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('اطلاعات وارد شده نامعتبر است', 422, $validator->errors());
+        }
+
         try {
             $appointment = $this->appointmentService->rescheduleAppointment(
                 $appointment,
-                $request->validated()
+                $request->only(['date', 'start_time'])
             );
             return $this->success($appointment, 'زمان نوبت با موفقیت تغییر کرد');
         } catch (\Exception $e) {

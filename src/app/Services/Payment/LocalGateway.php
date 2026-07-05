@@ -4,7 +4,6 @@ namespace App\Services\Payment;
 
 use App\Models\Invoice;
 use App\Enums\PaymentStatusEnum;
-use App\Enums\InvoiceStatusEnum;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -21,13 +20,18 @@ class LocalGateway extends BaseGateway
 
         $transactionId = 'LOCAL_' . $invoice->id . '_' . time();
 
-        $this->storePayment($invoice, $transactionId);
+        $this->storePayment($invoice, $transactionId, [
+            'test_mode' => true,
+        ]);
 
         $callbackUrl = $this->getCallbackUrl();
 
         return [
             'success' => true,
             'gateway' => $this->getGatewayName(),
+            'invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+            'amount' => $invoice->total_amount,
             'form' => [
                 'action' => $callbackUrl,
                 'method' => 'POST',
@@ -52,7 +56,7 @@ class LocalGateway extends BaseGateway
         $invoiceId = $request->input('invoice_id');
         $cancel = $request->input('cancel');
 
-        Log::info('LocalGateway verify called', [
+        $this->logInfo('LocalGateway verify called', [
             'transactionId' => $transactionId,
             'invoiceId' => $invoiceId,
             'cancel' => $cancel,

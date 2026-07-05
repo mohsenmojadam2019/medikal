@@ -19,9 +19,6 @@ class AuthController extends Controller
         $this->authService = $authService;
     }
 
-    /**
-     * ورود با موبایل (ارسال OTP)
-     */
     public function loginWithMobile(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -40,9 +37,6 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * تایید OTP
-     */
     public function verifyOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -62,9 +56,6 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * ورود با ایمیل و رمز عبور
-     */
     public function loginWithEmail(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -84,27 +75,23 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * خروج از سیستم
-     */
     public function logout(Request $request)
     {
         $this->authService->logout($request->user());
         return $this->success(null, 'خروج با موفقیت انجام شد');
     }
 
-    /**
-     * اطلاعات کاربر جاری
-     */
     public function me(Request $request)
     {
         $user = $request->user();
-        $user->load('primaryAddress', 'primaryAddress.province', 'primaryAddress.city');
+        
+        if (!$user) {
+            return $this->error('کاربر یافت نشد', 401);
+        }
 
+        // فقط اطلاعات کاربر رو برگردون (بدون role و permission)
         return $this->success([
             'user' => $user,
-            'roles' => $user->getRoleNames(),
-            'permissions' => $user->getAllPermissions()->pluck('name'),
         ]);
     }
 }

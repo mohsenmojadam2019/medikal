@@ -1,13 +1,13 @@
 <?php
 
-
 namespace App\Services\Payment;
 
-use App\Models\Order;
-use App\Models\Transaction;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Enums\PaymentStatusEnum;
 use Illuminate\Http\Request;
 use Shetabit\Payment\Facade\Payment;
-use Shetabit\Multipay\Invoice;
+use Shetabit\Multipay\Invoice as ShetabitInvoice;
 
 class AsanpardakhtGateway extends BaseGateway
 {
@@ -16,42 +16,30 @@ class AsanpardakhtGateway extends BaseGateway
         return 'asanpardakht';
     }
 
-    public function initiate($order, array $options = []): array
+    public function initiate(Invoice $invoice, array $options = []): array
     {
-        $this->order = $order;
+        $this->invoice = $invoice;
 
-        $invoice = (new Invoice)->amount((int)$order->total);
-
-        if ($order->user) {
-            if ($order->user->email) {
-                $invoice->detail('email', $order->user->email);
-            }
-            if ($order->user->phone) {
-                $invoice->detail('mobile', $order->user->phone);
-            }
-        }
-
-        $invoice->detail('metadata', [
-            'order_id' => $order->id,
-            'order_number' => $order->order_number,
-        ]);
-
+        $shetabitInvoice = $this->createShetabitInvoice($invoice);
         $callbackUrl = $this->getCallbackUrl();
 
         try {
             $payment = Payment::via($this->getGatewayName())
                 ->callbackUrl($callbackUrl)
-                ->purchase($invoice, function ($driver, $transactionId) use ($order) {
-                    $this->storeTransaction($order, $transactionId, [
+                ->purchase($shetabitInvoice, function ($driver, $transactionId) use ($invoice) {
+                    $this->storePayment($invoice, $transactionId, [
                         'ref_id' => $transactionId,
                     ]);
                 });
 
             $result = $payment->pay();
 
-            // آسان‌پرداخت فرم POST برمی‌گرداند
             return [
                 'success' => true,
+                'gateway' => $this->getGatewayName(),
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'amount' => $invoice->total_amount,
                 'form' => [
                     'action' => $result->getAction(),
                     'method' => $result->getMethod(),
@@ -61,92 +49,98 @@ class AsanpardakhtGateway extends BaseGateway
             ];
 
         } catch (\Exception $e) {
-            \Log::error('Asanpardakht initiation failed', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage()
+            $this->logError('Asanpardakht initiation failed', [
+                'error' => $e->getMessage(),
+                'invoice_id' => $invoice->id,
             ]);
 
             return [
                 'success' => false,
                 'message' => 'خطا در اتصال به درگاه آسان پرداخت: ' . $e->getMessage(),
+                'gateway' => $this->getGatewayName(),
             ];
         }
     }
 
     public function verify(Request $request): array
     {
-        // دریافت پارامترهای کال‌بک
         $refId = $request->input('RefId');
         $payGateTranId = $request->input('PayGateTranID');
 
-        \Log::info('Asanpardakht verify', [
+        $this->logInfo('Asanpardakht verify', [
             'RefId' => $refId,
             'PayGateTranID' => $payGateTranId,
-            'all' => $request->all()
         ]);
 
         if (!$refId && !$payGateTranId) {
             return [
                 'success' => false,
-                'message' => 'پارامترهای پرداخت یافت نشد'
+                'message' => 'پارامترهای پرداخت یافت نشد',
+                'gateway' => $this->getGatewayName(),
             ];
         }
 
-        // پیدا کردن تراکنش
-        $transaction = Transaction::where('transaction_id', $refId)
-            ->orWhere('reference_id', $payGateTranId)
+        $payment = Payment::where('transaction_id', $refId)
+            ->orWhere('reference_code', $payGateTranId)
+            ->where('gateway', $this->getGatewayName())
             ->first();
 
-        if (!$transaction) {
+        if (!$payment) {
             return [
                 'success' => false,
-                'message' => 'تراکنش یافت نشد'
+                'message' => 'تراکنش یافت نشد',
+                'gateway' => $this->getGatewayName(),
             ];
         }
 
-        $order = $transaction->order;
+        $invoice = $payment->invoice;
 
-        if (!$order) {
+        if (!$invoice) {
             return [
                 'success' => false,
-                'message' => 'سفارش یافت نشد'
+                'message' => 'فاکتور یافت نشد',
+                'gateway' => $this->getGatewayName(),
             ];
         }
 
         try {
-            // تأیید پرداخت با پکیج
             $receipt = Payment::via($this->getGatewayName())
-                ->amount((int)$order->total)
+                ->amount((int) $invoice->total_amount)
                 ->transactionId($refId)
                 ->verify();
 
             $referenceId = $receipt->getReferenceId();
 
-            $transaction->update([
-                'status' => 'completed',
-                'reference_id' => $referenceId,
+            $payment->update([
+                'status' => PaymentStatusEnum::SUCCESS,
+                'reference_code' => $referenceId,
                 'message' => 'پرداخت با موفقیت انجام شد',
+                'payment_date' => now(),
             ]);
+
+            $invoice->markAsPaid();
 
             return [
                 'success' => true,
                 'reference_id' => $referenceId,
-                'order' => $order,
-                'transaction' => $transaction,
+                'invoice' => $invoice,
+                'payment' => $payment,
                 'message' => 'پرداخت با موفقیت انجام شد',
+                'gateway' => $this->getGatewayName(),
             ];
 
         } catch (\Exception $e) {
-            $transaction->update([
-                'status' => 'failed',
+            $payment->update([
+                'status' => PaymentStatusEnum::FAILED,
                 'message' => $e->getMessage(),
             ]);
 
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
-                'order' => $order,
-                'transaction' => $transaction,
+                'invoice' => $invoice,
+                'payment' => $payment,
+                'gateway' => $this->getGatewayName(),
             ];
         }
     }

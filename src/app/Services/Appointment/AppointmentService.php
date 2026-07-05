@@ -8,6 +8,7 @@ use App\Models\Patient;
 use App\Models\DoctorSchedule;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AppointmentService
 {
@@ -15,9 +16,12 @@ class AppointmentService
 
     public function __construct()
     {
-        $this->tenantId = session('tenant_id');
+        $this->tenantId = session('tenant_id', 1);
     }
 
+    /**
+     * دریافت زمان‌های خالی پزشک
+     */
     public function getAvailableSlots(Doctor $doctor, string $date): array
     {
         $dayOfWeek = Carbon::parse($date)->dayOfWeek;
@@ -78,14 +82,9 @@ class AppointmentService
             $start->addMinutes($slotDuration);
         }
 
-        if ($schedule->max_slots_per_day) {
-            $availableSlots = array_filter($allSlots, function($slot) {
-                return $slot['is_available'];
-            });
-            if (count($availableSlots) > $schedule->max_slots_per_day) {
-                $allSlots = array_slice($allSlots, 0, $schedule->max_slots_per_day);
-            }
-        }
+        $availableSlots = array_filter($allSlots, function($slot) {
+            return $slot['is_available'] === true;
+        });
 
         return [
             'available' => true,
@@ -96,31 +95,70 @@ class AppointmentService
                 'specialty' => $doctor->specialty?->name,
                 'consultation_fee' => $doctor->consultation_fee,
             ],
-            'slots' => $allSlots,
+            'slots' => array_values($availableSlots),
             'total_slots' => count($allSlots),
-            'available_slots' => count(array_filter($allSlots, function($slot) {
-                return $slot['is_available'];
-            })),
+            'available_slots' => count($availableSlots),
         ];
     }
 
+    /**
+     * رزرو نوبت جدید با قفل تراکنشی
+     */
     public function bookAppointment(array $data): Appointment
     {
         return DB::transaction(function () use ($data) {
-            $this->validateSlotAvailability(
-                $data['doctor_id'],
-                $data['date'],
-                $data['start_time']
-            );
+            // 1. قفل کردن جدول پزشک برای جلوگیری از تغییر همزمان
+            $doctor = Doctor::where('id', $data['doctor_id'])
+                ->lockForUpdate()
+                ->first();
 
+            if (!$doctor) {
+                throw new \Exception('پزشک یافت نشد');
+            }
+
+            // 2. قفل کردن جدول زمان‌بندی پزشک
+            $dayOfWeek = Carbon::parse($data['date'])->dayOfWeek;
+            $schedule = DoctorSchedule::where('doctor_id', $doctor->id)
+                ->where('day_of_week', $dayOfWeek)
+                ->where('is_active', true)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$schedule) {
+                throw new \Exception('پزشک در این روز کاری ندارد');
+            }
+
+            // 3. بررسی و قفل کردن نوبت‌های موجود برای جلوگیری از تداخل
+            $existingAppointment = Appointment::where('doctor_id', $doctor->id)
+                ->where('tenant_id', $this->tenantId)
+                ->whereDate('date', $data['date'])
+                ->where('start_time', $data['start_time'])
+                ->whereIn('status', [
+                    Appointment::STATUS_PENDING,
+                    Appointment::STATUS_CONFIRMED,
+                    Appointment::STATUS_ARRIVED,
+                    Appointment::STATUS_IN_PROGRESS
+                ])
+                ->lockForUpdate() // قفل کردن رکوردهای موجود
+                ->first();
+
+            if ($existingAppointment) {
+                throw new \Exception('این زمان قبلاً توسط شخص دیگری رزرو شده است');
+            }
+
+            // 4. اعتبارسنجی کامل زمان
+            $this->validateSlotAvailability($doctor, $schedule, $data['date'], $data['start_time']);
+
+            // 5. ایجاد یا دریافت بیمار
             $patient = $this->getOrCreatePatient($data);
-            $doctor = Doctor::findOrFail($data['doctor_id']);
+
+            // 6. ایجاد نوبت جدید
             $fee = $doctor->consultation_fee ?? 0;
 
             $appointment = Appointment::create([
                 'tenant_id' => $this->tenantId,
                 'patient_id' => $patient->id,
-                'doctor_id' => $data['doctor_id'],
+                'doctor_id' => $doctor->id,
                 'date' => $data['date'],
                 'start_time' => $data['start_time'],
                 'duration' => $doctor->visit_duration ?? 30,
@@ -134,96 +172,253 @@ class AppointmentService
                 'metadata' => $data['metadata'] ?? null,
             ]);
 
+            // 7. محاسبه زمان پایان
             $endTime = Carbon::parse($appointment->start_time)
                 ->addMinutes($appointment->duration)
                 ->format('H:i:s');
             $appointment->update(['end_time' => $endTime]);
 
+            Log::info('نوبت جدید رزرو شد', [
+                'appointment_id' => $appointment->id,
+                'patient_id' => $patient->id,
+                'doctor_id' => $doctor->id,
+                'date' => $data['date'],
+                'time' => $data['start_time'],
+                'transaction_id' => DB::transactionLevel(),
+            ]);
+
             return $appointment->load(['patient.user', 'doctor.user', 'doctor.specialty']);
+        }, 3); // تلاش مجدد ۳ بار در صورت برخورد قفل
+    }
+
+    /**
+     * تایید نوبت
+     */
+    public function confirmAppointment(Appointment $appointment): Appointment
+    {
+        return DB::transaction(function () use ($appointment) {
+            $appointment = Appointment::where('id', $appointment->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$appointment) {
+                throw new \Exception('نوبت یافت نشد');
+            }
+
+            if ($appointment->status !== Appointment::STATUS_PENDING) {
+                throw new \Exception('فقط نوبت‌های در انتظار تایید قابل تایید هستند');
+            }
+
+            $appointment->update(['status' => Appointment::STATUS_CONFIRMED]);
+
+            Log::info('نوبت تایید شد', [
+                'appointment_id' => $appointment->id,
+                'doctor_id' => $appointment->doctor_id,
+            ]);
+
+            return $appointment->fresh();
         });
     }
 
-    public function confirmAppointment(Appointment $appointment): Appointment
-    {
-        if ($appointment->status !== Appointment::STATUS_PENDING) {
-            throw new \Exception('فقط نوبت‌های در انتظار تایید قابل تایید هستند');
-        }
-
-        $appointment->update(['status' => Appointment::STATUS_CONFIRMED]);
-        return $appointment->fresh();
-    }
-
+    /**
+     * لغو نوبت
+     */
     public function cancelAppointment(Appointment $appointment, string $reason = null): Appointment
     {
-        if ($appointment->canCancel() == false) {
-            throw new \Exception('امکان لغو این نوبت وجود ندارد');
-        }
+        return DB::transaction(function () use ($appointment, $reason) {
+            $appointment = Appointment::where('id', $appointment->id)
+                ->lockForUpdate()
+                ->first();
 
-        $appointment->update([
-            'status' => Appointment::STATUS_CANCELLED,
-            'notes' => $reason ? "لغو شده: {$reason}" : $appointment->notes,
-        ]);
+            if (!$appointment) {
+                throw new \Exception('نوبت یافت نشد');
+            }
 
-        return $appointment->fresh();
+            if ($appointment->canCancel() == false) {
+                throw new \Exception('امکان لغو این نوبت وجود ندارد');
+            }
+
+            $appointment->update([
+                'status' => Appointment::STATUS_CANCELLED,
+                'notes' => $reason ? "لغو شده: {$reason}" : $appointment->notes,
+            ]);
+
+            Log::info('نوبت لغو شد', [
+                'appointment_id' => $appointment->id,
+                'reason' => $reason,
+            ]);
+
+            return $appointment->fresh();
+        });
     }
 
+    /**
+     * تغییر زمان نوبت
+     */
     public function rescheduleAppointment(Appointment $appointment, array $data): Appointment
     {
-        if ($appointment->canReschedule() == false) {
-            throw new \Exception('امکان تغییر زمان این نوبت وجود ندارد');
-        }
+        return DB::transaction(function () use ($appointment, $data) {
+            // قفل کردن نوبت فعلی
+            $appointment = Appointment::where('id', $appointment->id)
+                ->lockForUpdate()
+                ->first();
 
-        $this->validateSlotAvailability(
-            $appointment->doctor_id,
-            $data['date'],
-            $data['start_time'],
-            $appointment->id
-        );
+            if (!$appointment) {
+                throw new \Exception('نوبت یافت نشد');
+            }
 
-        $appointment->update([
-            'date' => $data['date'],
-            'start_time' => $data['start_time'],
-            'status' => Appointment::STATUS_PENDING,
-        ]);
+            if ($appointment->canReschedule() == false) {
+                throw new \Exception('امکان تغییر زمان این نوبت وجود ندارد');
+            }
 
-        $endTime = Carbon::parse($appointment->start_time)
-            ->addMinutes($appointment->duration)
-            ->format('H:i:s');
-        $appointment->update(['end_time' => $endTime]);
+            // قفل کردن پزشک
+            $doctor = Doctor::where('id', $appointment->doctor_id)
+                ->lockForUpdate()
+                ->first();
 
-        return $appointment->fresh();
+            if (!$doctor) {
+                throw new \Exception('پزشک یافت نشد');
+            }
+
+            // بررسی زمان جدید
+            $dayOfWeek = Carbon::parse($data['date'])->dayOfWeek;
+            $schedule = DoctorSchedule::where('doctor_id', $doctor->id)
+                ->where('day_of_week', $dayOfWeek)
+                ->where('is_active', true)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$schedule) {
+                throw new \Exception('پزشک در این روز کاری ندارد');
+            }
+
+            // بررسی تداخل با نوبت‌های دیگر
+            $conflict = Appointment::where('doctor_id', $doctor->id)
+                ->where('tenant_id', $this->tenantId)
+                ->whereDate('date', $data['date'])
+                ->where('start_time', $data['start_time'])
+                ->where('id', '!=', $appointment->id)
+                ->whereIn('status', [
+                    Appointment::STATUS_PENDING,
+                    Appointment::STATUS_CONFIRMED,
+                    Appointment::STATUS_ARRIVED,
+                    Appointment::STATUS_IN_PROGRESS
+                ])
+                ->lockForUpdate()
+                ->exists();
+
+            if ($conflict) {
+                throw new \Exception('زمان انتخابی توسط شخص دیگری رزرو شده است');
+            }
+
+            $appointment->update([
+                'date' => $data['date'],
+                'start_time' => $data['start_time'],
+                'status' => Appointment::STATUS_PENDING,
+            ]);
+
+            $endTime = Carbon::parse($appointment->start_time)
+                ->addMinutes($appointment->duration)
+                ->format('H:i:s');
+            $appointment->update(['end_time' => $endTime]);
+
+            Log::info('زمان نوبت تغییر کرد', [
+                'appointment_id' => $appointment->id,
+                'new_date' => $data['date'],
+                'new_time' => $data['start_time'],
+            ]);
+
+            return $appointment->fresh();
+        });
     }
 
+    /**
+     * شروع ویزیت (حضور بیمار)
+     */
     public function startAppointment(Appointment $appointment): Appointment
     {
-        if ($appointment->status !== Appointment::STATUS_CONFIRMED) {
-            throw new \Exception('فقط نوبت‌های تایید شده قابل شروع هستند');
-        }
+        return DB::transaction(function () use ($appointment) {
+            $appointment = Appointment::where('id', $appointment->id)
+                ->lockForUpdate()
+                ->first();
 
-        $appointment->update(['status' => Appointment::STATUS_ARRIVED]);
-        return $appointment->fresh();
+            if (!$appointment) {
+                throw new \Exception('نوبت یافت نشد');
+            }
+
+            if ($appointment->status !== Appointment::STATUS_CONFIRMED) {
+                throw new \Exception('فقط نوبت‌های تایید شده قابل شروع هستند');
+            }
+
+            $appointment->update(['status' => Appointment::STATUS_ARRIVED]);
+
+            Log::info('حضور بیمار ثبت شد', [
+                'appointment_id' => $appointment->id,
+            ]);
+
+            return $appointment->fresh();
+        });
     }
 
+    /**
+     * پایان ویزیت
+     */
     public function completeAppointment(Appointment $appointment): Appointment
     {
-        if ($appointment->status !== Appointment::STATUS_ARRIVED) {
-            throw new \Exception('فقط نوبت‌های حاضر قابل پایان هستند');
-        }
+        return DB::transaction(function () use ($appointment) {
+            $appointment = Appointment::where('id', $appointment->id)
+                ->lockForUpdate()
+                ->first();
 
-        $appointment->update(['status' => Appointment::STATUS_COMPLETED]);
-        return $appointment->fresh();
+            if (!$appointment) {
+                throw new \Exception('نوبت یافت نشد');
+            }
+
+            if ($appointment->status !== Appointment::STATUS_ARRIVED) {
+                throw new \Exception('فقط نوبت‌های حاضر قابل پایان هستند');
+            }
+
+            $appointment->update(['status' => Appointment::STATUS_COMPLETED]);
+
+            Log::info('ویزیت پایان یافت', [
+                'appointment_id' => $appointment->id,
+            ]);
+
+            return $appointment->fresh();
+        });
     }
 
+    /**
+     * بیمار حاضر نشده
+     */
     public function markNoShow(Appointment $appointment): Appointment
     {
-        if ($appointment->status === Appointment::STATUS_COMPLETED) {
-            throw new \Exception('نوبت قبلاً انجام شده است');
-        }
+        return DB::transaction(function () use ($appointment) {
+            $appointment = Appointment::where('id', $appointment->id)
+                ->lockForUpdate()
+                ->first();
 
-        $appointment->update(['status' => Appointment::STATUS_NO_SHOW]);
-        return $appointment->fresh();
+            if (!$appointment) {
+                throw new \Exception('نوبت یافت نشد');
+            }
+
+            if ($appointment->status === Appointment::STATUS_COMPLETED) {
+                throw new \Exception('نوبت قبلاً انجام شده است');
+            }
+
+            $appointment->update(['status' => Appointment::STATUS_NO_SHOW]);
+
+            Log::info('بیمار حاضر نشد', [
+                'appointment_id' => $appointment->id,
+            ]);
+
+            return $appointment->fresh();
+        });
     }
 
+    /**
+     * لیست نوبت‌های بیمار
+     */
     public function patientAppointments(Patient $patient, array $filters = [], int $perPage = 15)
     {
         $query = Appointment::where('patient_id', $patient->id)
@@ -242,9 +437,14 @@ class AppointmentService
             $query->past();
         }
 
-        return $query->orderBy('date', 'desc')->paginate($perPage);
+        return $query->orderBy('date', 'desc')
+            ->orderBy('start_time', 'desc')
+            ->paginate($perPage);
     }
 
+    /**
+     * لیست نوبت‌های پزشک
+     */
     public function doctorAppointments(Doctor $doctor, array $filters = [], int $perPage = 15)
     {
         $query = Appointment::where('doctor_id', $doctor->id)
@@ -263,52 +463,30 @@ class AppointmentService
             $query->upcoming();
         }
 
-        return $query->orderBy('date', 'desc')->orderBy('start_time', 'desc')->paginate($perPage);
+        return $query->orderBy('date', 'desc')
+            ->orderBy('start_time', 'desc')
+            ->paginate($perPage);
     }
 
+    /**
+     * اعتبارسنجی زمان نوبت (داخلی)
+     */
     protected function validateSlotAvailability(
-        int $doctorId,
+        Doctor $doctor,
+        DoctorSchedule $schedule,
         string $date,
-        string $startTime,
-        ?int $excludeAppointmentId = null
+        string $startTime
     ): void {
-        $query = Appointment::where('doctor_id', $doctorId)
-            ->where('tenant_id', $this->tenantId)
-            ->whereDate('date', $date)
-            ->where('start_time', $startTime)
-            ->whereIn('status', [
-                Appointment::STATUS_PENDING,
-                Appointment::STATUS_CONFIRMED,
-                Appointment::STATUS_ARRIVED,
-                Appointment::STATUS_IN_PROGRESS
-            ]);
-
-        if ($excludeAppointmentId) {
-            $query->where('id', '!=', $excludeAppointmentId);
-        }
-
-        if ($query->exists()) {
-            throw new \Exception('این زمان قبلاً توسط شخص دیگری رزرو شده است');
-        }
-
-        $dayOfWeek = Carbon::parse($date)->dayOfWeek;
-        $schedule = DoctorSchedule::where('doctor_id', $doctorId)
-            ->where('day_of_week', $dayOfWeek)
-            ->where('is_active', true)
-            ->first();
-
-        if (is_null($schedule)) {
-            throw new \Exception('پزشک در این روز کاری ندارد');
-        }
-
         $start = Carbon::parse($startTime);
         $scheduleStart = Carbon::parse($schedule->start_time);
         $scheduleEnd = Carbon::parse($schedule->end_time);
 
+        // بررسی ساعات کاری
         if ($start < $scheduleStart || $start >= $scheduleEnd) {
             throw new \Exception('زمان انتخابی خارج از ساعات کاری پزشک است');
         }
 
+        // بررسی زمان استراحت
         if ($schedule->break_start && $schedule->break_end) {
             $breakStart = Carbon::parse($schedule->break_start);
             $breakEnd = Carbon::parse($schedule->break_end);
@@ -316,18 +494,47 @@ class AppointmentService
                 throw new \Exception('زمان انتخابی در زمان استراحت پزشک است');
             }
         }
+
+        // بررسی بازه‌های ۳۰ دقیقه‌ای
+        if ($start->minute % 30 != 0) {
+            throw new \Exception('زمان انتخابی باید در بازه‌های ۳۰ دقیقه‌ای باشد');
+        }
     }
 
+    /**
+     * دریافت یا ایجاد بیمار
+     */
     protected function getOrCreatePatient(array $data): Patient
     {
         if (isset($data['patient_id'])) {
             return Patient::where('tenant_id', $this->tenantId)->findOrFail($data['patient_id']);
         }
 
-        if (isset($data['national_code'])) {
+        if (auth()->check()) {
+            $user = auth()->user();
+            $patient = Patient::where('tenant_id', $this->tenantId)
+                ->where('user_id', $user->id)
+                ->first();
+            
+            if ($patient) {
+                return $patient;
+            }
+
+            return Patient::create([
+                'tenant_id' => $this->tenantId,
+                'user_id' => $user->id,
+                'national_code' => $data['national_code'] ?? null,
+                'phone' => $data['phone'] ?? $user->mobile ?? null,
+                'is_active' => true,
+                'verified_at' => now(),
+            ]);
+        }
+
+        if (isset($data['national_code']) && !empty($data['national_code'])) {
             $patient = Patient::where('tenant_id', $this->tenantId)
                 ->where('national_code', $data['national_code'])
                 ->first();
+            
             if ($patient) {
                 return $patient;
             }
@@ -335,7 +542,7 @@ class AppointmentService
 
         $userData = [
             'name' => $data['patient_name'] ?? 'بیمار',
-            'mobile' => $data['mobile'] ?? null,
+            'mobile' => $data['phone'] ?? $data['mobile'] ?? null,
             'is_active' => true,
         ];
 
@@ -344,9 +551,8 @@ class AppointmentService
         }
 
         $user = \App\Models\User::create($userData);
-        $user->assignRole('patient');
 
-        $patient = Patient::create([
+        return Patient::create([
             'tenant_id' => $this->tenantId,
             'user_id' => $user->id,
             'national_code' => $data['national_code'] ?? null,
@@ -354,7 +560,5 @@ class AppointmentService
             'is_active' => true,
             'verified_at' => now(),
         ]);
-
-        return $patient;
     }
 }

@@ -5,8 +5,9 @@ namespace App\Services\Payment;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Enums\PaymentStatusEnum;
-use Shetabit\Multipay\Invoice as ShetabitInvoice;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Shetabit\Multipay\Invoice as ShetabitInvoice;
 
 abstract class BaseGateway implements GatewayInterface
 {
@@ -14,6 +15,11 @@ abstract class BaseGateway implements GatewayInterface
     protected Payment $payment;
 
     abstract protected function getGatewayName(): string;
+
+    public function isAvailable(): bool
+    {
+        return true;
+    }
 
     protected function createShetabitInvoice(Invoice $invoice): ShetabitInvoice
     {
@@ -54,9 +60,11 @@ abstract class BaseGateway implements GatewayInterface
     {
         $gateway = $this->getGatewayName();
 
+        // اول تلاش کن از route استفاده کن
         try {
             return route('payment.callback', ['gateway' => $gateway]);
         } catch (\Exception $e) {
+            // اگر route وجود نداشت، از آدرس مستقیم استفاده کن
             return config('app.url') . '/api/payment/callback/' . $gateway;
         }
     }
@@ -64,6 +72,14 @@ abstract class BaseGateway implements GatewayInterface
     protected function logError(string $message, array $context = []): void
     {
         Log::error($message, array_merge($context, [
+            'gateway' => $this->getGatewayName(),
+            'invoice_id' => $this->invoice->id ?? null,
+        ]));
+    }
+
+    protected function logInfo(string $message, array $context = []): void
+    {
+        Log::info($message, array_merge($context, [
             'gateway' => $this->getGatewayName(),
             'invoice_id' => $this->invoice->id ?? null,
         ]));

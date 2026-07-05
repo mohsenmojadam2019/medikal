@@ -5,8 +5,6 @@ namespace App\Services\Payment;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Enums\PaymentStatusEnum;
-use App\Enums\InvoiceStatusEnum;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class PaymentService
@@ -28,11 +26,11 @@ class PaymentService
         return $this->paymentManager->getDefaultGateway();
     }
 
-    public function initiatePayment(Invoice $invoice, string $gateway = null): array
+    public function initiatePayment(Invoice $invoice, ?string $gateway = null): array
     {
         $gateway = $gateway ?? $this->getDefaultGateway();
 
-        if (!in_array($gateway, $this->getAvailableGateways())) {
+        if (!$this->paymentManager->isGatewayAvailable($gateway)) {
             throw new \Exception("درگاه {$gateway} در دسترس نیست");
         }
 

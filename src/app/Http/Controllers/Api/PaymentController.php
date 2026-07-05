@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\Payment\PaymentService;
-use App\Services\Invoice\InvoiceService;
 use App\Traits\ApiResponse;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -15,22 +14,39 @@ class PaymentController extends Controller
     use ApiResponse;
 
     protected PaymentService $paymentService;
-    protected InvoiceService $invoiceService;
 
-    public function __construct(PaymentService $paymentService, InvoiceService $invoiceService)
+    public function __construct(PaymentService $paymentService)
     {
         $this->paymentService = $paymentService;
-        $this->invoiceService = $invoiceService;
     }
 
+    /**
+     * دریافت لیست درگاه‌های موجود
+     */
     public function gateways()
     {
+        $availableGateways = $this->paymentService->getAvailableGateways();
+        
+        // اطلاعات کامل هر درگاه
+        $gateways = [];
+        foreach ($availableGateways as $name) {
+            $gateways[] = [
+                'name' => $name,
+                'title' => $this->getGatewayTitle($name),
+                'icon' => $this->getGatewayIcon($name),
+                'is_default' => $name === $this->paymentService->getDefaultGateway(),
+            ];
+        }
+
         return $this->success([
-            'available' => $this->paymentService->getAvailableGateways(),
+            'available' => $gateways,
             'default' => $this->paymentService->getDefaultGateway(),
         ]);
     }
 
+    /**
+     * شروع پرداخت
+     */
     public function initiate(Request $request)
     {
         $request->validate([
@@ -75,6 +91,7 @@ class PaymentController extends Controller
                 'message' => $result['message'] ?? '',
                 'invoice_id' => $result['invoice']->id ?? '',
                 'invoice_number' => $result['invoice']->invoice_number ?? '',
+                'gateway' => $gateway,
             ];
 
             if ($result['success'] && isset($result['reference_id'])) {
@@ -88,6 +105,9 @@ class PaymentController extends Controller
         }
     }
 
+    /**
+     * وضعیت پرداخت
+     */
     public function status($invoiceId)
     {
         try {
@@ -106,6 +126,9 @@ class PaymentController extends Controller
         }
     }
 
+    /**
+     * تاریخچه پرداخت‌ها
+     */
     public function history(Request $request)
     {
         $user = auth()->user();
@@ -119,6 +142,9 @@ class PaymentController extends Controller
         return $this->success($payments);
     }
 
+    /**
+     * عودت وجه
+     */
     public function refund($paymentId)
     {
         try {
@@ -135,5 +161,59 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
+    }
+
+    /**
+     * دریافت عنوان درگاه
+     */
+    private function getGatewayTitle(string $name): string
+    {
+        $titles = [
+            'local' => 'درگاه تست (آفلاین)',
+            'zarinpal' => 'زرین‌پال',
+            'asanpardakht' => 'آسان پرداخت',
+            'behpardakht' => 'به پرداخت (ملی)',
+            'paypal' => 'پی‌پال',
+            'stripe' => 'استرایپ',
+            'idpay' => 'آیدی پی',
+            'payir' => 'پی‌آی‌آر',
+            'zibal' => 'زیبال',
+            'nextpay' => 'نکست پی',
+            'sadad' => 'سداد',
+            'parsian' => 'پارسیان',
+            'pasargad' => 'پاسارگاد',
+            'saman' => 'سامان',
+            'payping' => 'پی‌پینگ',
+            'vandar' => 'وندر',
+        ];
+
+        return $titles[$name] ?? ucfirst($name);
+    }
+
+    /**
+     * دریافت آیکون درگاه
+     */
+    private function getGatewayIcon(string $name): string
+    {
+        $icons = [
+            'local' => '🔄',
+            'zarinpal' => '🟡',
+            'asanpardakht' => '🟣',
+            'behpardakht' => '🔵',
+            'paypal' => '🔷',
+            'stripe' => '⚡',
+            'idpay' => '🟠',
+            'payir' => '🟢',
+            'zibal' => '🔶',
+            'nextpay' => '🟣',
+            'sadad' => '🔷',
+            'parsian' => '🟩',
+            'pasargad' => '🟨',
+            'saman' => '🟦',
+            'payping' => '🟪',
+            'vandar' => '🟥',
+        ];
+
+        return $icons[$name] ?? '💳';
     }
 }

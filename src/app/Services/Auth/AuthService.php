@@ -3,9 +3,10 @@
 namespace App\Services\Auth;
 
 use App\Models\User;
-use App\Services\Sms\SmsManager;
+use App\Models\OtpCode;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use App\Services\Sms\SmsManager;
 
 class AuthService
 {
@@ -18,28 +19,38 @@ class AuthService
 
     public function loginWithMobile(string $mobile): array
     {
+        Log::info('🔐 Login request for mobile: ' . $mobile);
+
         $user = User::where('mobile', $mobile)->first();
 
         if (is_null($user)) {
+            Log::info('👤 Creating new user for mobile: ' . $mobile);
             $user = User::create([
                 'mobile' => $mobile,
                 'is_active' => true,
             ]);
         }
 
-        if ($user->is_active == false) {
+        if (!$user->is_active) {
+            Log::warning('⚠️ Inactive user: ' . $mobile);
             throw new \Exception('حساب کاربری شما غیرفعال است');
         }
 
-        $otp = $this->generateOtp();
+        // ایجاد OTP در دیتابیس
+        $otp = OtpCode::createForMobile($mobile);
+        
+        Log::info('📱 OTP Code created for mobile: ' . $mobile . ' => ' . $otp->code);
 
-        cache()->put("otp_{$mobile}", [
-            'code' => $otp,
-            'user_id' => $user->id,
-            'attempts' => 0,
-        ], 300);
-
-        $this->sendOtpSms($mobile, $otp);
+        // ارسال SMS (با درگاه fake فعلاً)
+        try {
+            $this->smsManager->send(
+                $mobile,
+                "کد تایید شما: {$otp->code}\nکلینیک‌یار"
+            );
+            Log::info('✅ SMS sent to: ' . $mobile);
+        } catch (\Exception $e) {
+            Log::error('❌ SMS failed: ' . $e->getMessage());
+        }
 
         return [
             'user_id' => $user->id,
@@ -51,107 +62,77 @@ class AuthService
 
     public function verifyOtp(string $mobile, string $code): array
     {
-        $cached = cache()->get("otp_{$mobile}");
+        Log::info('🔍 Verifying OTP', [
+            'mobile' => $mobile,
+            'code' => $code,
+        ]);
 
-        if (is_null($cached)) {
-            throw new \Exception('کد تایید منقضی شده است');
+        $otp = OtpCode::verify($mobile, $code);
+
+        if (!$otp) {
+            Log::warning('❌ Invalid OTP', [
+                'mobile' => $mobile,
+                'code' => $code,
+            ]);
+            throw new \Exception('کد تایید نامعتبر یا منقضی شده است');
         }
 
-        if ($cached['attempts'] >= 5) {
-            cache()->forget("otp_{$mobile}");
-            throw new \Exception('تعداد تلاشها بیش از حد مجاز است');
-        }
+        $user = User::where('mobile', $mobile)->first();
 
-        if ($cached['code'] !== $code) {
-            $cached['attempts']++;
-            cache()->put("otp_{$mobile}", $cached, 300);
-            throw new \Exception('کد تایید اشتباه است');
-        }
-
-        $user = User::find($cached['user_id']);
-        if (is_null($user)) {
+        if (!$user) {
+            Log::error('❌ User not found', ['mobile' => $mobile]);
             throw new \Exception('کاربر یافت نشد');
         }
 
-        $user->update([
-            'mobile_verified_at' => now(),
-            'last_login_at' => now(),
-            'last_login_ip' => request()->ip(),
-        ]);
-
-        cache()->forget("otp_{$mobile}");
-
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        if ($user->current_tenant_id) {
-            session(['tenant_id' => $user->current_tenant_id]);
-        }
+        Log::info('✅ User logged in', [
+            'user_id' => $user->id,
+            'mobile' => $mobile,
+        ]);
 
         return [
             'user' => $user,
             'token' => $token,
-            'roles' => $user->getRoleNames(),
-            'permissions' => $user->getAllPermissions()->pluck('name'),
             'message' => 'ورود با موفقیت انجام شد',
         ];
     }
 
     public function loginWithEmail(string $email, string $password): array
     {
+        Log::info('🔐 Login with email: ' . $email);
+
         $user = User::where('email', $email)->first();
 
-        if (is_null($user) || Hash::check($password, $user->password) == false) {
+        if (!$user || !Hash::check($password, $user->password)) {
+            Log::warning('❌ Invalid email/password', ['email' => $email]);
             throw new \Exception('ایمیل یا رمز عبور اشتباه است');
         }
 
-        if ($user->is_active == false) {
+        if (!$user->is_active) {
+            Log::warning('⚠️ Inactive user', ['email' => $email]);
             throw new \Exception('حساب کاربری شما غیرفعال است');
         }
 
-        $user->update([
-            'last_login_at' => now(),
-            'last_login_ip' => request()->ip(),
-        ]);
-
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        if ($user->current_tenant_id) {
-            session(['tenant_id' => $user->current_tenant_id]);
-        }
+        Log::info('✅ User logged in', [
+            'user_id' => $user->id,
+            'email' => $email,
+        ]);
 
         return [
             'user' => $user,
             'token' => $token,
-            'roles' => $user->getRoleNames(),
-            'permissions' => $user->getAllPermissions()->pluck('name'),
             'message' => 'ورود با موفقیت انجام شد',
         ];
     }
 
-    public function logout(User $user): void
+    public function logout($user): void
     {
-        $user->currentAccessToken()?->delete();
-        session()->forget('tenant_id');
-    }
-
-    protected function generateOtp(): string
-    {
-        if (app()->environment('production')) {
-            return str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
-        }
-        return '1234';
-    }
-
-    protected function sendOtpSms(string $mobile, string $code): void
-    {
-        try {
-            $pattern = config('sms.patterns.otp_login', 'otp-login');
-            $this->smsManager->sendPattern($mobile, $pattern, ['token' => $code]);
-        } catch (\Exception $e) {
-            Log::error('SMS sending failed', [
-                'mobile' => $mobile,
-                'error' => $e->getMessage(),
-            ]);
+        if ($user) {
+            $user->currentAccessToken()->delete();
+            Log::info('🚪 User logged out', ['user_id' => $user->id]);
         }
     }
 }

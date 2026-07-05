@@ -1,0 +1,20 @@
+'use client';
+
+import { Input } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
+
+export default function SearchBox() {
+  return (
+    <div className="search-box">
+      <Input
+        size="large"
+        placeholder="جستجوی پزشک، تخصص، مطب یا خدمات..."
+        prefix={<SearchOutlined />}
+        suffix={<span className="search-shortcut">Ctrl + K</span>}
+        onPressEnter={(e) => {
+          console.log('Search:', e.target.value);
+        }}
+      />
+    </div>
+  );
+}

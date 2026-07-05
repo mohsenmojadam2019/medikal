@@ -12,8 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('doctor_id')->nullable()->constrained('doctors')->onDelete('set null');
-
-            $table->string('national_code', 10)->unique();
+            $table->string('national_code')->nullable();
             $table->string('phone', 15)->nullable();
             $table->string('emergency_contact', 15)->nullable();
             $table->string('blood_type', 5)->nullable();

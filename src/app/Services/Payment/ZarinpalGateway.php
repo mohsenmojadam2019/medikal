@@ -4,7 +4,6 @@ namespace App\Services\Payment;
 
 use App\Models\Invoice;
 use App\Enums\PaymentStatusEnum;
-use App\Enums\InvoiceStatusEnum;
 use Illuminate\Http\Request;
 use Shetabit\Payment\Facade\Payment;
 use Shetabit\Multipay\Invoice as ShetabitInvoice;
@@ -34,14 +33,7 @@ class ZarinpalGateway extends BaseGateway
 
             $result = $payment->pay();
 
-            $redirectUrl = null;
-            if (method_exists($result, 'getActionUrl')) {
-                $redirectUrl = $result->getActionUrl();
-            } elseif (method_exists($result, 'getAction')) {
-                $redirectUrl = $result->getAction();
-            } elseif (is_string($result)) {
-                $redirectUrl = $result;
-            }
+            $redirectUrl = $this->extractRedirectUrl($result);
 
             if (!$redirectUrl) {
                 throw new \Exception('آدرس درگاه پرداخت یافت نشد');
@@ -51,6 +43,9 @@ class ZarinpalGateway extends BaseGateway
                 'success' => true,
                 'redirect_url' => $redirectUrl,
                 'gateway' => $this->getGatewayName(),
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'amount' => $invoice->total_amount,
                 'message' => 'در حال انتقال به درگاه زرین‌پال...',
             ];
 
@@ -76,10 +71,10 @@ class ZarinpalGateway extends BaseGateway
             return [
                 'success' => false,
                 'message' => 'پارامتر Authority یافت نشد',
+                'gateway' => $this->getGatewayName(),
             ];
         }
 
-        // پیدا کردن پرداخت
         $payment = Payment::where('transaction_id', $authority)
             ->where('gateway', $this->getGatewayName())
             ->first();
@@ -89,6 +84,7 @@ class ZarinpalGateway extends BaseGateway
                 'success' => false,
                 'message' => 'تراکنش یافت نشد',
                 'authority' => $authority,
+                'gateway' => $this->getGatewayName(),
             ];
         }
 
@@ -98,6 +94,7 @@ class ZarinpalGateway extends BaseGateway
             return [
                 'success' => false,
                 'message' => 'فاکتور یافت نشد',
+                'gateway' => $this->getGatewayName(),
             ];
         }
 
@@ -116,7 +113,6 @@ class ZarinpalGateway extends BaseGateway
                 'payment_date' => now(),
             ]);
 
-            // بروزرسانی فاکتور
             $invoice->markAsPaid();
 
             return [
@@ -142,5 +138,22 @@ class ZarinpalGateway extends BaseGateway
                 'gateway' => $this->getGatewayName(),
             ];
         }
+    }
+
+    protected function extractRedirectUrl($result): ?string
+    {
+        if (method_exists($result, 'getActionUrl')) {
+            return $result->getActionUrl();
+        }
+        if (method_exists($result, 'getAction')) {
+            return $result->getAction();
+        }
+        if (is_string($result)) {
+            return $result;
+        }
+        if (is_array($result) && isset($result['url'])) {
+            return $result['url'];
+        }
+        return null;
     }
 }
