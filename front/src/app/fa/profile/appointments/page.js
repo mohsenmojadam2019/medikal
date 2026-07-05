@@ -1,68 +1,252 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Table, Tag, Button, Space, Typography, message, Spin } from 'antd';
-import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { 
+  Card, Table, Tag, Button, Typography, Space, Spin, 
+  Empty, App, Tabs, Statistic, Row, Col, Avatar
+} from 'antd';
+import { 
+  CalendarOutlined, ClockCircleOutlined, 
+  CheckCircleOutlined, CloseCircleOutlined,
+  DollarOutlined, ReloadOutlined
+} from '@ant-design/icons';
+import { useLanguage } from '@/lib/context/LanguageContext';
+import Breadcrumb from '@/components/shared/Breadcrumb';
 
 const { Title, Text } = Typography;
 
+function toPersianDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (!date || isNaN(date.getTime())) return '';
+  try {
+    const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long',
+    });
+    return formatter.format(date);
+  } catch {
+    return '';
+  }
+}
+
+function formatTime(timeStr) {
+  if (!timeStr) return '';
+  return timeStr.substring(0, 5);
+}
+
 export default function AppointmentsPage() {
   const router = useRouter();
+  const { locale } = useLanguage();
+  const { message: appMessage } = App.useApp();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    completed: 0,
+    cancelled: 0,
+  });
+  const [activeTab, setActiveTab] = useState('all');
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
-  const getToken = () => localStorage.getItem('token');
-
-  const fetchAppointments = async () => {
-    const token = getToken();
-    if (!token) {
-      router.push('/login');
-      return;
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
     }
+    return null;
+  };
 
+  const fetchAppointments = async (status = 'all') => {
+    setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/appointments/my/appointments`, {
+      const token = getToken();
+      if (!token) {
+        router.push(`/${locale}/login`);
+        return;
+      }
+
+      let url = `${API_URL}/api/appointments/my/appointments`;
+      if (status !== 'all') {
+        url += `?status=${status}`;
+      }
+
+      const res = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
+
       const data = await res.json();
+      console.log('📦 Appointments data:', data);
+
       if (data.success) {
-        setAppointments(data.data || []);
+        let appointmentList = [];
+        if (data.data && Array.isArray(data.data)) {
+          appointmentList = data.data;
+        } else if (data.data && data.data.data && Array.isArray(data.data.data)) {
+          appointmentList = data.data.data;
+        } else if (Array.isArray(data)) {
+          appointmentList = data;
+        } else {
+          appointmentList = [];
+        }
+
+        setAppointments(appointmentList);
+
+        const statsData = {
+          total: appointmentList.length,
+          pending: appointmentList.filter(a => a.status === 'pending').length,
+          confirmed: appointmentList.filter(a => a.status === 'confirmed' || a.status === 'arrived' || a.status === 'in_progress').length,
+          completed: appointmentList.filter(a => a.status === 'completed').length,
+          cancelled: appointmentList.filter(a => a.status === 'cancelled' || a.status === 'no_show').length,
+        };
+        setStats(statsData);
       } else {
-        message.error(data.message || 'خطا در دریافت نوبت‌ها');
+        appMessage.error(data.message || 'خطا در دریافت نوبت‌ها');
+        setAppointments([]);
       }
     } catch (error) {
-      message.error('خطا در ارتباط با سرور');
+      console.error('Error fetching appointments:', error);
+      appMessage.error('خطا در ارتباط با سرور');
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAppointments();
+    fetchAppointments('all');
   }, []);
 
-  const getStatus = (status) => {
-    const map = {
-      confirmed: { color: 'success', icon: <CheckCircleOutlined />, label: 'تایید شده' },
-      pending: { color: 'warning', icon: <ClockCircleOutlined />, label: 'در انتظار' },
-      completed: { color: 'blue', icon: <CheckCircleOutlined />, label: 'انجام شده' },
-      cancelled: { color: 'error', icon: <CloseCircleOutlined />, label: 'لغو شده' },
-      in_progress: { color: 'processing', icon: <ClockCircleOutlined />, label: 'در حال انجام' },
-      arrived: { color: 'success', icon: <CheckCircleOutlined />, label: 'حاضر' },
-      no_show: { color: 'error', icon: <CloseCircleOutlined />, label: 'حاضر نشده' },
-    };
-    return map[status] || map.pending;
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+    fetchAppointments(key);
   };
 
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: 'warning',
+      confirmed: 'info',
+      arrived: 'primary',
+      in_progress: 'blue',
+      completed: 'success',
+      cancelled: 'danger',
+      no_show: 'secondary',
+    };
+    return colors[status] || 'default';
+  };
+
+  const getStatusText = (status) => {
+    const texts = {
+      pending: 'در انتظار تایید',
+      confirmed: 'تایید شده',
+      arrived: 'حاضر در مطب',
+      in_progress: 'در حال ویزیت',
+      completed: 'انجام شده',
+      cancelled: 'لغو شده',
+      no_show: 'حاضر نشده',
+    };
+    return texts[status] || status;
+  };
+
+  const columns = [
+    {
+      title: 'کد نوبت',
+      dataIndex: 'code',
+      key: 'code',
+      render: (code) => <Text strong>{code || '—'}</Text>,
+    },
+    {
+      title: 'پزشک',
+      dataIndex: 'doctor',
+      key: 'doctor',
+      render: (doctor) => {
+        if (!doctor) return '—';
+        const name = doctor.name || doctor.full_name || 'پزشک';
+        const specialty = doctor.specialty?.name || '';
+        return (
+          <Space>
+            <Avatar size="small" style={{ background: '#2563eb' }}>
+              {name.charAt(0)}
+            </Avatar>
+            <div>
+              <div>{name}</div>
+              {specialty && <Text type="secondary" style={{ fontSize: '12px' }}>{specialty}</Text>}
+            </div>
+          </Space>
+        );
+      },
+    },
+    {
+      title: 'تاریخ و ساعت',
+      key: 'datetime',
+      render: (_, record) => {
+        const persianDate = toPersianDate(record.date);
+        const time = formatTime(record.start_time);
+        return (
+          <Space direction="vertical" size={0}>
+            <Text>{persianDate}</Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              <ClockCircleOutlined /> {time}
+            </Text>
+          </Space>
+        );
+      },
+    },
+    {
+      title: 'وضعیت',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => (
+        <Tag color={getStatusColor(status)}>
+          {getStatusText(status)}
+        </Tag>
+      ),
+    },
+    {
+      title: 'هزینه',
+      key: 'fee',
+      render: (_, record) => {
+        const fee = record.fee || record.doctor?.consultation_fee || 0;
+        return <Text>{parseFloat(fee).toLocaleString()} تومان</Text>;
+      },
+    },
+    {
+      title: 'عملیات',
+      key: 'action',
+      render: (_, record) => (
+        <Space>
+          <Button 
+            type="link" 
+            size="small"
+            onClick={() => router.push(`/${locale}/appointments/${record.id}`)}
+          >
+            مشاهده
+          </Button>
+          {record.status === 'pending' && (
+            <Button 
+              type="link" 
+              size="small" 
+              danger
+              onClick={() => handleCancel(record.id)}
+            >
+              لغو
+            </Button>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
   const handleCancel = async (id) => {
-    const token = getToken();
     try {
+      const token = getToken();
       const res = await fetch(`${API_URL}/api/appointments/${id}/cancel`, {
         method: 'POST',
         headers: {
@@ -72,102 +256,123 @@ export default function AppointmentsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        message.success('نوبت با موفقیت لغو شد');
-        fetchAppointments();
+        appMessage.success('نوبت با موفقیت لغو شد');
+        fetchAppointments(activeTab);
       } else {
-        message.error(data.message || 'خطا در لغو نوبت');
+        appMessage.error(data.message || 'خطا در لغو نوبت');
       }
     } catch (error) {
-      message.error('خطا در ارتباط با سرور');
+      console.error('Error cancelling appointment:', error);
+      appMessage.error('خطا در ارتباط با سرور');
     }
   };
 
-  const columns = [
-    {
-      title: 'پزشک',
-      dataIndex: 'doctor',
-      key: 'doctor',
-      render: (doctor) => doctor?.full_name || doctor?.name || 'نامشخص',
-    },
-    {
-      title: 'تخصص',
-      dataIndex: 'doctor',
-      key: 'specialty',
-      render: (doctor) => doctor?.specialty?.name || 'نامشخص',
-    },
-    {
-      title: 'تاریخ',
-      dataIndex: 'date',
-      key: 'date',
-    },
-    {
-      title: 'ساعت',
-      dataIndex: 'time',
-      key: 'time',
-    },
-    {
-      title: 'وضعیت',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        const s = getStatus(status);
-        return <Tag color={s.color}>{s.icon} {s.label}</Tag>;
-      },
-    },
-    {
-      title: 'هزینه',
-      dataIndex: 'fee',
-      key: 'fee',
-      render: (fee) => `${(fee || 0).toLocaleString()} تومان`,
-    },
-    {
-      title: 'عملیات',
-      key: 'action',
-      render: (_, record) => (
-        (record.status === 'pending' || record.status === 'confirmed') && (
-          <Button 
-            type="link" 
-            danger 
-            size="small" 
-            onClick={() => handleCancel(record.id)}
-          >
-            لغو
-          </Button>
-        )
-      ),
-    },
+  const tabsItems = [
+    { key: 'all', label: 'همه' },
+    { key: 'pending', label: `در انتظار (${stats.pending})` },
+    { key: 'confirmed', label: `تایید شده (${stats.confirmed})` },
+    { key: 'completed', label: `انجام شده (${stats.completed})` },
+    { key: 'cancelled', label: `لغو شده (${stats.cancelled})` },
   ];
 
   if (loading) {
     return (
-      <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px', textAlign: 'center' }}>
-        <Spin size="large" />
-        <p style={{ marginTop: '16px' }}>در حال بارگذاری نوبت‌ها...</p>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
+        <Spin size="large" description="در حال بارگذاری..." />
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px' }}>
-      <Card
-        title={
-          <Space>
-            <Link href="/profile">
-              <Button type="text" icon={<ArrowLeftOutlined />} />
-            </Link>
-            <span>لیست نوبت‌ها ({appointments.length})</span>
-          </Space>
-        }
-        style={{ borderRadius: '16px' }}
-      >
-        <Table
-          dataSource={appointments}
-          columns={columns}
-          rowKey="id"
-          pagination={{ pageSize: 10 }}
-          locale={{ emptyText: 'هیچ نوبتی ثبت نشده است' }}
+    <>
+      <Breadcrumb />
+
+      <Title level={2} style={{ marginBottom: '4px' }}>📋 نوبت‌های من</Title>
+      <Text type="secondary">لیست تمام نوبت‌های شما</Text>
+
+      <Row gutter={[16, 16]} style={{ marginTop: '24px' }}>
+        <Col xs={12} sm={6}>
+          <Card>
+            <Statistic 
+              title="کل نوبت‌ها" 
+              value={stats.total}
+              prefix={<CalendarOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card>
+            <Statistic 
+              title="در انتظار" 
+              value={stats.pending}
+              valueStyle={{ color: '#faad14' }}
+              prefix={<ClockCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card>
+            <Statistic 
+              title="تایید شده" 
+              value={stats.confirmed}
+              valueStyle={{ color: '#1890ff' }}
+              prefix={<CheckCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card>
+            <Statistic 
+              title="انجام شده" 
+              value={stats.completed}
+              valueStyle={{ color: '#52c41a' }}
+              prefix={<CheckCircleOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card style={{ marginTop: '24px', borderRadius: '16px' }}>
+        <Tabs
+          activeKey={activeTab}
+          onChange={handleTabChange}
+          items={tabsItems}
         />
+
+        {appointments.length === 0 ? (
+          <Empty 
+            description="هیچ نوبتی یافت نشد" 
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          >
+            <Button 
+              type="primary" 
+              onClick={() => router.push(`/${locale}/doctors`)}
+            >
+              رزرو نوبت جدید
+            </Button>
+          </Empty>
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={appointments}
+            rowKey="id"
+            pagination={{
+              pageSize: 10,
+              showTotal: (total) => `تعداد ${total} نوبت`,
+            }}
+            scroll={{ x: 'max-content' }}
+          />
+        )}
       </Card>
-    </div>
+
+      <div style={{ marginTop: '24px', textAlign: 'center' }}>
+        <Button 
+          icon={<ReloadOutlined />} 
+          onClick={() => fetchAppointments(activeTab)}
+        >
+          بروزرسانی
+        </Button>
+      </div>
+    </>
   );
 }

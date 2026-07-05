@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Card, Row, Col, Button, Typography, Spin, Tag, 
-  Space, Divider, Alert, Avatar, Empty, Modal, App
+  Space, Divider, Avatar, Empty, App
 } from 'antd';
 import { 
   CalendarOutlined, ClockCircleOutlined, 
@@ -35,7 +35,6 @@ function toPersianDate(date) {
   }
 }
 
-// تبدیل تاریخ به فرمت YYYY-MM-DD برای API
 function formatDateForAPI(date) {
   if (!date || !(date instanceof Date) || isNaN(date)) return '';
   const year = date.getFullYear();
@@ -60,7 +59,6 @@ export default function NewAppointmentPage() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [loadingBook, setLoadingBook] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
   const getToken = () => {
@@ -117,8 +115,6 @@ export default function NewAppointmentPage() {
         return;
       }
 
-      console.log('🔍 Fetching slots for date:', dateStr);
-
       const res = await fetch(`${API_URL}/api/appointments/doctors/${doctorId}/available-slots?date=${dateStr}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -127,7 +123,6 @@ export default function NewAppointmentPage() {
       });
 
       const data = await res.json();
-      console.log('📦 Slots response:', data);
 
       if (data.success) {
         const slots = data.data?.slots || [];
@@ -182,13 +177,9 @@ export default function NewAppointmentPage() {
     setLoadingBook(true);
     try {
       const token = getToken();
-      
-      // فرمت تاریخ به YYYY-MM-DD
       const dateStr = formatDateForAPI(selectedDate);
       
-      // فرمت زمان به HH:MM
       let timeStr = selectedSlot.start_time || selectedSlot.time || '';
-      // اگر زمان شامل ثانیه بود، فقط HH:MM رو بگیر
       if (timeStr.includes(':')) {
         const parts = timeStr.split(':');
         timeStr = parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
@@ -207,8 +198,6 @@ export default function NewAppointmentPage() {
         notes: '',
       };
 
-      console.log('📝 Booking appointment data:', JSON.stringify(bookData, null, 2));
-
       const res = await fetch(`${API_URL}/api/appointments`, {
         method: 'POST',
         headers: {
@@ -219,10 +208,9 @@ export default function NewAppointmentPage() {
       });
 
       const data = await res.json();
-      console.log('📦 Booking response:', data);
 
       if (data.success) {
-        setShowSuccessModal(true);
+        const appointment = data.data;
         
         localStorage.setItem('appointmentData', JSON.stringify({
           doctorId: doctorId,
@@ -231,18 +219,18 @@ export default function NewAppointmentPage() {
           date: dateStr,
           time: timeStr,
           doctorFee: parseFloat(doctor?.consultation_fee) || 0,
+          appointmentId: appointment.id,
         }));
         
         appMessage.success('نوبت با موفقیت رزرو شد');
+        router.push(`/${locale}/appointments/checkout`);
       } else {
-        // نمایش خطای دقیق از سرور
         let errorMsg = data.message || 'خطا در رزرو نوبت';
         if (data.errors) {
           const errors = Object.values(data.errors).flat().join('، ');
           errorMsg = errors || errorMsg;
         }
         appMessage.error(errorMsg);
-        console.error('❌ Booking error:', data);
       }
     } catch (error) {
       console.error('Error booking:', error);
@@ -250,16 +238,6 @@ export default function NewAppointmentPage() {
     } finally {
       setLoadingBook(false);
     }
-  };
-
-  const handleGoToPayment = () => {
-    setShowSuccessModal(false);
-    router.push(`/${locale}/appointments/checkout`);
-  };
-
-  const handleGoHome = () => {
-    setShowSuccessModal(false);
-    router.push(`/${locale}/doctors`);
   };
 
   const disabledDate = (date) => {
@@ -311,7 +289,7 @@ export default function NewAppointmentPage() {
                 style={{ borderRadius: '16px' }}
                 styles={{ body: { padding: '16px' } }}
               >
-                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <Space orientation="vertical" style={{ width: '100%' }} size="middle">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Avatar 
                       size={64} 
@@ -480,7 +458,7 @@ export default function NewAppointmentPage() {
                     }}
                   >
                     {selectedSlot ? 
-                      `رزرو نوبت ${selectedSlot.time || selectedSlot.start_time?.substring(0, 5)}` : 
+                      `رزرو و پرداخت` : 
                       'ابتدا یک زمان انتخاب کنید'
                     }
                   </Button>
@@ -501,46 +479,6 @@ export default function NewAppointmentPage() {
           </Row>
         </div>
       </main>
-
-      <Modal
-        title="✅ نوبت رزرو شد"
-        open={showSuccessModal}
-        onCancel={handleGoHome}
-        footer={null}
-        width={450}
-        centered
-        closable={false}
-      >
-        <div style={{ textAlign: 'center', padding: '20px 0' }}>
-          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
-          <Title level={4}>نوبت شما با موفقیت رزرو شد</Title>
-          
-          <div style={{ textAlign: 'right', marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-            <div><strong>پزشک:</strong> {doctor?.name || doctor?.full_name}</div>
-            <div><strong>تاریخ:</strong> {toPersianDate(selectedDate)}</div>
-            <div><strong>ساعت:</strong> {selectedSlot?.time || selectedSlot?.start_time?.substring(0, 5)}</div>
-            <div><strong>هزینه:</strong> {parseFloat(doctor?.consultation_fee || 0).toLocaleString()} تومان</div>
-          </div>
-
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <Button 
-              type="primary" 
-              size="large"
-              onClick={handleGoToPayment}
-              style={{ borderRadius: '12px' }}
-            >
-              ادامه به پرداخت
-            </Button>
-            <Button 
-              size="large"
-              onClick={handleGoHome}
-              style={{ borderRadius: '12px' }}
-            >
-              بازگشت به خانه
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       <Footer />
     </>
