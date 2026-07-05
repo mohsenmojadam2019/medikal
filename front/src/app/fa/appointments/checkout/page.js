@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
   Card, Row, Col, Button, Typography, Spin, Tag, message, 
   Space, Divider, Alert, Input, Radio, Statistic, Steps,
-  Descriptions, Avatar, Modal
+  Descriptions, Avatar, Modal, Empty
 } from 'antd';
 import { 
   CheckCircleOutlined, WalletOutlined, CreditCardOutlined, 
@@ -12,7 +12,7 @@ import {
   SafetyOutlined, UserOutlined,
   EnvironmentOutlined, DollarOutlined,
   ClockCircleOutlined, CalendarOutlined,
-  BankOutlined, GlobalOutlined
+  BankOutlined, GlobalOutlined, ReloadOutlined
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/context/LanguageContext';
@@ -24,6 +24,7 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 const { Title, Text } = Typography;
 
 function toJalali(dateStr) {
+  if (!dateStr) return '';
   const d = new Date(dateStr);
   const calendar = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
     year: 'numeric',
@@ -48,48 +49,126 @@ export default function CheckoutPage() {
   const [gateways, setGateways] = useState([]);
   const [selectedGateway, setSelectedGateway] = useState(null);
   const [gatewayModalVisible, setGatewayModalVisible] = useState(false);
+  const [fetchingGateways, setFetchingGateways] = useState(false);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
-  const getToken = () => localStorage.getItem('token');
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
+    }
+    return null;
+  };
 
   // دریافت درگاه‌های موجود
   const fetchGateways = async () => {
     const token = getToken();
-    if (!token) return;
+    console.log('🔑 Token:', token ? 'Exists' : 'Not found');
+    
+    if (!token) {
+      console.warn('⚠️ No token found for fetching gateways');
+      setGateways([
+        { 
+          name: 'local', 
+          title: 'درگاه تست (آفلاین)', 
+          icon: '🔄', 
+          is_default: true 
+        }
+      ]);
+      setSelectedGateway('local');
+      return;
+    }
+
+    setFetchingGateways(true);
+    console.log('🌐 Fetching gateways from:', `${API_URL}/api/payments/gateways`);
 
     try {
-      const res = await fetch(`${API_URL}/api/payment/gateways`, {
+      const res = await fetch(`${API_URL}/api/payments/gateways`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
       });
+
+      console.log('📡 Response status:', res.status);
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const data = await res.json();
+      console.log('📦 Full response:', data);
+
       if (data.success) {
-        setGateways(data.data.available || []);
-        const defaultGateway = data.data.default;
-        if (defaultGateway) {
+        const availableGateways = data.data?.available || [];
+        console.log('✅ Available gateways count:', availableGateways.length);
+        
+        if (availableGateways.length === 0) {
+          const fallbackGateway = [
+            { 
+              name: 'local', 
+              title: 'درگاه تست (آفلاین)', 
+              icon: '🔄', 
+              is_default: true 
+            }
+          ];
+          setGateways(fallbackGateway);
+          setSelectedGateway('local');
+          message.info('هیچ درگاه پرداختی فعال نیست. درگاه تست فعال شد.');
+        } else {
+          setGateways(availableGateways);
+          const defaultGateway = data.data?.default || availableGateways[0]?.name || 'local';
           setSelectedGateway(defaultGateway);
+          message.success(`${availableGateways.length} درگاه پرداخت بارگیری شد`);
         }
+      } else {
+        console.error('❌ API returned success=false:', data.message);
+        setGateways([
+          { 
+            name: 'local', 
+            title: 'درگاه تست (آفلاین)', 
+            icon: '🔄', 
+            is_default: true 
+          }
+        ]);
+        setSelectedGateway('local');
+        message.warning(data.message || 'خطا در بارگیری درگاه‌ها');
       }
     } catch (error) {
-      console.error('Error fetching gateways:', error);
+      console.error('❌ Error fetching gateways:', error);
+      message.error('خطا در ارتباط با سرور');
+      setGateways([
+        { 
+          name: 'local', 
+          title: 'درگاه تست (آفلاین)', 
+          icon: '🔄', 
+          is_default: true 
+        }
+      ]);
+      setSelectedGateway('local');
+    } finally {
+      setFetchingGateways(false);
     }
   };
 
   useEffect(() => {
     const stored = localStorage.getItem('appointmentData');
+    console.log('📋 Stored appointment data:', stored);
+    
     if (!stored) {
       router.push(`/${locale}/doctors`);
       return;
     }
+    
     try {
       const data = JSON.parse(stored);
+      console.log('✅ Parsed appointment data:', data);
       setAppointmentData(data);
-    } catch {
+    } catch (error) {
+      console.error('❌ Error parsing appointment data:', error);
       router.push(`/${locale}/doctors`);
     }
-  }, []);
+  }, [locale, router]);
 
   const fetchWalletBalance = async () => {
     const token = getToken();
@@ -104,21 +183,22 @@ export default function CheckoutPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setWalletBalance(data.data.balance || 0);
+        setWalletBalance(data.data?.balance || 0);
       }
     } catch (error) {
       console.error('Error fetching wallet balance:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
     if (appointmentData) {
+      console.log('🔄 AppointmentData loaded, fetching wallet and gateways...');
       Promise.all([
         fetchWalletBalance(),
         fetchGateways(),
-      ]);
+      ]).finally(() => {
+        setLoading(false);
+      });
     }
   }, [appointmentData]);
 
@@ -146,13 +226,15 @@ export default function CheckoutPage() {
       const data = await res.json();
       if (data.success) {
         setDiscountApplied(data.data);
-        message.success(data.data.message || 'کد تخفیف با موفقیت اعمال شد');
+        message.success(data.data?.message || 'کد تخفیف با موفقیت اعمال شد');
       } else {
         message.error(data.message || 'کد تخفیف نامعتبر است');
         setDiscountApplied(null);
       }
     } catch (error) {
+      console.error('Error validating discount:', error);
       message.error('خطا در اعتبارسنجی کد تخفیف');
+      setDiscountApplied(null);
     } finally {
       setApplyingDiscount(false);
     }
@@ -162,7 +244,7 @@ export default function CheckoutPage() {
     const basePrice = appointmentData?.doctorFee || 0;
     if (discountApplied) {
       if (discountApplied.type === 'percentage') {
-        return basePrice - (basePrice * discountApplied.value / 100);
+        return Math.max(0, basePrice - (basePrice * discountApplied.value / 100));
       } else if (discountApplied.type === 'fixed') {
         return Math.max(0, basePrice - discountApplied.value);
       }
@@ -178,6 +260,17 @@ export default function CheckoutPage() {
     if (paymentMethod === 'wallet') {
       await handleWalletPayment();
     } else {
+      console.log('🎯 Opening gateway modal, gateways count:', gateways.length);
+      
+      if (gateways.length === 0) {
+        message.info('در حال بارگیری لیست درگاه‌ها...');
+        await fetchGateways();
+        if (gateways.length === 0) {
+          message.error('هیچ درگاه پرداختی در دسترس نیست');
+          return;
+        }
+      }
+      
       setGatewayModalVisible(true);
     }
   };
@@ -192,7 +285,6 @@ export default function CheckoutPage() {
     const token = getToken();
 
     try {
-      // 1. رزرو نوبت
       const bookRes = await fetch(`${API_URL}/api/appointments`, {
         method: 'POST',
         headers: {
@@ -216,7 +308,6 @@ export default function CheckoutPage() {
 
       const appointmentId = bookData.data.id;
 
-      // 2. پرداخت با کیف پول
       if (!isFree) {
         const payRes = await fetch(`${API_URL}/api/wallet/pay-appointment`, {
           method: 'POST',
@@ -237,7 +328,6 @@ export default function CheckoutPage() {
         }
       }
 
-      // 3. دریافت فاکتور
       const invRes = await fetch(`${API_URL}/api/invoices/my`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -266,7 +356,7 @@ export default function CheckoutPage() {
       message.success('✅ نوبت با موفقیت رزرو شد');
       router.push(`/${locale}/appointments/confirmation`);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error in wallet payment:', error);
       message.error('خطا در پردازش پرداخت');
     } finally {
       setSubmitting(false);
@@ -279,7 +369,6 @@ export default function CheckoutPage() {
     const token = getToken();
 
     try {
-      // 1. رزرو نوبت
       const bookRes = await fetch(`${API_URL}/api/appointments`, {
         method: 'POST',
         headers: {
@@ -303,7 +392,21 @@ export default function CheckoutPage() {
 
       const appointmentId = bookData.data.id;
 
-      // 2. شروع پرداخت با درگاه
+      const invRes = await fetch(`${API_URL}/api/invoices/my`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const invData = await invRes.json();
+      const invoice = invData.success ? invData.data?.find(i => i.appointment_id === appointmentId) : null;
+
+      if (!invoice) {
+        message.error('فاکتور یافت نشد');
+        setSubmitting(false);
+        return;
+      }
+
       const payRes = await fetch(`${API_URL}/api/payments/initiate`, {
         method: 'POST',
         headers: {
@@ -311,7 +414,7 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          appointment_id: appointmentId,
+          invoice_id: invoice.id,
           gateway: gateway,
           amount: finalPrice,
           discount_code: discountApplied?.code || null,
@@ -321,10 +424,8 @@ export default function CheckoutPage() {
 
       if (payData.success) {
         if (payData.data.redirect_url) {
-          // هدایت به درگاه
           window.location.href = payData.data.redirect_url;
         } else if (payData.data.form) {
-          // ارسال فرم به درگاه
           const form = document.createElement('form');
           form.method = payData.data.form.method || 'POST';
           form.action = payData.data.form.action;
@@ -394,7 +495,6 @@ export default function CheckoutPage() {
           <Text type="secondary">اطلاعات نوبت را بررسی و پرداخت را تکمیل کنید</Text>
 
           <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
-            {/* ستون چپ: خلاصه نوبت */}
             <Col xs={24} lg={10}>
               <Card 
                 title="📋 خلاصه نوبت"
@@ -435,7 +535,7 @@ export default function CheckoutPage() {
                     <Text type="secondary" style={{ fontSize: '12px' }}>هزینه ویزیت</Text>
                     <div style={{ marginTop: '4px' }}>
                       <Text strong style={{ fontSize: '20px', color: '#2563eb' }}>
-                        {appointmentData.doctorFee.toLocaleString()}
+                        {appointmentData.doctorFee?.toLocaleString() || '۰'}
                       </Text>
                       <Text type="secondary"> تومان</Text>
                     </div>
@@ -443,7 +543,6 @@ export default function CheckoutPage() {
                 </Space>
               </Card>
 
-              {/* خلاصه مبلغ */}
               <Card 
                 style={{ marginTop: '16px', borderRadius: '16px', background: '#f0f5ff' }}
                 bodyStyle={{ padding: '16px' }}
@@ -453,7 +552,7 @@ export default function CheckoutPage() {
                     <Text type="secondary">هزینه ویزیت</Text>
                   </Col>
                   <Col span={12} style={{ textAlign: 'left' }}>
-                    <Text>{appointmentData.doctorFee.toLocaleString()} تومان</Text>
+                    <Text>{appointmentData.doctorFee?.toLocaleString() || '۰'} تومان</Text>
                   </Col>
                   {discountAmount > 0 && (
                     <>
@@ -478,14 +577,12 @@ export default function CheckoutPage() {
               </Card>
             </Col>
 
-            {/* ستون راست: پرداخت */}
             <Col xs={24} lg={14}>
               <Card 
                 title="💳 اطلاعات پرداخت"
                 style={{ borderRadius: '16px' }}
                 bodyStyle={{ padding: '20px' }}
               >
-                {/* کد تخفیف */}
                 <div style={{ marginBottom: '20px' }}>
                   <Text strong><GiftOutlined /> کد تخفیف</Text>
                   <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
@@ -516,7 +613,6 @@ export default function CheckoutPage() {
 
                 <Divider style={{ margin: '12px 0' }} />
 
-                {/* روش پرداخت */}
                 <div>
                   <Text strong>انتخاب روش پرداخت</Text>
                   <Radio.Group 
@@ -531,7 +627,7 @@ export default function CheckoutPage() {
                           <div>
                             <div>کیف پول</div>
                             <Text type="secondary" style={{ fontSize: '12px' }}>
-                              موجودی: {walletBalance.toLocaleString()} تومان
+                              موجودی: {walletBalance?.toLocaleString() || '۰'} تومان
                             </Text>
                           </div>
                           {!canUseWallet && !isFree && (
@@ -545,7 +641,7 @@ export default function CheckoutPage() {
                           <div>
                             <div>درگاه پرداخت</div>
                             <Text type="secondary" style={{ fontSize: '12px' }}>
-                              انتخاب از بین درگاه‌های موجود
+                              {gateways.length > 0 ? `${gateways.length} درگاه موجود` : 'بارگیری درگاه‌ها...'}
                             </Text>
                           </div>
                           <Tag color="green" style={{ marginRight: 0 }}>امن</Tag>
@@ -614,43 +710,78 @@ export default function CheckoutPage() {
         </div>
       </main>
 
-      {/* مودال انتخاب درگاه پرداخت */}
       <Modal
         title="انتخاب درگاه پرداخت"
         open={gatewayModalVisible}
         onCancel={() => setGatewayModalVisible(false)}
         footer={null}
         width={500}
+        centered
+        destroyOnClose
       >
         <div style={{ padding: '8px 0' }}>
           <Text type="secondary" style={{ display: 'block', marginBottom: '16px' }}>
             لطفاً یکی از درگاه‌های زیر را برای پرداخت انتخاب کنید:
           </Text>
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            {gateways.map((gateway) => (
-              <Card
-                key={gateway.name}
-                size="small"
-                hoverable
-                onClick={() => handleGatewayPayment(gateway.name)}
-                style={{ 
-                  borderRadius: '12px',
-                  border: selectedGateway === gateway.name ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                  cursor: 'pointer'
-                }}
+          
+          {fetchingGateways ? (
+            <div style={{ textAlign: 'center', padding: '30px 0' }}>
+              <Spin size="large" />
+              <div style={{ marginTop: 12 }}>
+                <Text type="secondary">در حال بارگیری درگاه‌های پرداخت...</Text>
+              </div>
+            </div>
+          ) : gateways.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <Empty 
+                description="هیچ درگاه پرداختی در دسترس نیست" 
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+              <Button 
+                type="primary" 
+                icon={<ReloadOutlined />}
+                onClick={fetchGateways}
+                style={{ marginTop: 16 }}
+                loading={fetchingGateways}
               >
-                <Space>
-                  <span style={{ fontSize: '24px' }}>{gateway.icon || '💳'}</span>
-                  <div>
-                    <Text strong>{gateway.title}</Text>
-                    {gateway.is_default && (
-                      <Tag color="blue" style={{ marginLeft: '8px' }}>پیش‌فرض</Tag>
-                    )}
-                  </div>
-                </Space>
-              </Card>
-            ))}
-          </Space>
+                بارگیری مجدد
+              </Button>
+            </div>
+          ) : (
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              {gateways.map((gateway) => (
+                <Card
+                  key={gateway.name}
+                  size="small"
+                  hoverable
+                  onClick={() => handleGatewayPayment(gateway.name)}
+                  style={{ 
+                    borderRadius: '12px',
+                    border: selectedGateway === gateway.name ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  bodyStyle={{ padding: '12px 16px' }}
+                >
+                  <Space>
+                    <span style={{ fontSize: '24px' }}>{gateway.icon || '💳'}</span>
+                    <div>
+                      <Text strong>{gateway.title}</Text>
+                      {gateway.is_default && (
+                        <Tag color="blue" style={{ marginLeft: '8px' }}>پیش‌فرض</Tag>
+                      )}
+                    </div>
+                  </Space>
+                </Card>
+              ))}
+            </Space>
+          )}
+          
+          <div style={{ marginTop: '20px', padding: '12px 16px', background: '#f8fafc', borderRadius: '8px' }}>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              <SafetyOutlined /> پرداخت شما با امنیت کامل انجام می‌شود
+            </Text>
+          </div>
         </div>
       </Modal>
 

@@ -41,7 +41,7 @@ function readDirRecursive($dir, $extensions, $exclude, &$output)
 readDirRecursive(getcwd(), $extensions, $exclude, $output);
 
 // ذخیره فایل خروجی
-$outputFile = 'code_dump.txt';
+$outputFile = 'backend.txt';
 file_put_contents($outputFile, $output);
 
 echo "✅ فایل '$outputFile' با موفقیت ایجاد شد.\n";

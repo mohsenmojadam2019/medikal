@@ -11,24 +11,96 @@ class PaymentService
 {
     protected PaymentManager $paymentManager;
 
+    // لیست درگاه‌های فعال (دستی)
+    protected array $activeGateways = [
+        'local',
+        'zarinpal',
+        // 'asanpardakht',
+        // 'behpardakht',
+        // 'paypal',
+        // 'idpay',
+        // 'payir',
+        // 'zibal',
+        // 'nextpay',
+        // 'sadad',
+        // 'parsian',
+        // 'pasargad',
+        // 'saman',
+        // 'payping',
+        // 'vandar',
+    ];
+
     public function __construct(PaymentManager $paymentManager)
     {
         $this->paymentManager = $paymentManager;
     }
 
+    /**
+     * دریافت لیست درگاه‌های موجود (فقط درگاه‌های فعال)
+     */
     public function getAvailableGateways(): array
     {
-        return $this->paymentManager->getAvailableGateways();
+        $allGateways = $this->paymentManager->getAvailableGateways();
+        
+        // فیلتر کردن بر اساس لیست فعال
+        return array_filter($allGateways, function ($gateway) {
+            return in_array($gateway, $this->activeGateways);
+        });
     }
 
+    /**
+     * دریافت درگاه پیش‌فرض
+     */
     public function getDefaultGateway(): string
     {
-        return $this->paymentManager->getDefaultGateway();
+        // اگر درگاه پیش‌فرض در لیست فعال نیست، اولین درگاه فعال را برگردان
+        $default = $this->paymentManager->getDefaultGateway();
+        
+        if (in_array($default, $this->activeGateways)) {
+            return $default;
+        }
+        
+        // برگرداندن اولین درگاه فعال
+        $activeGateways = $this->getAvailableGateways();
+        return !empty($activeGateways) ? $activeGateways[0] : 'local';
+    }
+
+    /**
+     * تنظیم درگاه‌های فعال (برای استفاده در صورت نیاز)
+     */
+    public function setActiveGateways(array $gateways): void
+    {
+        $this->activeGateways = $gateways;
+    }
+
+    /**
+     * اضافه کردن درگاه به لیست فعال
+     */
+    public function addActiveGateway(string $gateway): void
+    {
+        if (!in_array($gateway, $this->activeGateways)) {
+            $this->activeGateways[] = $gateway;
+        }
+    }
+
+    /**
+     * حذف درگاه از لیست فعال
+     */
+    public function removeActiveGateway(string $gateway): void
+    {
+        $this->activeGateways = array_filter($this->activeGateways, function ($g) use ($gateway) {
+            return $g !== $gateway;
+        });
     }
 
     public function initiatePayment(Invoice $invoice, ?string $gateway = null): array
     {
         $gateway = $gateway ?? $this->getDefaultGateway();
+
+        // بررسی اینکه درگاه در لیست فعال باشد
+        if (!in_array($gateway, $this->activeGateways)) {
+            throw new \Exception("درگاه {$gateway} فعال نیست");
+        }
 
         if (!$this->paymentManager->isGatewayAvailable($gateway)) {
             throw new \Exception("درگاه {$gateway} در دسترس نیست");
