@@ -8,6 +8,7 @@ use App\Traits\ApiResponse;
 use App\Models\Invoice;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class PaymentController extends Controller
 {
@@ -20,14 +21,10 @@ class PaymentController extends Controller
         $this->paymentService = $paymentService;
     }
 
-    /**
-     * دریافت لیست درگاه‌های موجود
-     */
     public function gateways()
     {
         $availableGateways = $this->paymentService->getAvailableGateways();
         
-        // اطلاعات کامل هر درگاه
         $gateways = [];
         foreach ($availableGateways as $name) {
             $gateways[] = [
@@ -44,41 +41,61 @@ class PaymentController extends Controller
         ]);
     }
 
-    /**
-     * شروع پرداخت
-     */
     public function initiate(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'invoice_id' => 'required|exists:invoices,id',
             'gateway' => 'nullable|string',
+            'amount' => 'nullable|numeric|min:0',
+            'discount_code' => 'nullable|string|max:50',
         ]);
 
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
         try {
-            $invoice = Invoice::findOrFail($request->invoice_id);
+            $invoice = Invoice::with(['patient'])->find($request->invoice_id);
+            
+            if (!$invoice) {
+                return $this->error('فاکتور یافت نشد', 404);
+            }
 
             $user = auth()->user();
+            if (!$user) {
+                return $this->error('لطفاً وارد شوید', 401);
+            }
+
             if (!$user->isAdmin() && $invoice->patient->user_id != $user->id) {
                 return $this->error('شما دسترسی به این فاکتور ندارید', 403);
             }
 
+            if ($invoice->is_paid) {
+                return $this->error('این فاکتور قبلاً پرداخت شده است', 400);
+            }
+
             $gateway = $request->gateway ?? $this->paymentService->getDefaultGateway();
+            
+            $availableGateways = $this->paymentService->getAvailableGateways();
+            if (!in_array($gateway, $availableGateways)) {
+                return $this->error("درگاه {$gateway} در دسترس نیست", 400);
+            }
+
             $result = $this->paymentService->initiatePayment($invoice, $gateway);
 
             if ($result['success']) {
                 return $this->success($result, 'در حال انتقال به درگاه پرداخت...');
             }
 
-            return $this->error($result['message'], 400);
+            return $this->error($result['message'] ?? 'خطا در شروع پرداخت', 400);
 
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 400);
+            \Log::error('Payment initiation error: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            return $this->error('خطا در شروع پرداخت: ' . $e->getMessage(), 400);
         }
     }
 
-    /**
-     * Callback درگاه‌های پرداخت
-     */
     public function callback(Request $request, $gateway)
     {
         try {
@@ -94,20 +111,18 @@ class PaymentController extends Controller
                 'gateway' => $gateway,
             ];
 
-            if ($result['success'] && isset($result['reference_id'])) {
-                $params['ref_id'] = $result['reference_id'];
+            if ($result['success'] && isset($result['transaction_id'])) {
+                $params['transaction_id'] = $result['transaction_id'];
             }
 
             return redirect($frontendUrl . '/payment/result?' . http_build_query($params));
 
         } catch (\Exception $e) {
+            \Log::error('Payment callback error: ' . $e->getMessage());
             return $this->error($e->getMessage(), 400);
         }
     }
 
-    /**
-     * وضعیت پرداخت
-     */
     public function status($invoiceId)
     {
         try {
@@ -126,9 +141,6 @@ class PaymentController extends Controller
         }
     }
 
-    /**
-     * تاریخچه پرداخت‌ها
-     */
     public function history(Request $request)
     {
         $user = auth()->user();
@@ -138,34 +150,40 @@ class PaymentController extends Controller
             return $this->error('بیمار یافت نشد', 404);
         }
 
-        $payments = $this->paymentService->getPaymentHistory($patient->id, $request->get('per_page', 15));
+        $payments = Payment::where('patient_id', $patient->id)
+            ->with(['invoice'])
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->get('per_page', 15));
+            
         return $this->success($payments);
     }
 
-    /**
-     * عودت وجه
-     */
     public function refund($paymentId)
     {
         try {
             $payment = Payment::findOrFail($paymentId);
 
             $user = auth()->user();
-            if (!$user->isAdmin() && $payment->patient->user_id != $user->id) {
+            if (!$user->isAdmin() && $payment->patient_id != $user->id) {
                 return $this->error('شما دسترسی به این پرداخت ندارید', 403);
             }
 
-            $result = $this->paymentService->refundPayment($payment);
-            return $this->success($result, 'عودت وجه با موفقیت انجام شد');
+            if ($payment->status !== Payment::STATUS_SUCCESS) {
+                return $this->error('فقط پرداخت‌های موفق قابل عودت هستند', 400);
+            }
+
+            $payment->update([
+                'status' => Payment::STATUS_REFUNDED,
+                'message' => 'عودت وجه انجام شد',
+            ]);
+
+            return $this->success($payment, 'عودت وجه با موفقیت انجام شد');
 
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
 
-    /**
-     * دریافت عنوان درگاه
-     */
     private function getGatewayTitle(string $name): string
     {
         $titles = [
@@ -190,9 +208,6 @@ class PaymentController extends Controller
         return $titles[$name] ?? ucfirst($name);
     }
 
-    /**
-     * دریافت آیکون درگاه
-     */
     private function getGatewayIcon(string $name): string
     {
         $icons = [

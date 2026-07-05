@@ -3,122 +3,66 @@
 namespace App\Services\Payment;
 
 use App\Models\Invoice;
-use App\Enums\PaymentStatusEnum;
+use App\Models\Payment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class LocalGateway extends BaseGateway
 {
-    protected function getGatewayName(): string
+    public function __construct()
     {
-        return 'local';
+        parent::__construct();
+        $this->name = 'local';
     }
 
-    public function initiate(Invoice $invoice, array $options = []): array
+    public function initiate(Invoice $invoice): array
     {
-        $this->invoice = $invoice;
+        // ایجاد transaction_id یکتا
+        $transactionId = 'LOCAL-' . time() . '-' . rand(1000, 9999);
+        $referenceCode = 'REF-' . time() . '-' . rand(1000, 9999);
 
-        $transactionId = 'LOCAL_' . $invoice->id . '_' . time();
-
-        $this->storePayment($invoice, $transactionId, [
-            'test_mode' => true,
+        // ایجاد یک پرداخت تست
+        $payment = Payment::create([
+            'invoice_id' => $invoice->id,
+            'patient_id' => $invoice->patient_id,
+            'transaction_id' => $transactionId,
+            'reference_code' => $referenceCode,
+            'amount' => $invoice->total_amount,
+            'gateway' => 'local',
+            'status' => Payment::STATUS_SUCCESS,
+            'message' => 'پرداخت تست با موفقیت انجام شد',
+            'payment_date' => now(),
+            'raw_data' => json_encode([
+                'test' => true,
+                'timestamp' => now()->toIso8601String(),
+            ]),
         ]);
 
-        $callbackUrl = $this->getCallbackUrl();
+        // آپدیت وضعیت فاکتور
+        $invoice->update([
+            'is_paid' => true,
+            'paid_at' => now(),
+            'status' => 'paid',
+        ]);
 
         return [
             'success' => true,
-            'gateway' => $this->getGatewayName(),
-            'invoice_id' => $invoice->id,
-            'invoice_number' => $invoice->invoice_number,
-            'amount' => $invoice->total_amount,
-            'form' => [
-                'action' => $callbackUrl,
-                'method' => 'POST',
-                'inputs' => [
-                    'transactionId' => $transactionId,
-                    'invoice_id' => $invoice->id,
-                    'invoice_number' => $invoice->invoice_number,
-                    'title' => 'درگاه پرداخت تست',
-                    'description' => 'این درگاه *صرفا* برای تست صحت روند پرداخت',
-                    'amount' => $invoice->total_amount,
-                    'payButton' => 'پرداخت موفق',
-                    'cancelButton' => 'پرداخت ناموفق',
-                ],
-            ],
-            'message' => 'در حال انتقال به درگاه تست...',
+            'message' => 'پرداخت با موفقیت انجام شد',
+            'payment_id' => $payment->id,
+            'transaction_id' => $payment->transaction_id,
+            'reference_code' => $payment->reference_code,
+            'invoice' => $invoice,
+            'redirect_url' => null,
         ];
     }
 
     public function verify(Request $request): array
     {
-        $transactionId = $request->input('transactionId');
-        $invoiceId = $request->input('invoice_id');
-        $cancel = $request->input('cancel');
-
-        $this->logInfo('LocalGateway verify called', [
-            'transactionId' => $transactionId,
-            'invoiceId' => $invoiceId,
-            'cancel' => $cancel,
-        ]);
-
-        if ($cancel) {
-            return [
-                'success' => false,
-                'message' => 'پرداخت لغو شد',
-                'cancelled' => true,
-                'gateway' => $this->getGatewayName(),
-            ];
-        }
-
-        if (!$transactionId) {
-            return [
-                'success' => false,
-                'message' => 'شناسه تراکنش یافت نشد',
-                'gateway' => $this->getGatewayName(),
-            ];
-        }
-
-        $payment = Payment::where('transaction_id', $transactionId)
-            ->where('gateway', $this->getGatewayName())
-            ->first();
-
-        if (!$payment) {
-            return [
-                'success' => false,
-                'message' => 'تراکنش یافت نشد',
-                'gateway' => $this->getGatewayName(),
-            ];
-        }
-
-        $invoice = $payment->invoice;
-
-        if (!$invoice) {
-            return [
-                'success' => false,
-                'message' => 'فاکتور یافت نشد',
-                'gateway' => $this->getGatewayName(),
-            ];
-        }
-
-        $referenceId = 'LOCAL_REF_' . $transactionId . '_' . time();
-
-        $payment->update([
-            'status' => PaymentStatusEnum::SUCCESS,
-            'reference_code' => $referenceId,
-            'message' => 'پرداخت تست با موفقیت انجام شد',
-            'payment_date' => now(),
-        ]);
-
-        $invoice->markAsPaid();
-
+        // برای درگاه local نیازی به verify نیست
         return [
             'success' => true,
-            'reference_id' => $referenceId,
-            'invoice' => $invoice,
-            'payment' => $payment,
-            'message' => 'پرداخت با موفقیت انجام شد',
-            'gateway' => $this->getGatewayName(),
+            'message' => 'پرداخت تایید شد',
+            'transaction_id' => $request->get('transaction_id', 'LOCAL-' . time()),
+            'reference_code' => $request->get('ref_id', 'REF-' . time()),
         ];
     }
 }

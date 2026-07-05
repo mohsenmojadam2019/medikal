@@ -7,11 +7,18 @@ use Illuminate\Http\Request;
 
 interface GatewayInterface
 {
-    public function getGatewayName(): string;
+    /**
+     * شروع پرداخت
+     */
+    public function initiate(Invoice $invoice): array;
 
-    public function initiate(Invoice $invoice, array $options = []): array;
-
+    /**
+     * تایید پرداخت
+     */
     public function verify(Request $request): array;
 
-    public function isAvailable(): bool;
+    /**
+     * دریافت نام درگاه
+     */
+    public function getGatewayName(): string;
 }

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\PaymentStatusEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -11,7 +10,6 @@ class Payment extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',
         'invoice_id',
         'patient_id',
         'transaction_id',
@@ -28,11 +26,15 @@ class Payment extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'payment_date' => 'datetime',
-        'raw_data' => 'array',
-        'status' => PaymentStatusEnum::class,
+        'raw_data' => 'json',
     ];
 
-    // ========== Relationships ==========
+    // وضعیت‌های پرداخت
+    const STATUS_PENDING = 'pending';
+    const STATUS_SUCCESS = 'success';
+    const STATUS_FAILED = 'failed';
+    const STATUS_REFUNDED = 'refunded';
+
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
@@ -43,42 +45,28 @@ class Payment extends Model
         return $this->belongsTo(Patient::class);
     }
 
-    // ========== Accessors ==========
-    public function getStatusLabelAttribute(): string
+    public function isSuccessful()
     {
-        return $this->status?->label() ?? 'نامشخص';
+        return $this->status === self::STATUS_SUCCESS;
     }
 
-    public function getGatewayLabelAttribute(): string
+    public function isPending()
     {
-        $labels = [
-            'zarinpal' => 'زرین‌پال',
-            'asanpardakht' => 'آسان پرداخت',
-            'paypal' => 'پی‌پال',
-            'stripe' => 'استرایپ',
-            'local' => 'محلی (تست)',
-        ];
-        return $labels[$this->gateway] ?? $this->gateway;
+        return $this->status === self::STATUS_PENDING;
     }
 
-    public function getIsSuccessfulAttribute(): bool
-    {
-        return $this->status === PaymentStatusEnum::SUCCESS;
-    }
-
-    // ========== Scopes ==========
     public function scopeSuccess($query)
     {
-        return $query->where('status', PaymentStatusEnum::SUCCESS);
+        return $query->where('status', self::STATUS_SUCCESS);
     }
 
     public function scopePending($query)
     {
-        return $query->where('status', PaymentStatusEnum::PENDING);
+        return $query->where('status', self::STATUS_PENDING);
     }
 
-    public function scopeByGateway($query, $gateway)
+    public function getReferenceIdAttribute()
     {
-        return $query->where('gateway', $gateway);
+        return $this->reference_code ?? $this->transaction_id;
     }
 }
