@@ -7,7 +7,7 @@ import {
   Space, Divider, Alert, Avatar, Empty, Modal, App
 } from 'antd';
 import { 
-  CalendarOutlined, ClockCircleOutlined, UserOutlined, 
+  CalendarOutlined, ClockCircleOutlined, 
   LeftOutlined, EnvironmentOutlined, PhoneOutlined,
   DollarOutlined, ReloadOutlined
 } from '@ant-design/icons';
@@ -20,7 +20,6 @@ import PersianCalendar from '@/components/shared/PersianCalendar';
 
 const { Title, Text } = Typography;
 
-// تبدیل تاریخ میلادی به شمسی
 function toPersianDate(date) {
   if (!date || !(date instanceof Date) || isNaN(date)) return '';
   try {
@@ -54,7 +53,6 @@ export default function NewAppointmentPage() {
   
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
-  // تاریخ امروز را به عنوان پیش‌فرض قرار بده
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -72,7 +70,6 @@ export default function NewAppointmentPage() {
     return null;
   };
 
-  // دریافت اطلاعات پزشک
   useEffect(() => {
     const fetchDoctor = async () => {
       if (!doctorId) {
@@ -106,7 +103,6 @@ export default function NewAppointmentPage() {
     fetchDoctor();
   }, [doctorId, locale, router, appMessage]);
 
-  // دریافت زمان‌های خالی
   const fetchAvailableSlots = useCallback(async (date) => {
     if (!doctorId) return;
     
@@ -156,7 +152,6 @@ export default function NewAppointmentPage() {
     }
   }, [doctorId, API_URL, appMessage]);
 
-  // بارگیری اولیه زمان‌ها
   useEffect(() => {
     if (doctorId && selectedDate) {
       fetchAvailableSlots(selectedDate);
@@ -187,10 +182,20 @@ export default function NewAppointmentPage() {
     setLoadingBook(true);
     try {
       const token = getToken();
+      
+      // فرمت تاریخ به YYYY-MM-DD
       const dateStr = formatDateForAPI(selectedDate);
       
-      if (!dateStr) {
-        appMessage.error('تاریخ نامعتبر است');
+      // فرمت زمان به HH:MM
+      let timeStr = selectedSlot.start_time || selectedSlot.time || '';
+      // اگر زمان شامل ثانیه بود، فقط HH:MM رو بگیر
+      if (timeStr.includes(':')) {
+        const parts = timeStr.split(':');
+        timeStr = parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
+      }
+      
+      if (!dateStr || !timeStr) {
+        appMessage.error('تاریخ یا زمان نامعتبر است');
         setLoadingBook(false);
         return;
       }
@@ -198,11 +203,11 @@ export default function NewAppointmentPage() {
       const bookData = {
         doctor_id: parseInt(doctorId),
         date: dateStr,
-        start_time: selectedSlot.start_time || selectedSlot.time,
+        start_time: timeStr,
         notes: '',
       };
 
-      console.log('📝 Booking appointment:', bookData);
+      console.log('📝 Booking appointment data:', JSON.stringify(bookData, null, 2));
 
       const res = await fetch(`${API_URL}/api/appointments`, {
         method: 'POST',
@@ -224,13 +229,20 @@ export default function NewAppointmentPage() {
           doctorName: doctor?.name || doctor?.full_name || 'پزشک',
           doctorSpecialty: doctor?.specialty?.name || 'عمومی',
           date: dateStr,
-          time: selectedSlot.start_time || selectedSlot.time,
+          time: timeStr,
           doctorFee: parseFloat(doctor?.consultation_fee) || 0,
         }));
         
         appMessage.success('نوبت با موفقیت رزرو شد');
       } else {
-        appMessage.error(data.message || 'خطا در رزرو نوبت');
+        // نمایش خطای دقیق از سرور
+        let errorMsg = data.message || 'خطا در رزرو نوبت';
+        if (data.errors) {
+          const errors = Object.values(data.errors).flat().join('، ');
+          errorMsg = errors || errorMsg;
+        }
+        appMessage.error(errorMsg);
+        console.error('❌ Booking error:', data);
       }
     } catch (error) {
       console.error('Error booking:', error);
@@ -250,12 +262,10 @@ export default function NewAppointmentPage() {
     router.push(`/${locale}/doctors`);
   };
 
-  // بررسی اینکه تاریخ گذشته نباشد (فقط امروز و آینده قابل انتخاب است)
   const disabledDate = (date) => {
     if (!date || !(date instanceof Date) || isNaN(date)) return true;
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
-    // تاریخ‌های قبل از امروز غیرفعال هستند
     return date < todayDate;
   };
 
