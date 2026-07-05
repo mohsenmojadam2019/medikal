@@ -212,6 +212,7 @@ export default function NewAppointmentPage() {
       if (data.success) {
         const appointment = data.data;
         
+        // ✅ فقط اطلاعات نوبت رو ذخیره کن، نه دوباره رزرو
         localStorage.setItem('appointmentData', JSON.stringify({
           doctorId: doctorId,
           doctorName: doctor?.name || doctor?.full_name || 'پزشک',
@@ -219,10 +220,12 @@ export default function NewAppointmentPage() {
           date: dateStr,
           time: timeStr,
           doctorFee: parseFloat(doctor?.consultation_fee) || 0,
-          appointmentId: appointment.id,
+          appointmentId: appointment.id,  // ✅ مهم: ID نوبت برای پرداخت
+          status: appointment.status,
         }));
         
         appMessage.success('نوبت با موفقیت رزرو شد');
+        // ✅ هدایت به صفحه پرداخت با ID نوبت
         router.push(`/${locale}/appointments/checkout`);
       } else {
         let errorMsg = data.message || 'خطا در رزرو نوبت';
@@ -457,10 +460,7 @@ export default function NewAppointmentPage() {
                       fontWeight: 'bold',
                     }}
                   >
-                    {selectedSlot ? 
-                      `رزرو و پرداخت` : 
-                      'ابتدا یک زمان انتخاب کنید'
-                    }
+                    {selectedSlot ? `رزرو و پرداخت` : 'ابتدا یک زمان انتخاب کنید'}
                   </Button>
                 </div>
 

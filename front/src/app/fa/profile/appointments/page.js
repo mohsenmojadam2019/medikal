@@ -16,6 +16,7 @@ import Breadcrumb from '@/components/shared/Breadcrumb';
 
 const { Title, Text } = Typography;
 
+// ✅ تبدیل تاریخ میلادی به شمسی
 function toPersianDate(dateStr) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
@@ -33,9 +34,20 @@ function toPersianDate(dateStr) {
   }
 }
 
+// ✅ فرمت زمان (فقط HH:MM)
 function formatTime(timeStr) {
   if (!timeStr) return '';
-  return timeStr.substring(0, 5);
+  if (timeStr.includes('T')) {
+    const date = new Date(timeStr);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+  if (timeStr.includes(':')) {
+    const parts = timeStr.split(':');
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
+  }
+  return timeStr;
 }
 
 export default function AppointmentsPage() {
@@ -187,6 +199,7 @@ export default function AppointmentsPage() {
       title: 'تاریخ و ساعت',
       key: 'datetime',
       render: (_, record) => {
+        // ✅ فقط تاریخ شمسی و زمان را نمایش بده
         const persianDate = toPersianDate(record.date);
         const time = formatTime(record.start_time);
         return (

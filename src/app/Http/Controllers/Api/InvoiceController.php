@@ -18,8 +18,11 @@ class InvoiceController extends Controller
     public function myInvoices(Request $request)
     {
         $user = auth()->user();
-        $patient = Patient::where('user_id', $user->id)->first();
+        if (!$user) {
+            return $this->error('لطفاً وارد شوید', 401);
+        }
 
+        $patient = Patient::where('user_id', $user->id)->first();
         if (!$patient) {
             return $this->error('بیمار یافت نشد', 404);
         }
@@ -28,12 +31,10 @@ class InvoiceController extends Controller
             ->with(['appointment', 'appointment.doctor', 'appointment.doctor.user'])
             ->orderBy('created_at', 'desc');
 
-        // فیلتر بر اساس وضعیت
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
 
-        // فیلتر بر اساس تاریخ
         if ($request->has('from_date')) {
             $query->whereDate('created_at', '>=', $request->from_date);
         }
@@ -53,12 +54,18 @@ class InvoiceController extends Controller
     {
         try {
             $user = auth()->user();
+            if (!$user) {
+                return $this->error('لطفاً وارد شوید', 401);
+            }
+
             $patient = Patient::where('user_id', $user->id)->first();
+            if (!$patient) {
+                return $this->error('بیمار یافت نشد', 404);
+            }
 
             $invoice = Invoice::with(['appointment', 'appointment.doctor', 'payments'])
                 ->findOrFail($id);
 
-            // بررسی دسترسی
             if ($invoice->patient_id !== $patient->id && !$user->isAdmin()) {
                 return $this->error('شما دسترسی به این فاکتور ندارید', 403);
             }
@@ -70,13 +77,61 @@ class InvoiceController extends Controller
     }
 
     /**
+     * ✅ دریافت فاکتور بر اساس appointment_id
+     */
+    public function getByAppointment($appointmentId)
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return $this->error('لطفاً وارد شوید', 401);
+            }
+
+            $patient = Patient::where('user_id', $user->id)->first();
+            if (!$patient) {
+                return $this->error('بیمار یافت نشد', 404);
+            }
+
+            \Log::info('🔍 Searching invoice for appointment', [
+                'appointment_id' => $appointmentId,
+                'patient_id' => $patient->id,
+            ]);
+
+            $invoice = Invoice::where('appointment_id', $appointmentId)
+                ->where('patient_id', $patient->id)
+                ->first();
+
+            if (!$invoice) {
+                \Log::warning('❌ Invoice not found', [
+                    'appointment_id' => $appointmentId,
+                    'patient_id' => $patient->id,
+                ]);
+                return $this->error('فاکتور یافت نشد', 404);
+            }
+
+            \Log::info('✅ Invoice found', [
+                'invoice_id' => $invoice->id,
+                'appointment_id' => $appointmentId,
+            ]);
+
+            return $this->success($invoice);
+        } catch (\Exception $e) {
+            \Log::error('❌ Error fetching invoice: ' . $e->getMessage());
+            return $this->error('خطا در دریافت فاکتور', 500);
+        }
+    }
+
+    /**
      * آمار فاکتورها
      */
     public function stats()
     {
         $user = auth()->user();
-        $patient = Patient::where('user_id', $user->id)->first();
+        if (!$user) {
+            return $this->error('لطفاً وارد شوید', 401);
+        }
 
+        $patient = Patient::where('user_id', $user->id)->first();
         if (!$patient) {
             return $this->error('بیمار یافت نشد', 404);
         }
@@ -100,3 +155,5 @@ class InvoiceController extends Controller
         ]);
     }
 }
+
+

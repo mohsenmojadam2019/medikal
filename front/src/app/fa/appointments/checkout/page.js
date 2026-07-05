@@ -9,7 +9,7 @@ import {
   CheckCircleOutlined, WalletOutlined, CreditCardOutlined, 
   LeftOutlined, GiftOutlined, 
   SafetyOutlined, UserOutlined,
-  EnvironmentOutlined, DollarOutlined,
+  DollarOutlined,
   ClockCircleOutlined, CalendarOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
@@ -41,7 +41,17 @@ function toPersianDate(dateStr) {
 
 function formatTime(timeStr) {
   if (!timeStr) return '';
-  return timeStr.substring(0, 5);
+  if (timeStr.includes('T')) {
+    const date = new Date(timeStr);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+  if (timeStr.includes(':')) {
+    const parts = timeStr.split(':');
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
+  }
+  return timeStr;
 }
 
 export default function CheckoutPage() {
@@ -60,6 +70,8 @@ export default function CheckoutPage() {
   const [selectedGateway, setSelectedGateway] = useState(null);
   const [gatewayModalVisible, setGatewayModalVisible] = useState(false);
   const [fetchingGateways, setFetchingGateways] = useState(false);
+  const [invoice, setInvoice] = useState(null);
+  const [fetchingInvoice, setFetchingInvoice] = useState(false);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
   const getToken = () => {
@@ -111,20 +123,79 @@ export default function CheckoutPage() {
     }
   };
 
+  const fetchInvoice = async (appointmentId) => {
+    if (!appointmentId) return null;
+
+    console.log('🔍 Fetching invoice for appointment:', appointmentId);
+    
+    setFetchingInvoice(true);
+    try {
+      const token = getToken();
+      console.log('🔑 Token:', token ? 'Exists' : 'Missing');
+      
+      const url = `${API_URL}/api/invoices/appointment/${appointmentId}`;
+      console.log('🌐 URL:', url);
+      
+      const res = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('📡 Response status:', res.status);
+      
+      const data = await res.json();
+      console.log('📦 Full response:', JSON.stringify(data, null, 2));
+
+      if (data.success) {
+        console.log('✅ Invoice found:', data.data);
+        setInvoice(data.data);
+        return data.data;
+      } else {
+        console.log('❌ Error:', data.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching invoice:', error);
+      return null;
+    } finally {
+      setFetchingInvoice(false);
+    }
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem('appointmentData');
+    console.log('📋 Stored appointmentData:', stored);
+    
     if (!stored) {
+      console.warn('⚠️ No appointmentData found in localStorage');
+      appMessage.warning('اطلاعات نوبت یافت نشد. لطفاً از صفحه انتخاب نوبت اقدام کنید.');
+      // هدایت به صفحه انتخاب نوبت
       router.push(`/${locale}/doctors`);
       return;
     }
+    
     try {
       const data = JSON.parse(stored);
+      console.log('📋 Parsed appointmentData:', data);
+      
+      if (!data.appointmentId) {
+        console.error('❌ No appointmentId in data');
+        appMessage.error('شناسه نوبت یافت نشد. لطفاً دوباره تلاش کنید.');
+        router.push(`/${locale}/doctors`);
+        return;
+      }
+      
       setAppointmentData(data);
+      
+      // دریافت فاکتور
+      fetchInvoice(data.appointmentId);
     } catch (error) {
       console.error('Error parsing appointment data:', error);
       router.push(`/${locale}/doctors`);
     }
-  }, [locale, router]);
+  }, [locale, router, appMessage]);
 
   const fetchWalletBalance = async () => {
     const token = getToken();
@@ -244,6 +315,16 @@ export default function CheckoutPage() {
         return;
       }
 
+      let currentInvoice = invoice;
+      if (!currentInvoice) {
+        currentInvoice = await fetchInvoice(appointmentId);
+        if (!currentInvoice) {
+          appMessage.error('فاکتور یافت نشد. لطفاً دوباره تلاش کنید.');
+          setSubmitting(false);
+          return;
+        }
+      }
+
       if (!isFree) {
         const payRes = await fetch(`${API_URL}/api/wallet/pay-appointment`, {
           method: 'POST',
@@ -264,18 +345,9 @@ export default function CheckoutPage() {
         }
       }
 
-      const invRes = await fetch(`${API_URL}/api/invoices/my`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const invData = await invRes.json();
-      const invoice = invData.success ? invData.data?.data?.find(i => i.appointment_id === appointmentId) : null;
-
       const confirmationData = {
         appointmentId,
-        invoiceId: invoice?.id || null,
+        invoiceId: currentInvoice?.id || null,
         doctorName: appointmentData.doctorName,
         doctorSpecialty: appointmentData.doctorSpecialty,
         date: appointmentData.date,
@@ -284,7 +356,7 @@ export default function CheckoutPage() {
         discount: discountApplied ? (appointmentData.doctorFee - finalPrice) : 0,
         paymentMethod: isFree ? 'رایگان' : 'کیف پول',
         status: 'confirmed',
-        invoiceNumber: invoice?.invoice_number || null,
+        invoiceNumber: currentInvoice?.invoice_number || null,
       };
       localStorage.setItem('appointmentConfirmation', JSON.stringify(confirmationData));
       localStorage.removeItem('appointmentData');
@@ -312,27 +384,14 @@ export default function CheckoutPage() {
         return;
       }
 
-      const invRes = await fetch(`${API_URL}/api/invoices/my`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const invData = await invRes.json();
-
-      let invoice = null;
-      if (invData.success && invData.data) {
-        if (Array.isArray(invData.data)) {
-          invoice = invData.data.find(i => i.appointment_id === appointmentId);
-        } else if (invData.data.data && Array.isArray(invData.data.data)) {
-          invoice = invData.data.data.find(i => i.appointment_id === appointmentId);
+      let currentInvoice = invoice;
+      if (!currentInvoice) {
+        currentInvoice = await fetchInvoice(appointmentId);
+        if (!currentInvoice) {
+          appMessage.error('فاکتور یافت نشد. لطفاً دوباره تلاش کنید.');
+          setSubmitting(false);
+          return;
         }
-      }
-
-      if (!invoice) {
-        appMessage.error('فاکتور یافت نشد. لطفاً دوباره تلاش کنید.');
-        setSubmitting(false);
-        return;
       }
 
       const payRes = await fetch(`${API_URL}/api/payments/initiate`, {
@@ -342,7 +401,7 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          invoice_id: invoice.id,
+          invoice_id: currentInvoice.id,
           gateway: gateway,
           amount: finalPrice,
           discount_code: discountApplied?.code || null,
@@ -357,7 +416,7 @@ export default function CheckoutPage() {
           appMessage.success('پرداخت با موفقیت انجام شد');
           const confirmationData = {
             appointmentId,
-            invoiceId: invoice.id,
+            invoiceId: currentInvoice.id,
             doctorName: appointmentData.doctorName,
             doctorSpecialty: appointmentData.doctorSpecialty,
             date: appointmentData.date,
@@ -366,7 +425,7 @@ export default function CheckoutPage() {
             discount: discountApplied ? (appointmentData.doctorFee - finalPrice) : 0,
             paymentMethod: 'درگاه پرداخت',
             status: 'confirmed',
-            invoiceNumber: invoice.invoice_number,
+            invoiceNumber: currentInvoice.invoice_number,
           };
           localStorage.setItem('appointmentConfirmation', JSON.stringify(confirmationData));
           localStorage.removeItem('appointmentData');
@@ -385,7 +444,7 @@ export default function CheckoutPage() {
     }
   };
 
-  if (loading) {
+  if (loading || fetchingInvoice) {
     return (
       <>
         <Header />
@@ -396,18 +455,7 @@ export default function CheckoutPage() {
   }
 
   if (!appointmentData) {
-    return (
-      <>
-        <Header />
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <Title level={4}>اطلاعات نوبت یافت نشد</Title>
-          <Button type="primary" onClick={() => router.push(`/${locale}/doctors`)}>
-            انتخاب نوبت جدید
-          </Button>
-        </div>
-        <Footer />
-      </>
-    );
+    return null;
   }
 
   const discountAmount = appointmentData.doctorFee - finalPrice;

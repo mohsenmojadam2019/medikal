@@ -5,12 +5,12 @@ import { useRouter, useParams } from 'next/navigation';
 import { 
   Card, Row, Col, Button, Typography, Spin, Tag, 
   Space, Divider, Avatar, Descriptions, App, Timeline,
-  Badge, Alert
+  Alert
 } from 'antd';
 import { 
   CalendarOutlined, ClockCircleOutlined, 
-  UserOutlined, LeftOutlined, PhoneOutlined,
-  EnvironmentOutlined, DollarOutlined,
+  UserOutlined, LeftOutlined,
+  DollarOutlined,
   CheckCircleOutlined, CloseCircleOutlined,
   InfoCircleOutlined
 } from '@ant-design/icons';
@@ -22,7 +22,6 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
 
-// تبدیل تاریخ میلادی به شمسی
 function toPersianDate(dateStr) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
@@ -40,27 +39,18 @@ function toPersianDate(dateStr) {
   }
 }
 
-// تبدیل زمان به فرمت HH:MM
 function formatTime(timeStr) {
   if (!timeStr) return '';
-  
-  // اگر timeStr یک تاریخ کامل است (مثل 2026-07-06T06:00:00.000000Z)
   if (timeStr.includes('T')) {
     const date = new Date(timeStr);
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
   }
-  
-  // اگر زمان به صورت HH:MM:SS است
   if (timeStr.includes(':')) {
     const parts = timeStr.split(':');
-    if (parts.length >= 2) {
-      return `${parts[0]}:${parts[1]}`;
-    }
-    return timeStr;
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
   }
-  
   return timeStr;
 }
 
@@ -129,15 +119,15 @@ export default function AppointmentDetailPage() {
 
   const getStatusConfig = (status) => {
     const configs = {
-      pending: { color: 'warning', text: 'در انتظار تایید', icon: <ClockCircleOutlined /> },
-      confirmed: { color: 'info', text: 'تایید شده', icon: <CheckCircleOutlined /> },
-      arrived: { color: 'primary', text: 'حاضر در مطب', icon: <UserOutlined /> },
-      in_progress: { color: 'blue', text: 'در حال ویزیت', icon: <InfoCircleOutlined /> },
-      completed: { color: 'success', text: 'انجام شده', icon: <CheckCircleOutlined /> },
-      cancelled: { color: 'danger', text: 'لغو شده', icon: <CloseCircleOutlined /> },
-      no_show: { color: 'secondary', text: 'حاضر نشده', icon: <CloseCircleOutlined /> },
+      pending: { color: 'warning', text: 'در انتظار پرداخت', icon: <ClockCircleOutlined />, action: 'pay' },
+      confirmed: { color: 'success', text: 'تایید شده', icon: <CheckCircleOutlined />, action: 'view' },
+      arrived: { color: 'primary', text: 'حاضر در مطب', icon: <UserOutlined />, action: 'view' },
+      in_progress: { color: 'blue', text: 'در حال ویزیت', icon: <InfoCircleOutlined />, action: 'view' },
+      completed: { color: 'green', text: 'انجام شده', icon: <CheckCircleOutlined />, action: 'view' },
+      cancelled: { color: 'danger', text: 'لغو شده', icon: <CloseCircleOutlined />, action: 'view' },
+      no_show: { color: 'secondary', text: 'حاضر نشده', icon: <CloseCircleOutlined />, action: 'view' },
     };
-    return configs[status] || { color: 'default', text: status, icon: null };
+    return configs[status] || { color: 'default', text: status, icon: null, action: 'view' };
   };
 
   const handleBack = () => {
@@ -160,6 +150,8 @@ export default function AppointmentDetailPage() {
       if (data.success) {
         appMessage.success('نوبت با موفقیت لغو شد');
         setAppointment({ ...appointment, status: 'cancelled' });
+        // رفرش صفحه
+        fetchAppointment();
       } else {
         appMessage.error(data.message || 'خطا در لغو نوبت');
       }
@@ -167,6 +159,21 @@ export default function AppointmentDetailPage() {
       console.error('Error cancelling appointment:', error);
       appMessage.error('خطا در ارتباط با سرور');
     }
+  };
+
+  const handlePay = () => {
+    // ذخیره اطلاعات نوبت برای پرداخت
+    localStorage.setItem('appointmentData', JSON.stringify({
+      doctorId: appointment.doctor_id,
+      doctorName: appointment.doctor?.name || appointment.doctor?.full_name || 'پزشک',
+      doctorSpecialty: appointment.doctor?.specialty?.name || 'عمومی',
+      date: appointment.date,
+      time: appointment.start_time,
+      doctorFee: appointment.doctor?.consultation_fee || 0,
+      appointmentId: appointment.id,
+      status: appointment.status,
+    }));
+    router.push(`/${locale}/appointments/checkout`);
   };
 
   if (loading) {
@@ -221,6 +228,7 @@ export default function AppointmentDetailPage() {
   const fee = appointment.fee || appointment.doctor?.consultation_fee || 0;
   const doctorName = appointment.doctor?.name || appointment.doctor?.full_name || 'پزشک';
   const doctorSpecialty = appointment.doctor?.specialty?.name || 'عمومی';
+  const isPending = appointment.status === 'pending';
 
   return (
     <>
@@ -252,7 +260,7 @@ export default function AppointmentDetailPage() {
                   </Title>
                   <Text type="secondary">{doctorSpecialty}</Text>
                   <div style={{ marginTop: '8px' }}>
-                    <Tag color={statusConfig.color}>
+                    <Tag color={statusConfig.color} style={{ fontSize: '14px', padding: '4px 12px' }}>
                       {statusConfig.icon} {statusConfig.text}
                     </Tag>
                   </div>
@@ -298,41 +306,61 @@ export default function AppointmentDetailPage() {
                   )}
                 </Descriptions>
 
-                <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
-                  <Button 
-                    type="primary"
-                    onClick={() => router.push(`/${locale}/appointments/checkout`)}
-                  >
-                    پرداخت
-                  </Button>
-                  {appointment.status === 'pending' && (
+                {/* ✅ فقط در صورت pending دکمه‌های اقدام نمایش داده شوند */}
+                {isPending && (
+                  <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+                    <Button 
+                      type="primary"
+                      onClick={handlePay}
+                      style={{ borderRadius: '8px' }}
+                    >
+                      پرداخت نوبت
+                    </Button>
                     <Button 
                       danger
                       onClick={handleCancel}
+                      style={{ borderRadius: '8px' }}
                     >
                       لغو نوبت
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {!isPending && appointment.status === 'confirmed' && (
+                  <div style={{ marginTop: '16px' }}>
+                    <Alert
+                      title="✅ نوبت تایید شده"
+                      description="پرداخت این نوبت با موفقیت انجام شده است."
+                      type="success"
+                      showIcon
+                    />
+                  </div>
+                )}
+
+                {!isPending && appointment.status === 'completed' && (
+                  <div style={{ marginTop: '16px' }}>
+                    <Alert
+                      title="✅ نوبت انجام شده"
+                      description="این نوبت به پایان رسیده است."
+                      type="success"
+                      showIcon
+                    />
+                  </div>
+                )}
+
+                {!isPending && appointment.status === 'cancelled' && (
+                  <div style={{ marginTop: '16px' }}>
+                    <Alert
+                      title="❌ نوبت لغو شده"
+                      description="این نوبت لغو شده است."
+                      type="error"
+                      showIcon
+                    />
+                  </div>
+                )}
               </Col>
             </Row>
           </Card>
-
-          {appointment.status_history && appointment.status_history.length > 0 && (
-            <Card style={{ marginTop: '24px', borderRadius: '16px' }}>
-              <Title level={4}>تاریخچه وضعیت</Title>
-              <Timeline>
-                {appointment.status_history.map((item, index) => (
-                  <Timeline.Item key={index}>
-                    <Text strong>{getStatusConfig(item.status).text}</Text>
-                    <Text type="secondary" style={{ display: 'block', fontSize: '12px' }}>
-                      {toPersianDate(item.created_at)} - {formatTime(item.created_at)}
-                    </Text>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
-            </Card>
-          )}
         </div>
       </main>
       <Footer />

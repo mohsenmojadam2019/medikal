@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Patient;
+use App\Models\Invoice;
+use App\Enums\InvoiceStatusEnum;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -15,9 +17,6 @@ class AppointmentController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * دریافت زمان‌های خالی پزشک
-     */
     public function availableSlots(Request $request, $doctorId)
     {
         $validator = Validator::make($request->all(), [
@@ -35,12 +34,10 @@ class AppointmentController extends Controller
 
         $date = $request->date;
         
-        // ساعات کاری پیش‌فرض (از 9 صبح تا 5 عصر)
         $startHour = 9;
         $endHour = 17;
-        $slotDuration = 30; // دقیقه
+        $slotDuration = 30;
 
-        // تولید تمام اسلات‌های ممکن
         $allSlots = [];
         $currentTime = Carbon::parse($date . ' ' . sprintf('%02d:00:00', $startHour));
         $endTime = Carbon::parse($date . ' ' . sprintf('%02d:00:00', $endHour));
@@ -49,7 +46,6 @@ class AppointmentController extends Controller
             $slotEnd = clone $currentTime;
             $slotEnd->addMinutes($slotDuration);
             
-            // رد کردن زمان استراحت (12:30 - 14:00)
             $isBreak = false;
             $breakStart = Carbon::parse($date . ' 12:30:00');
             $breakEnd = Carbon::parse($date . ' 14:00:00');
@@ -71,18 +67,15 @@ class AppointmentController extends Controller
             $currentTime->addMinutes($slotDuration);
         }
 
-        // دریافت نوبت‌های رزرو شده برای این تاریخ
         $bookedAppointments = Appointment::where('doctor_id', $doctorId)
             ->whereDate('date', $date)
             ->whereIn('status', ['pending', 'confirmed', 'arrived', 'in_progress'])
             ->get();
 
-        // استخراج زمان‌های شروع رزرو شده
         $bookedTimes = $bookedAppointments->map(function ($appointment) {
             return Carbon::parse($appointment->start_time)->format('H:i');
         })->toArray();
 
-        // علامت‌گذاری اسلات‌های رزرو شده
         foreach ($allSlots as &$slot) {
             if (in_array($slot['time'], $bookedTimes)) {
                 $slot['is_available'] = false;
@@ -90,7 +83,6 @@ class AppointmentController extends Controller
             }
         }
 
-        // فیلتر اسلات‌های خالی برای نمایش
         $availableSlots = array_filter($allSlots, function ($slot) {
             return $slot['is_available'] === true;
         });
@@ -110,9 +102,6 @@ class AppointmentController extends Controller
         ]);
     }
 
-    /**
-     * رزرو نوبت جدید
-     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -120,6 +109,14 @@ class AppointmentController extends Controller
             'date' => 'required|date|after_or_equal:today',
             'start_time' => 'required|date_format:H:i',
             'notes' => 'nullable|string|max:500',
+        ], [
+            'doctor_id.required' => 'شناسه پزشک الزامی است',
+            'doctor_id.exists' => 'پزشک مورد نظر یافت نشد',
+            'date.required' => 'تاریخ الزامی است',
+            'date.date' => 'فرمت تاریخ نامعتبر است',
+            'date.after_or_equal' => 'تاریخ باید امروز یا بعد از آن باشد',
+            'start_time.required' => 'ساعت شروع الزامی است',
+            'start_time.date_format' => 'فرمت ساعت باید HH:MM باشد',
         ]);
 
         if ($validator->fails()) {
@@ -136,24 +133,38 @@ class AppointmentController extends Controller
             return $this->error('بیمار یافت نشد. لطفاً ابتدا ثبت نام کنید.', 404);
         }
 
-        // بررسی دقیق تداخل زمانی
         $startTime = Carbon::parse($request->date . ' ' . $request->start_time);
         $endTime = clone $startTime;
         $endTime->addMinutes(30);
 
-        // چک کردن اینکه آیا نوبتی در این زمان وجود دارد
+        // ✅ بررسی اینکه آیا کاربر قبلاً برای این زمان نوبت گرفته است
+        $userExistingAppointment = Appointment::where('patient_id', $patient->id)
+            ->where('doctor_id', $request->doctor_id)
+            ->whereDate('date', $request->date)
+            ->whereTime('start_time', $startTime->format('H:i:s'))
+            ->whereIn('status', ['pending', 'confirmed', 'arrived', 'in_progress'])
+            ->first();
+
+        if ($userExistingAppointment) {
+            return $this->error('شما قبلاً برای این زمان نوبت گرفته‌اید', 409, [
+                'existing_appointment' => [
+                    'id' => $userExistingAppointment->id,
+                    'start_time' => $userExistingAppointment->start_time,
+                    'status' => $userExistingAppointment->status,
+                ]
+            ]);
+        }
+
+        // ✅ بررسی تداخل با سایر کاربران
         $existingAppointment = Appointment::where('doctor_id', $request->doctor_id)
             ->whereDate('date', $request->date)
             ->where(function ($query) use ($startTime, $endTime) {
-                $query->where(function ($q) use ($startTime, $endTime) {
-                    // نوبتی که دقیقاً در این زمان شروع می‌شود
+                $query->where(function ($q) use ($startTime) {
                     $q->whereTime('start_time', '=', $startTime->format('H:i:s'));
                 })->orWhere(function ($q) use ($startTime, $endTime) {
-                    // نوبتی که در این بازه زمانی قرار می‌گیرد
                     $q->whereTime('start_time', '>=', $startTime->format('H:i:s'))
                       ->whereTime('start_time', '<', $endTime->format('H:i:s'));
-                })->orWhere(function ($q) use ($startTime, $endTime) {
-                    // نوبتی که این بازه زمانی را پوشش می‌دهد
+                })->orWhere(function ($q) use ($startTime) {
                     $q->whereTime('start_time', '<=', $startTime->format('H:i:s'))
                       ->whereTime('end_time', '>', $startTime->format('H:i:s'));
                 });
@@ -172,7 +183,6 @@ class AppointmentController extends Controller
             ]);
         }
 
-        // ایجاد نوبت
         $appointment = new Appointment();
         $appointment->code = $this->generateAppointmentCode();
         $appointment->patient_id = $patient->id;
@@ -184,17 +194,29 @@ class AppointmentController extends Controller
         $appointment->notes = $request->notes;
         $appointment->save();
 
-        // محاسبه هزینه و ایجاد فاکتور
         $doctor = Doctor::find($request->doctor_id);
         $fee = $doctor->consultation_fee ?? 0;
         
-        $invoice = new \App\Models\Invoice();
-        $invoice->invoice_number = $this->generateInvoiceNumber();
+        $invoice = new Invoice();
+        $invoice->tenant_id = session('tenant_id', 1);
         $invoice->patient_id = $patient->id;
         $invoice->appointment_id = $appointment->id;
+        $invoice->invoice_number = $invoice->generateNumber();
         $invoice->amount = $fee;
+        $invoice->tax = 0;
+        $invoice->discount = 0;
         $invoice->total_amount = $fee;
-        $invoice->status = 'issued';
+        $invoice->status = InvoiceStatusEnum::ISSUED;
+        $invoice->description = 'هزینه ویزیت دکتر ' . ($doctor->full_name ?? $doctor->name ?? '');
+        $invoice->due_date = Carbon::parse($request->date)->addDays(7);
+        $invoice->items = [
+            [
+                'description' => 'ویزیت پزشک',
+                'quantity' => 1,
+                'unit_price' => $fee,
+                'total' => $fee,
+            ]
+        ];
         $invoice->save();
 
         return $this->success(
@@ -204,40 +226,22 @@ class AppointmentController extends Controller
         );
     }
 
-    /**
-     * تولید کد نوبت
-     */
-    private function generateAppointmentCode()
-    {
-        $prefix = 'APT';
-        $random = strtoupper(substr(uniqid(), -6));
-        return $prefix . '-' . date('Ymd') . '-' . $random;
-    }
-
-    /**
-     * تولید شماره فاکتور
-     */
-    private function generateInvoiceNumber()
-    {
-        $prefix = 'INV';
-        $count = \App\Models\Invoice::count() + 1;
-        return $prefix . '-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * لیست نوبت‌های من (بیمار)
-     */
     public function myAppointments(Request $request)
     {
         $user = auth()->user();
-        $patient = Patient::where('user_id', $user->id)->first();
+        if (!$user) {
+            return $this->error('لطفاً وارد شوید', 401);
+        }
 
+        $patient = Patient::where('user_id', $user->id)->first();
         if (!$patient) {
             return $this->error('بیمار یافت نشد', 404);
         }
 
         $query = Appointment::where('patient_id', $patient->id)
-            ->with(['doctor', 'doctor.user', 'doctor.specialty']);
+            ->with(['doctor', 'doctor.user', 'doctor.specialty'])
+            ->orderBy('date', 'desc')
+            ->orderBy('start_time', 'desc');
 
         if ($request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
@@ -250,16 +254,11 @@ class AppointmentController extends Controller
             $query->whereDate('date', '<=', $request->to_date);
         }
 
-        $appointments = $query->orderBy('date', 'desc')
-            ->orderBy('start_time', 'desc')
-            ->paginate($request->get('per_page', 15));
+        $appointments = $query->paginate($request->get('per_page', 15));
 
         return $this->success($appointments);
     }
 
-    /**
-     * نمایش یک نوبت
-     */
     public function show($id)
     {
         try {
@@ -279,9 +278,6 @@ class AppointmentController extends Controller
         }
     }
 
-    /**
-     * لغو نوبت
-     */
     public function cancel($id)
     {
         try {
@@ -301,69 +297,46 @@ class AppointmentController extends Controller
             $appointment->status = 'cancelled';
             $appointment->save();
 
+            $invoice = Invoice::where('appointment_id', $appointment->id)->first();
+            if ($invoice && $invoice->status === InvoiceStatusEnum::ISSUED) {
+                $invoice->markAsCancelled();
+            }
+
             return $this->success($appointment, 'نوبت با موفقیت لغو شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
 
-    /**
-     * تکمیل نوبت (توسط پزشک)
-     */
-    public function complete($id)
+    public function confirm($id)
     {
         try {
             $appointment = Appointment::findOrFail($id);
             
             $user = auth()->user();
-            $doctor = Doctor::where('user_id', $user->id)->first();
+            $patient = Patient::where('user_id', $user->id)->first();
             
-            if ($appointment->doctor_id !== $doctor->id && !$user->isAdmin()) {
+            if ($appointment->patient_id !== $patient->id && !$user->isAdmin()) {
                 return $this->error('شما دسترسی به این نوبت ندارید', 403);
             }
 
-            if ($appointment->status === 'completed') {
-                return $this->error('این نوبت قبلاً تکمیل شده است', 400);
+            if ($appointment->status !== 'pending') {
+                return $this->error('این نوبت قابل تایید نیست', 400);
             }
 
-            $appointment->status = 'completed';
+            $appointment->status = 'confirmed';
             $appointment->save();
 
-            return $this->success($appointment, 'نوبت با موفقیت تکمیل شد');
+            return $this->success($appointment, 'نوبت با موفقیت تایید شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
 
-    /**
-     * آمار نوبت‌های بیمار
-     */
-    public function myPatientStats()
+    private function generateAppointmentCode()
     {
-        $user = auth()->user();
-        $patient = Patient::where('user_id', $user->id)->first();
-
-        if (!$patient) {
-            return $this->error('بیمار یافت نشد', 404);
-        }
-
-        $total = Appointment::where('patient_id', $patient->id)->count();
-        $pending = Appointment::where('patient_id', $patient->id)->where('status', 'pending')->count();
-        $confirmed = Appointment::where('patient_id', $patient->id)->where('status', 'confirmed')->count();
-        $completed = Appointment::where('patient_id', $patient->id)->where('status', 'completed')->count();
-        $cancelled = Appointment::where('patient_id', $patient->id)->where('status', 'cancelled')->count();
-        $upcoming = Appointment::where('patient_id', $patient->id)
-            ->whereDate('date', '>=', date('Y-m-d'))
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->count();
-
-        return $this->success([
-            'total' => $total,
-            'pending' => $pending,
-            'confirmed' => $confirmed,
-            'completed' => $completed,
-            'cancelled' => $cancelled,
-            'upcoming' => $upcoming,
-        ]);
+        $prefix = 'APT';
+        $random = strtoupper(substr(uniqid(), -6));
+        return $prefix . '-' . date('Ymd') . '-' . $random;
     }
 }

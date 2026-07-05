@@ -101,7 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/my/stats', [AppointmentController::class, 'myPatientStats']);
         Route::get('/my/doctor/appointments', [AppointmentController::class, 'myDoctorAppointments']);
         Route::get('/my/doctor/stats', [AppointmentController::class, 'myDoctorStats']);
-        
+
         Route::post('/', [AppointmentController::class, 'store']);
         Route::get('/{id}', [AppointmentController::class, 'show']);
         Route::put('/{id}', [AppointmentController::class, 'update']);
@@ -131,14 +131,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}/print', [PrescriptionController::class, 'print']);
     });
 
-    // ============================================================
-    // 3.6 INVOICES
-    // ============================================================
+
+// ============================================================
+// 3.6 INVOICES
+// ============================================================
     Route::prefix('invoices')->group(function () {
         Route::get('/my', [InvoiceController::class, 'myInvoices']);
         Route::get('/stats', [InvoiceController::class, 'stats']);
-        Route::get('/', [InvoiceController::class, 'index']);
         Route::get('/{id}', [InvoiceController::class, 'show']);
+        // ✅ مسیر جدید برای دریافت فاکتور بر اساس appointment_id
+        Route::get('/appointment/{appointmentId}', [InvoiceController::class, 'getByAppointment']);
     });
 
     // ============================================================
@@ -257,3 +259,9 @@ Route::fallback(function () {
         'errors' => ['route' => 'The requested route does not exist']
     ], 404);
 });
+
+// ============================================================
+// 3.6.2 INVOICES - دریافت فاکتور بر اساس appointment_id
+// ============================================================
+Route::get('/invoices/appointment/{appointmentId}', [App\Http\Controllers\Api\InvoiceController::class, 'getByAppointment'])
+    ->middleware('auth:sanctum');
