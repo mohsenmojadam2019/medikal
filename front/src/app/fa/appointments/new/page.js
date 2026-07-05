@@ -1,40 +1,53 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
-  Card, Row, Col, Button, Typography, Spin, Empty, Tag, message, 
-  Space, Divider, Alert, Skeleton, Avatar, Calendar, Badge, Tooltip
+  Card, Row, Col, Button, Typography, Spin, Tag, message, 
+  Space, Divider, Alert, Calendar, Select, List, Avatar,
+  Statistic, Timeline, Empty, Radio, Modal, Skeleton
 } from 'antd';
 import { 
-  CalendarOutlined, ClockCircleOutlined, 
-  LeftOutlined, RightOutlined,
-  EnvironmentOutlined, DollarOutlined,
-  CheckCircleOutlined, UserOutlined,
-  StarOutlined, ThunderboltOutlined
+  CalendarOutlined, ClockCircleOutlined, UserOutlined, 
+  LeftOutlined, CheckCircleOutlined, CloseCircleOutlined,
+  EnvironmentOutlined, StarOutlined, HeartOutlined,
+  PhoneOutlined, MailOutlined, VideoCameraOutlined,
+  DollarOutlined, SafetyOutlined, ReloadOutlined
 } from '@ant-design/icons';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/lib/context/LanguageContext';
-import dayjs from 'dayjs';
 import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
 import Breadcrumb from '@/components/shared/Breadcrumb';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import dayjs from 'dayjs';
+import 'dayjs/locale/fa';
+
+dayjs.locale('fa');
 
 const { Title, Text } = Typography;
 
-function toJalali(date) {
-  const d = new Date(date);
-  const calendar = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+// تبدیل تاریخ میلادی به شمسی
+function toPersianDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
     year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+    month: 'long',
+    day: 'numeric',
     weekday: 'long',
   });
-  const parts = calendar.formatToParts(d);
-  const year = parts.find(p => p.type === 'year').value;
-  const month = parts.find(p => p.type === 'month').value;
-  const day = parts.find(p => p.type === 'day').value;
-  const weekday = parts.find(p => p.type === 'weekday').value;
-  return { year, month, day, weekday, jalali: `${year}/${month}/${day}` };
+  return formatter.format(date);
+}
+
+function toPersianDateShort(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+  return formatter.format(date);
 }
 
 export default function NewAppointmentPage() {
@@ -42,169 +55,196 @@ export default function NewAppointmentPage() {
   const searchParams = useSearchParams();
   const { t, locale } = useLanguage();
   const doctorId = searchParams.get('doctorId');
-
+  
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTime, setSelectedTime] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [availableSlots, setAvailableSlots] = useState([]);
-  const [availableDates, setAvailableDates] = useState([]);
-  const [selectedDateIndex, setSelectedDateIndex] = useState(null);
-  const [isBooking, setIsBooking] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [loadingBook, setLoadingBook] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [bookingResult, setBookingResult] = useState(null);
+  
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
-
   const getToken = () => localStorage.getItem('token');
 
-  const fetchDoctor = async () => {
-    if (!doctorId) {
-      message.error('پزشک انتخاب نشده است');
-      router.push(`/${locale}/doctors`);
-      return;
-    }
-
-    try {
-      const res = await fetch(`${API_URL}/api/doctors/${doctorId}/public`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setDoctor(data.data);
-      } else {
-        message.error(data.message || 'خطا در دریافت اطلاعات پزشک');
-      }
-    } catch (error) {
-      console.error('Error fetching doctor:', error);
-      message.error('خطا در ارتباط با سرور');
-    }
-  };
-
-  const fetchAvailableSlots = async (date) => {
-    const formattedDate = date.format('YYYY-MM-DD');
-    
-    try {
-      const res = await fetch(
-        `${API_URL}/api/appointments/doctors/${doctorId}/available-slots?date=${formattedDate}`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      const data = await res.json();
-      
-      if (data.success && data.data) {
-        const slots = data.data.slots || [];
-        return slots;
-      }
-      return [];
-    } catch (error) {
-      console.error('Error fetching slots:', error);
-      return [];
-    }
-  };
-
-  const fetchAvailableDates = async () => {
-    const dates = [];
-    const today = dayjs();
-    setLoading(true);
-    
-    for (let i = 0; i < 14; i++) {
-      const date = today.add(i, 'day');
-      const slots = await fetchAvailableSlots(date);
-      
-      if (slots.length > 0) {
-        const jalali = toJalali(date.toDate());
-        dates.push({
-          date: date,
-          jalali: jalali.jalali,
-          weekday: jalali.weekday,
-          day: jalali.day,
-          slots: slots,
-        });
-      }
-    }
-    
-    setAvailableDates(dates);
-    setLoading(false);
-  };
-
+  // دریافت اطلاعات پزشک
   useEffect(() => {
-    if (!doctorId) {
-      router.push(`/${locale}/doctors`);
-      return;
-    }
-    const token = getToken();
-    if (!token) {
-      router.push(`/${locale}/login`);
-      return;
-    }
-    fetchDoctor();
-    fetchAvailableDates();
-  }, [doctorId]);
-
-  const handleDateSelect = (index) => {
-    const dateData = availableDates[index];
-    setSelectedDateIndex(index);
-    setSelectedDate(dateData.date);
-    setAvailableSlots(dateData.slots);
-    setSelectedTime(null);
-  };
-
-  const handleTimeSelect = (time) => {
-    setSelectedTime(time);
-  };
-
-  const handleNext = async () => {
-    if (!selectedDate || !selectedTime) {
-      message.warning('لطفاً تاریخ و ساعت را انتخاب کنید');
-      return;
-    }
-
-    setIsBooking(true);
-
-    try {
-      const slots = await fetchAvailableSlots(selectedDate);
-      const stillAvailable = slots.some(slot => 
-        slot.start_time === selectedTime.start_time && slot.is_available === true
-      );
-
-      if (!stillAvailable) {
-        message.error('متأسفانه این زمان توسط شخص دیگری رزرو شده است. لطفاً زمان دیگری را انتخاب کنید.');
-        const newSlots = await fetchAvailableSlots(selectedDate);
-        setAvailableSlots(newSlots);
-        setSelectedTime(null);
-        setIsBooking(false);
+    const fetchDoctor = async () => {
+      if (!doctorId) {
+        message.error('شناسه پزشک یافت نشد');
+        router.push(`/${locale}/doctors`);
         return;
       }
 
-      const appointmentData = {
-        doctorId: doctor.id,
-        doctorName: doctor.full_name,
-        doctorSpecialty: doctor.specialty?.name,
-        doctorFee: parseInt(doctor.consultation_fee || 0),
-        date: selectedDate.format('YYYY-MM-DD'),
-        time: selectedTime.start_time,
-      };
-      localStorage.setItem('appointmentData', JSON.stringify(appointmentData));
+      try {
+        const token = getToken();
+        const res = await fetch(`${API_URL}/api/doctors/${doctorId}/public`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const data = await res.json();
+        console.log('👨‍⚕️ Doctor data:', data);
+        if (data.success) {
+          setDoctor(data.data);
+        } else {
+          message.error(data.message || 'خطا در دریافت اطلاعات پزشک');
+        }
+      } catch (error) {
+        console.error('Error fetching doctor:', error);
+        message.error('خطا در ارتباط با سرور');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctor();
+  }, [doctorId, locale, router]);
+
+  // دریافت زمان‌های خالی
+  const fetchAvailableSlots = async (date) => {
+    if (!doctorId) return;
+    
+    setLoadingSlots(true);
+    try {
+      const token = getToken();
+      console.log('📡 Fetching slots for doctor:', doctorId, 'date:', date);
       
-      router.push(`/${locale}/appointments/checkout`);
+      const res = await fetch(`${API_URL}/api/appointments/doctors/${doctorId}/available-slots?date=${date}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await res.json();
+      console.log('📦 Slots response:', data);
+
+      if (data.success) {
+        const slots = data.data?.slots || [];
+        console.log('📋 Available slots:', slots);
+        setAvailableSlots(slots);
+        
+        if (slots.length === 0) {
+          message.info('هیچ زمانی برای این تاریخ موجود نیست');
+        } else {
+          const availableCount = slots.filter(s => s.is_available !== false).length;
+          message.success(`${availableCount} زمان موجود برای انتخاب`);
+        }
+      } else {
+        message.error(data.message || 'خطا در دریافت زمان‌ها');
+        setAvailableSlots([]);
+      }
     } catch (error) {
-      console.error('Error checking availability:', error);
-      message.error('خطا در بررسی زمان نوبت');
+      console.error('Error fetching slots:', error);
+      message.error('خطا در ارتباط با سرور');
+      setAvailableSlots([]);
     } finally {
-      setIsBooking(false);
+      setLoadingSlots(false);
     }
+  };
+
+  // بارگیری اولیه زمان‌ها
+  useEffect(() => {
+    if (doctorId) {
+      fetchAvailableSlots(selectedDate);
+    }
+  }, [doctorId, selectedDate]);
+
+  const handleDateChange = (date) => {
+    const formattedDate = date.format('YYYY-MM-DD');
+    setSelectedDate(formattedDate);
+    setSelectedSlot(null);
+  };
+
+  const handleSlotSelect = (slot) => {
+    if (!slot.is_available) {
+      message.warning('این زمان قبلاً رزرو شده است');
+      return;
+    }
+    setSelectedSlot(slot);
+  };
+
+  const handleBook = async () => {
+    if (!selectedSlot) {
+      message.warning('لطفاً یک زمان را انتخاب کنید');
+      return;
+    }
+
+    setLoadingBook(true);
+    try {
+      const token = getToken();
+      const bookData = {
+        doctor_id: parseInt(doctorId),
+        date: selectedDate,
+        start_time: selectedSlot.start_time || selectedSlot.time,
+        notes: '',
+      };
+
+      console.log('📝 Booking appointment:', bookData);
+
+      const res = await fetch(`${API_URL}/api/appointments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookData),
+      });
+
+      const data = await res.json();
+      console.log('📦 Booking response:', data);
+
+      if (data.success) {
+        const appointment = data.data;
+        setBookingResult({
+          success: true,
+          appointment: appointment,
+          message: 'نوبت با موفقیت رزرو شد',
+        });
+        setShowSuccessModal(true);
+        
+        localStorage.setItem('appointmentData', JSON.stringify({
+          doctorId: doctorId,
+          doctorName: doctor?.name || doctor?.full_name || 'پزشک',
+          doctorSpecialty: doctor?.specialty?.name || 'عمومی',
+          date: selectedDate,
+          time: selectedSlot.start_time || selectedSlot.time,
+          doctorFee: parseFloat(doctor?.consultation_fee) || 0,
+        }));
+      } else {
+        message.error(data.message || 'خطا در رزرو نوبت');
+      }
+    } catch (error) {
+      console.error('Error booking:', error);
+      message.error('خطا در ارتباط با سرور');
+    } finally {
+      setLoadingBook(false);
+    }
+  };
+
+  const handleGoToPayment = () => {
+    setShowSuccessModal(false);
+    router.push(`/${locale}/appointments/checkout`);
+  };
+
+  const handleGoHome = () => {
+    setShowSuccessModal(false);
+    router.push(`/${locale}/doctors`);
+  };
+
+  const disabledDate = (current) => {
+    return current && current < dayjs().startOf('day');
   };
 
   if (loading) {
     return (
       <>
         <Header />
-        <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '0 20px' }}>
-          <Skeleton active avatar paragraph={{ rows: 8 }} />
-        </div>
+        <LoadingSpinner />
         <Footer />
       </>
     );
@@ -214,7 +254,7 @@ export default function NewAppointmentPage() {
     return (
       <>
         <Header />
-        <div className="container" style={{ padding: '40px 20px', textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
           <Title level={4}>پزشک یافت نشد</Title>
           <Button type="primary" onClick={() => router.push(`/${locale}/doctors`)}>
             بازگشت به لیست پزشکان
@@ -228,269 +268,262 @@ export default function NewAppointmentPage() {
   return (
     <>
       <Header />
-      <main style={{ minHeight: 'calc(100vh - 200px)', background: '#f8fafc' }}>
-        <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '0 20px' }}>
+      <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 20px' }}>
           <Breadcrumb />
 
-          <Title level={2} style={{ marginBottom: '4px' }}>📅 {t('appointments.newAppointment')}</Title>
-          <Text type="secondary" style={{ fontSize: '16px' }}>انتخاب تاریخ و ساعت نوبت</Text>
-
-          {/* اطلاعات پزشک */}
-          <Card style={{ marginTop: '24px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-            <Row gutter={[24, 24]} align="middle">
-              <Col xs={24} sm={6} style={{ textAlign: 'center' }}>
-                <Avatar
-                  size={80}
-                  style={{ 
-                    background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
-                    boxShadow: '0 4px 12px rgba(37,99,235,0.3)'
-                  }}
-                >
-                  {doctor.full_name?.charAt(0) || '👨‍⚕️'}
-                </Avatar>
-              </Col>
-              <Col xs={24} sm={18}>
-                <Title level={3} style={{ margin: 0, marginBottom: '4px' }}>{doctor.full_name}</Title>
-                <Space size="middle" wrap>
-                  <Text style={{ color: '#2563eb', fontWeight: 500 }}>{doctor.specialty?.name}</Text>
-                  <span style={{ color: '#e2e8f0' }}>|</span>
-                  <Text><EnvironmentOutlined style={{ color: '#64748b' }} /> {doctor.clinic_name || 'آدرس مطب'}</Text>
-                  <span style={{ color: '#e2e8f0' }}>|</span>
-                  <Text><DollarOutlined style={{ color: '#10b981' }} /> <strong>{parseInt(doctor.consultation_fee || 0).toLocaleString()}</strong> تومان</Text>
-                </Space>
-                <div style={{ marginTop: '8px' }}>
-                  <Space>
-                    <StarOutlined style={{ color: '#f59e0b' }} />
-                    <Text>{doctor.rating || 4.9}</Text>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>({doctor.total_reviews || 0} نظر)</Text>
-                  </Space>
-                </div>
-              </Col>
-            </Row>
-          </Card>
+          <Title level={2} style={{ marginBottom: '4px' }}>📅 رزرو نوبت جدید</Title>
+          <Text type="secondary">اطلاعات پزشک را بررسی و زمان مورد نظر را انتخاب کنید</Text>
 
           <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
-            {/* لیست روزهای دارای نوبت */}
-            <Col xs={24} lg={14}>
+            <Col xs={24} lg={8}>
               <Card 
-                title="📅 روزهای دارای نوبت خالی"
-                style={{ borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', height: '100%' }}
+                title="👨‍⚕️ اطلاعات پزشک"
+                style={{ borderRadius: '16px' }}
+                bodyStyle={{ padding: '16px' }}
               >
-                {availableDates.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {availableDates.map((item, index) => (
-                      <div
-                        key={index}
-                        onClick={() => handleDateSelect(index)}
-                        style={{
-                          padding: '14px 18px',
-                          background: selectedDateIndex === index ? '#eff6ff' : '#ffffff',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          border: selectedDateIndex === index ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                          transition: 'all 0.3s ease',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          boxShadow: selectedDateIndex === index ? '0 4px 12px rgba(37,99,235,0.1)' : 'none',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (selectedDateIndex !== index) {
-                            e.currentTarget.style.borderColor = '#2563eb';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (selectedDateIndex !== index) {
-                            e.currentTarget.style.borderColor = '#e2e8f0';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }
-                        }}
-                      >
-                        <Space size="middle">
-                          <div style={{ 
-                            width: '48px', 
-                            height: '48px', 
-                            borderRadius: '12px',
-                            background: selectedDateIndex === index ? '#2563eb' : '#f1f5f9',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: selectedDateIndex === index ? 'white' : '#475569',
-                          }}>
-                            <span style={{ fontSize: '18px', fontWeight: 'bold' }}>{item.day}</span>
-                            <span style={{ fontSize: '10px' }}>{item.jalali.split('/')[1]}</span>
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: '600', fontSize: '16px', color: selectedDateIndex === index ? '#1e293b' : '#334155' }}>
-                              {item.weekday}
-                            </div>
-                            <div style={{ fontSize: '13px', color: selectedDateIndex === index ? '#64748b' : '#94a3b8' }}>
-                              {item.jalali}
-                            </div>
-                          </div>
-                        </Space>
-                        <Tag color={selectedDateIndex === index ? 'blue' : 'default'} style={{ borderRadius: '20px', padding: '2px 14px' }}>
-                          {item.slots.length} زمان خالی
-                        </Tag>
+                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Avatar 
+                      size={64} 
+                      src={doctor?.avatar}
+                      style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+                    >
+                      {doctor?.name?.charAt(0) || doctor?.full_name?.charAt(0)}
+                    </Avatar>
+                    <div>
+                      <Text strong style={{ fontSize: '16px' }}>
+                        {doctor?.name || doctor?.full_name}
+                      </Text>
+                      <div>
+                        <Tag color="blue">{doctor?.specialty?.name || 'عمومی'}</Tag>
                       </div>
-                    ))}
+                      {doctor?.consultation_fee > 0 && (
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                          <DollarOutlined /> {parseFloat(doctor.consultation_fee).toLocaleString()} تومان
+                        </Text>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <Alert 
-                    message="هیچ روزی با نوبت خالی یافت نشد" 
-                    description="برای امروز و روزهای آینده زمان خالی موجود نیست" 
-                    type="warning" 
-                    showIcon 
-                  />
-                )}
+
+                  <Divider style={{ margin: '8px 0' }} />
+
+                  <div>
+                    <Text type="secondary">اطلاعات تماس</Text>
+                    <div style={{ marginTop: '4px' }}>
+                      {doctor?.phone && (
+                        <div><PhoneOutlined /> {doctor.phone}</div>
+                      )}
+                      {doctor?.address && (
+                        <div><EnvironmentOutlined /> {doctor.address}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {doctor?.bio && (
+                    <>
+                      <Divider style={{ margin: '8px 0' }} />
+                      <div>
+                        <Text type="secondary">درباره پزشک</Text>
+                        <Text style={{ display: 'block', marginTop: '4px', fontSize: '13px' }}>
+                          {doctor.bio}
+                        </Text>
+                      </div>
+                    </>
+                  )}
+                </Space>
               </Card>
             </Col>
 
-            {/* ساعت‌های خالی */}
-            <Col xs={24} lg={10}>
+            <Col xs={24} lg={16}>
               <Card 
-                title={
-                  <Space>
-                    <ClockCircleOutlined style={{ color: '#2563eb' }} />
-                    <span>ساعت‌های خالی</span>
-                    {selectedDate && (
-                      <Tag color="blue" style={{ borderRadius: '20px' }}>
-                        {toJalali(selectedDate.toDate()).jalali}
-                      </Tag>
-                    )}
-                  </Space>
-                }
-                style={{ borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', height: '100%' }}
+                title="🕐 انتخاب زمان"
+                style={{ borderRadius: '16px' }}
+                bodyStyle={{ padding: '20px' }}
               >
-                {selectedDate ? (
-                  availableSlots.length > 0 ? (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                      {availableSlots.map((slot) => {
-                        const isAvailable = slot.is_available === true;
+                <div style={{ marginBottom: '20px' }}>
+                  <Text strong>تاریخ مورد نظر (شمسی)</Text>
+                  <div style={{ marginTop: '8px' }}>
+                    <Calendar 
+                      fullscreen={false} 
+                      value={dayjs(selectedDate)}
+                      onChange={handleDateChange}
+                      disabledDate={disabledDate}
+                      style={{ borderRadius: '12px', border: '1px solid #e8e8e8' }}
+                    />
+                  </div>
+                </div>
+
+                <Divider style={{ margin: '12px 0' }} />
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <Text strong>
+                      زمان‌های موجود برای {toPersianDate(selectedDate)}
+                    </Text>
+                    <Button 
+                      size="small" 
+                      icon={<ReloadOutlined />} 
+                      onClick={() => fetchAvailableSlots(selectedDate)}
+                      loading={loadingSlots}
+                    >
+                      بروزرسانی
+                    </Button>
+                  </div>
+
+                  {loadingSlots ? (
+                    <div style={{ padding: '20px', textAlign: 'center' }}>
+                      <Spin size="large" />
+                      <div style={{ marginTop: 12 }}>
+                        <Text type="secondary">در حال دریافت زمان‌های موجود...</Text>
+                      </div>
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <Empty 
+                      description="هیچ زمانی برای این تاریخ موجود نیست" 
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    >
+                      <Button type="primary" onClick={() => {
+                        const nextDate = dayjs(selectedDate).add(1, 'day').format('YYYY-MM-DD');
+                        setSelectedDate(nextDate);
+                      }}>
+                        مشاهده روز بعد
+                      </Button>
+                    </Empty>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px' }}>
+                      {availableSlots.map((slot, index) => {
+                        const isAvailable = slot.is_available !== false;
+                        const isSelected = selectedSlot === slot;
+                        const timeLabel = slot.time || slot.start_time?.substring(0, 5) || '--:--';
+                        
                         return (
                           <Button
-                            key={slot.start_time}
-                            type={selectedTime?.start_time === slot.start_time ? 'primary' : 'default'}
-                            onClick={() => isAvailable && handleTimeSelect(slot)}
+                            key={index}
+                            type={isSelected ? 'primary' : 'default'}
                             disabled={!isAvailable}
-                            style={{ 
-                              minWidth: '80px',
-                              height: '48px',
+                            onClick={() => handleSlotSelect(slot)}
+                            style={{
+                              height: '56px',
                               borderRadius: '12px',
-                              fontWeight: selectedTime?.start_time === slot.start_time ? 'bold' : 'normal',
-                              borderColor: !isAvailable ? '#ef4444' : (
-                                selectedTime?.start_time === slot.start_time ? '#2563eb' : '#22c55e'
-                              ),
-                              background: !isAvailable ? '#fef2f2' : (
-                                selectedTime?.start_time === slot.start_time ? '#2563eb' : '#f0fdf4'
-                              ),
-                              color: !isAvailable ? '#ef4444' : (
-                                selectedTime?.start_time === slot.start_time ? 'white' : '#16a34a'
-                              ),
-                              boxShadow: selectedTime?.start_time === slot.start_time ? '0 4px 12px rgba(37,99,235,0.2)' : 'none',
-                              cursor: !isAvailable ? 'not-allowed' : 'pointer',
-                              opacity: !isAvailable ? 0.6 : 1,
+                              borderColor: isSelected ? '#2563eb' : (isAvailable ? '#d9d9d9' : '#f0f0f0'),
+                              background: isSelected ? '#2563eb' : (isAvailable ? 'white' : '#f5f5f5'),
+                              color: isSelected ? 'white' : (isAvailable ? 'inherit' : '#bfbfbf'),
+                              fontWeight: isSelected ? 'bold' : 'normal',
+                              transition: 'all 0.3s ease',
                             }}
                           >
-                            {slot.time}
-                            {!isAvailable && (
-                              <span style={{ fontSize: '10px', display: 'block', color: '#ef4444' }}>
-                                ✕ رزرو
-                              </span>
-                            )}
-                            {isAvailable && (
-                              <span style={{ fontSize: '10px', display: 'block', color: '#16a34a' }}>
-                                ✓ خالی
-                              </span>
-                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <ClockCircleOutlined style={{ fontSize: '14px' }} />
+                              <span style={{ fontSize: '14px' }}>{timeLabel}</span>
+                              {!isAvailable && (
+                                <span style={{ fontSize: '8px', color: '#ff4d4f' }}>رزرو شده</span>
+                              )}
+                            </div>
                           </Button>
                         );
                       })}
                     </div>
-                  ) : (
-                    <Empty description="در این روز هیچ زمان خالی وجود ندارد" />
-                  )
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <CalendarOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />
-                    <p style={{ marginTop: '16px', color: '#94a3b8' }}>
-                      لطفاً یک روز را انتخاب کنید
-                    </p>
-                  </div>
-                )}
+                  )}
 
-                {selectedTime && selectedTime.is_available && (
-                  <div style={{ 
-                    marginTop: '20px', 
-                    padding: '16px', 
-                    background: '#f0fdf4', 
-                    borderRadius: '12px',
-                    border: '1px solid #bbf7d0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <Space>
-                      <CheckCircleOutlined style={{ color: '#10b981' }} />
-                      <Text strong>زمان انتخابی: </Text>
-                      <Tag color="success" style={{ fontSize: '16px', padding: '4px 16px', borderRadius: '20px' }}>{selectedTime.time}</Tag>
-                    </Space>
-                  </div>
-                )}
+                  {availableSlots.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                        {availableSlots.filter(s => s.is_available !== false).length} زمان موجود از {availableSlots.length} زمان
+                      </Text>
+                    </div>
+                  )}
+                </div>
 
-                {selectedTime && !selectedTime.is_available && (
-                  <div style={{ 
-                    marginTop: '20px', 
-                    padding: '16px', 
-                    background: '#fef2f2', 
-                    borderRadius: '12px',
-                    border: '1px solid #fecaca',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
+                <Divider style={{ margin: '16px 0' }} />
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <Button 
+                    onClick={() => router.push(`/${locale}/doctors`)}
+                    icon={<LeftOutlined />}
+                    size="large"
+                    style={{ borderRadius: '12px' }}
+                  >
+                    بازگشت
+                  </Button>
+                  <Button
+                    type="primary"
+                    size="large"
+                    onClick={handleBook}
+                    loading={loadingBook}
+                    disabled={!selectedSlot}
+                    style={{ 
+                      flex: 1,
+                      borderRadius: '12px',
+                      height: '48px',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {selectedSlot ? 
+                      `رزرو نوبت ${selectedSlot.time || selectedSlot.start_time?.substring(0, 5)}` : 
+                      'ابتدا یک زمان انتخاب کنید'
+                    }
+                  </Button>
+                </div>
+
+                {selectedSlot && doctor?.consultation_fee > 0 && (
+                  <div style={{ marginTop: '12px', padding: '12px 16px', background: '#f0f5ff', borderRadius: '8px' }}>
                     <Space>
-                      <CloseCircleOutlined style={{ color: '#ef4444' }} />
-                      <Text strong style={{ color: '#ef4444' }}>این زمان رزرو شده است</Text>
+                      <DollarOutlined style={{ color: '#2563eb' }} />
+                      <Text>
+                        هزینه ویزیت: <strong>{parseFloat(doctor.consultation_fee).toLocaleString()} تومان</strong>
+                      </Text>
                     </Space>
                   </div>
                 )}
               </Card>
             </Col>
           </Row>
+        </div>
+      </main>
 
-          {/* دکمه ادامه */}
-          <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Button 
-              onClick={() => router.push(`/${locale}/doctors`)}
-              icon={<LeftOutlined />}
-              size="large"
-              style={{ borderRadius: '12px' }}
-            >
-              بازگشت
-            </Button>
+      <Modal
+        title="✅ نوبت رزرو شد"
+        open={showSuccessModal}
+        onCancel={handleGoHome}
+        footer={null}
+        width={450}
+        centered
+        closable={false}
+      >
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
+          <Title level={4}>نوبت شما با موفقیت رزرو شد</Title>
+          
+          {bookingResult?.appointment && (
+            <div style={{ textAlign: 'right', marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
+              <div><strong>پزشک:</strong> {doctor?.name || doctor?.full_name}</div>
+              <div><strong>تاریخ:</strong> {toPersianDate(selectedDate)}</div>
+              <div><strong>ساعت:</strong> {selectedSlot?.time || selectedSlot?.start_time?.substring(0, 5)}</div>
+              <div><strong>هزینه:</strong> {parseFloat(doctor?.consultation_fee || 0).toLocaleString()} تومان</div>
+            </div>
+          )}
+
+          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <Button 
               type="primary" 
               size="large"
-              onClick={handleNext}
-              loading={isBooking}
-              disabled={!selectedDate || !selectedTime || !selectedTime?.is_available || isBooking}
-              icon={<RightOutlined />}
-              style={{ 
-                borderRadius: '12px',
-                height: '48px',
-                padding: '0 32px',
-                fontWeight: 'bold',
-                boxShadow: (!selectedDate || !selectedTime || !selectedTime?.is_available || isBooking) ? 'none' : '0 4px 16px rgba(37,99,235,0.3)',
-              }}
+              onClick={handleGoToPayment}
+              style={{ borderRadius: '12px' }}
             >
-              ادامه به مرحله پرداخت
+              ادامه به پرداخت
+            </Button>
+            <Button 
+              size="large"
+              onClick={handleGoHome}
+              style={{ borderRadius: '12px' }}
+            >
+              بازگشت به خانه
             </Button>
           </div>
         </div>
-      </main>
+      </Modal>
+
       <Footer />
     </>
   );

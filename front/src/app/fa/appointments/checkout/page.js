@@ -23,16 +23,42 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
 
-function toJalali(dateStr) {
+// تبدیل تاریخ میلادی به شمسی با استفاده از Intl.DateTimeFormat
+function toPersianDate(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
-  const calendar = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+  
+  const date = new Date(dateStr);
+  
+  // تبدیل به شمسی با استفاده از Intl
+  const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     weekday: 'long',
   });
-  return calendar.format(d);
+  
+  return formatter.format(date);
+}
+
+// تبدیل تاریخ به شمسی با فرمت کوتاه
+function toPersianDateShort(dateStr) {
+  if (!dateStr) return '';
+  
+  const date = new Date(dateStr);
+  
+  const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+  
+  return formatter.format(date);
+}
+
+// فرمت زمان (فقط ساعت و دقیقه)
+function formatTime(timeStr) {
+  if (!timeStr) return '';
+  return timeStr.substring(0, 5); // فقط HH:MM
 }
 
 export default function CheckoutPage() {
@@ -292,7 +318,7 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          doctor_id: appointmentData.doctorId,
+          doctor_id: parseInt(appointmentData.doctorId),
           date: appointmentData.date,
           start_time: appointmentData.time,
           notes: '',
@@ -369,6 +395,8 @@ export default function CheckoutPage() {
     const token = getToken();
 
     try {
+      console.log('🔄 Starting gateway payment with:', { gateway, token: token ? 'exists' : 'missing' });
+
       const bookRes = await fetch(`${API_URL}/api/appointments`, {
         method: 'POST',
         headers: {
@@ -376,13 +404,15 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          doctor_id: appointmentData.doctorId,
+          doctor_id: parseInt(appointmentData.doctorId),
           date: appointmentData.date,
           start_time: appointmentData.time,
           notes: '',
         }),
       });
       const bookData = await bookRes.json();
+
+      console.log('📦 Booking response:', bookData);
 
       if (!bookData.success) {
         message.error(bookData.message || 'خطا در رزرو نوبت');
@@ -391,6 +421,7 @@ export default function CheckoutPage() {
       }
 
       const appointmentId = bookData.data.id;
+      console.log('✅ Appointment created with ID:', appointmentId);
 
       const invRes = await fetch(`${API_URL}/api/invoices/my`, {
         headers: {
@@ -399,13 +430,18 @@ export default function CheckoutPage() {
         },
       });
       const invData = await invRes.json();
+      console.log('📦 Invoices response:', invData);
+
       const invoice = invData.success ? invData.data?.find(i => i.appointment_id === appointmentId) : null;
 
       if (!invoice) {
-        message.error('فاکتور یافت نشد');
+        console.error('❌ No invoice found for appointment:', appointmentId);
+        message.error('فاکتور یافت نشد. لطفاً دوباره تلاش کنید.');
         setSubmitting(false);
         return;
       }
+
+      console.log('✅ Invoice found:', invoice.id, invoice.invoice_number);
 
       const payRes = await fetch(`${API_URL}/api/payments/initiate`, {
         method: 'POST',
@@ -421,6 +457,7 @@ export default function CheckoutPage() {
         }),
       });
       const payData = await payRes.json();
+      console.log('📦 Payment initiation response:', payData);
 
       if (payData.success) {
         if (payData.data.redirect_url) {
@@ -444,13 +481,17 @@ export default function CheckoutPage() {
           form.submit();
         } else {
           message.error('اطلاعات پرداخت ناقص است');
+          setSubmitting(false);
         }
       } else {
+        console.error('❌ Payment initiation failed:', payData);
         message.error(payData.message || 'خطا در شروع پرداخت');
+        setSubmitting(false);
       }
     } catch (error) {
-      console.error('Error initiating payment:', error);
+      console.error('❌ Error initiating payment:', error);
       message.error('خطا در ارتباط با درگاه پرداخت');
+      setSubmitting(false);
     } finally {
       setSubmitting(false);
     }
@@ -482,7 +523,12 @@ export default function CheckoutPage() {
   }
 
   const discountAmount = appointmentData.doctorFee - finalPrice;
-  const jalaliDate = toJalali(appointmentData.date);
+  
+  // نمایش تاریخ شمسی با استفاده از Intl.DateTimeFormat
+  const persianDate = toPersianDate(appointmentData.date);
+  const formattedTime = formatTime(appointmentData.time);
+  const doctorName = appointmentData.doctorName || 'پزشک';
+  const doctorSpecialty = appointmentData.doctorSpecialty || 'عمومی';
 
   return (
     <>
@@ -506,16 +552,16 @@ export default function CheckoutPage() {
                     <Text type="secondary" style={{ fontSize: '12px' }}>پزشک</Text>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                       <Avatar size={32} style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
-                        {appointmentData.doctorName?.charAt(0)}
+                        {doctorName.charAt(0)}
                       </Avatar>
-                      <Text strong style={{ fontSize: '16px' }}>{appointmentData.doctorName}</Text>
+                      <Text strong style={{ fontSize: '16px' }}>{doctorName}</Text>
                     </div>
                   </div>
 
                   <div>
                     <Text type="secondary" style={{ fontSize: '12px' }}>تخصص</Text>
                     <div style={{ marginTop: '4px' }}>
-                      <Tag color="blue">{appointmentData.doctorSpecialty}</Tag>
+                      <Tag color="blue">{doctorSpecialty}</Tag>
                     </div>
                   </div>
 
@@ -523,8 +569,8 @@ export default function CheckoutPage() {
                     <Text type="secondary" style={{ fontSize: '12px' }}>تاریخ و ساعت</Text>
                     <div style={{ marginTop: '4px' }}>
                       <Space>
-                        <Tag icon={<CalendarOutlined />} color="blue">{jalaliDate}</Tag>
-                        <Tag icon={<ClockCircleOutlined />} color="green">{appointmentData.time}</Tag>
+                        <Tag icon={<CalendarOutlined />} color="blue">{persianDate}</Tag>
+                        <Tag icon={<ClockCircleOutlined />} color="green">{formattedTime}</Tag>
                       </Space>
                     </div>
                   </div>
@@ -710,6 +756,7 @@ export default function CheckoutPage() {
         </div>
       </main>
 
+      {/* مودال انتخاب درگاه پرداخت */}
       <Modal
         title="انتخاب درگاه پرداخت"
         open={gatewayModalVisible}
