@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Models\Patient;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class ProfileController extends Controller
@@ -24,15 +27,48 @@ class ProfileController extends Controller
             'name' => 'sometimes|string|max:255',
             'full_name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,email,' . $user->id,
+            'mobile' => 'sometimes|string|max:20|unique:users,mobile,' . $user->id,
+            'national_code' => 'sometimes|string|max:10',
+            'address' => 'sometimes|string|max:500',
+            'insurance_type' => 'nullable|string|max:50',
+            'insurance_number' => 'nullable|string|max:50',
         ]);
 
         if ($validator->fails()) {
             return $this->error('اطلاعات وارد شده نامعتبر است', 422, $validator->errors());
         }
 
-        $user->update($request->only(['name', 'full_name', 'email']));
+        try {
+            // آپدیت کاربر
+            $user->update($request->only(['name', 'full_name', 'email', 'mobile']));
 
-        return $this->success($user->fresh(), 'اطلاعات با موفقیت به‌روزرسانی شد');
+            // آپدیت یا ایجاد پروفایل بیمار
+            $patient = Patient::where('user_id', $user->id)->first();
+            $patientData = [
+                'national_code' => $request->national_code,
+                'address' => $request->address,
+                'insurance_type' => $request->insurance_type,
+                'insurance_number' => $request->insurance_number,
+            ];
+
+            if ($patient) {
+                $patient->update($patientData);
+            } else {
+                $patientData['user_id'] = $user->id;
+                Patient::create($patientData);
+            }
+
+            Log::info('✅ Profile updated for user: ' . $user->id);
+
+            return $this->success(
+                $user->load('patient'),
+                'اطلاعات با موفقیت به‌روزرسانی شد'
+            );
+
+        } catch (\Exception $e) {
+            Log::error('❌ Profile update error: ' . $e->getMessage());
+            return $this->error('خطا در به‌روزرسانی اطلاعات: ' . $e->getMessage(), 500);
+        }
     }
 
     public function changePassword(Request $request)
@@ -52,13 +88,15 @@ class ProfileController extends Controller
             return $this->error('اطلاعات وارد شده نامعتبر است', 422, $validator->errors());
         }
 
-        if (!\Hash::check($request->current_password, $user->password)) {
+        if (!Hash::check($request->current_password, $user->password)) {
             return $this->error('رمز عبور فعلی اشتباه است', 400);
         }
 
         $user->update([
-            'password' => \Hash::make($request->new_password),
+            'password' => Hash::make($request->new_password),
         ]);
+
+        Log::info('✅ Password changed for user: ' . $user->id);
 
         return $this->success(null, 'رمز عبور با موفقیت تغییر کرد');
     }
@@ -66,7 +104,7 @@ class ProfileController extends Controller
     public function uploadAvatar(Request $request)
     {
         Log::info('📸 Upload avatar called');
-        
+
         $user = $request->user();
 
         if (!$user) {
@@ -142,8 +180,25 @@ class ProfileController extends Controller
 
         if ($user->getFirstMedia('avatar')) {
             $user->clearMediaCollection('avatar');
+            Log::info('🗑️ Avatar deleted for user: ' . $user->id);
         }
 
         return $this->success(null, 'عکس پروفایل با موفقیت حذف شد');
+    }
+
+    /**
+     * دریافت اطلاعات کامل کاربر با پروفایل
+     */
+    public function me(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->error('کاربر یافت نشد', 401);
+        }
+
+        $user->load('patient');
+
+        return $this->success($user);
     }
 }

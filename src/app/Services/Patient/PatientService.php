@@ -81,7 +81,11 @@ class PatientService
                 'tenant_id' => $this->tenantId,
                 'user_id' => $user->id,
                 'national_code' => $data['national_code'] ?? null,
+                'full_name' => $data['full_name'] ?? $data['name'] ?? null,
                 'phone' => $data['phone'] ?? $data['mobile'] ?? null,
+                'address' => $data['address'] ?? null,
+                'insurance_type' => $data['insurance_type'] ?? null,
+                'insurance_number' => $data['insurance_number'] ?? null,
                 'emergency_contact' => $data['emergency_contact'] ?? null,
                 'blood_type' => $data['blood_type'] ?? null,
                 'is_active' => $data['is_active'] ?? true,
@@ -95,7 +99,7 @@ class PatientService
 
             $patient = Patient::create($patientData);
 
-            if (isset($data['address'])) {
+            if (isset($data['address']) && is_array($data['address'])) {
                 $patient->addresses()->create(array_merge(
                     $data['address'],
                     ['is_primary' => true, 'tenant_id' => $this->tenantId]
@@ -135,6 +139,7 @@ class PatientService
     public function update(Patient $patient, array $data): Patient
     {
         return DB::transaction(function () use ($patient, $data) {
+            // آپدیت اطلاعات کاربر
             if (isset($data['name']) || isset($data['email']) || isset($data['mobile'])) {
                 $patient->user->update([
                     'name' => $data['name'] ?? $patient->user->name,
@@ -143,24 +148,37 @@ class PatientService
                 ]);
             }
 
+            // آپدیت اطلاعات بیمار
             $patientData = array_intersect_key($data, array_flip([
-                'national_code', 'phone', 'emergency_contact',
+                'national_code', 'full_name', 'phone', 'address',
+                'insurance_type', 'insurance_number', 'emergency_contact',
                 'blood_type', 'is_active', 'doctor_id', 'metadata'
             ]));
+
+            // اگر full_name وارد نشده ولی name وارد شده، از name استفاده کن
+            if (!isset($patientData['full_name']) && isset($data['name'])) {
+                $patientData['full_name'] = $data['name'];
+            }
 
             if (!empty($patientData)) {
                 $patient->update($patientData);
             }
 
+            // مدیریت آدرس
             if (isset($data['address'])) {
-                $address = $patient->primaryAddress;
-                if ($address) {
-                    $address->update($data['address']);
+                if (is_array($data['address'])) {
+                    $address = $patient->primaryAddress;
+                    if ($address) {
+                        $address->update($data['address']);
+                    } else {
+                        $patient->addresses()->create(array_merge(
+                            $data['address'],
+                            ['is_primary' => true, 'tenant_id' => $this->tenantId]
+                        ));
+                    }
                 } else {
-                    $patient->addresses()->create(array_merge(
-                        $data['address'],
-                        ['is_primary' => true, 'tenant_id' => $this->tenantId]
-                    ));
+                    // اگر آدرس به صورت رشته است، آن را ذخیره کن
+                    $patient->update(['address' => $data['address']]);
                 }
             }
 
@@ -247,5 +265,52 @@ class PatientService
             ->orderBy('appointments_count', 'desc')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * دریافت اطلاعات بیمار جاری (بر اساس user_id)
+     */
+    public function getCurrentPatient(int $userId): ?Patient
+    {
+        return Patient::where('tenant_id', $this->tenantId)
+            ->where('user_id', $userId)
+            ->with(['user'])
+            ->first();
+    }
+
+    /**
+     * بروزرسانی اطلاعات بیمار جاری
+     */
+    public function updateCurrentPatient(int $userId, array $data): Patient
+    {
+        return DB::transaction(function () use ($userId, $data) {
+            $patient = Patient::where('tenant_id', $this->tenantId)
+                ->where('user_id', $userId)
+                ->first();
+
+            if (!$patient) {
+                // اگر بیمار وجود نداشت، ایجاد کن
+                $user = User::findOrFail($userId);
+                $patient = Patient::create([
+                    'tenant_id' => $this->tenantId,
+                    'user_id' => $userId,
+                    'full_name' => $user->name,
+                    'phone' => $user->mobile,
+                    'is_active' => true,
+                ]);
+            }
+
+            // آپدیت اطلاعات بیمار
+            $patientData = array_intersect_key($data, array_flip([
+                'national_code', 'full_name', 'phone', 'address',
+                'insurance_type', 'insurance_number'
+            ]));
+
+            if (!empty($patientData)) {
+                $patient->update($patientData);
+            }
+
+            return $patient->fresh(['user']);
+        });
     }
 }

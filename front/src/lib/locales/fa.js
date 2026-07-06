@@ -123,11 +123,4 @@ export default {
   date: 'تاریخ',
   time: 'ساعت'
 }
-  // ===== داروخانه =====
-  found: 'یافت شد',
-  manufacturer: 'سازنده',
-  deliveryInfo: 'ارسال به سراسر کشور',
-  prescriptionInfo: 'برای خرید این دارو نیاز به ارائه نسخه پزشک معتبر دارید',
-  noDescription: 'توضیحاتی برای این دارو وارد نشده است.',
-  errorFetchingDrugs: 'خطا در دریافت داروها',
-  resetFilters: 'بازنشانی فیلترها',
+
