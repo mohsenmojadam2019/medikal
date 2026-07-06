@@ -14,7 +14,7 @@ import {
     TruckOutlined, HomeOutlined, UserOutlined,
     DollarOutlined, CheckCircleOutlined,
     ReloadOutlined, MedicineBoxOutlined,
-    EditOutlined, UserAddOutlined
+    EditOutlined, UserAddOutlined, PlusOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
@@ -48,14 +48,16 @@ export default function PharmacyCheckoutPage() {
     const [paymentMethod, setPaymentMethod] = useState('wallet');
     const [deliveryAddress, setDeliveryAddress] = useState('');
     const [deliveryNotes, setDeliveryNotes] = useState('');
+    const [recipientName, setRecipientName] = useState('');
+    const [recipientPhone, setRecipientPhone] = useState('');
     const [gateways, setGateways] = useState([]);
     const [selectedGateway, setSelectedGateway] = useState('local');
     const [userProfile, setUserProfile] = useState(null);
+    const [useDifferentAddress, setUseDifferentAddress] = useState(false);
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
     const getToken = () => localStorage.getItem('token');
 
-    // دریافت اطلاعات کاربر
     const fetchUserProfile = async () => {
         try {
             const token = getToken();
@@ -68,9 +70,20 @@ export default function PharmacyCheckoutPage() {
             const data = await res.json();
             if (data.success) {
                 setUserProfile(data.data);
-                // اگر آدرس در پروفایل وجود داشت، استفاده کن
-                if (data.data.address) {
-                    setDeliveryAddress(data.data.address);
+                // تنظیم پیش‌فرض با اطلاعات کاربر
+                setRecipientName(data.data.name || '');
+                setRecipientPhone(data.data.mobile || '');
+
+                // دریافت آدرس از بیمار
+                const patientRes = await fetch(`${API_URL}/api/patients/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const patientData = await patientRes.json();
+                if (patientData.success && patientData.data?.address) {
+                    setDeliveryAddress(patientData.data.address);
                 }
             }
         } catch (error) {
@@ -160,25 +173,19 @@ export default function PharmacyCheckoutPage() {
     const getTotal = () => getSubtotal() + getDeliveryFee() + getTax();
     const canUseWallet = walletBalance >= getTotal();
 
-    // بررسی کامل بودن پروفایل
-    const isProfileComplete = () => {
-        if (!userProfile) return false;
-        return !!(userProfile.name && userProfile.mobile && userProfile.address);
-    };
-
-    // رفتن به صفحه ویرایش پروفایل
-    const goToEditProfile = () => {
-        router.push(`/${locale}/profile`);
-    };
-
     const handleSubmitOrder = async () => {
         if (cart.length === 0) {
             appMessage.warning('سبد خرید شما خالی است');
             return;
         }
 
-        if (!isProfileComplete()) {
-            appMessage.warning('لطفاً ابتدا اطلاعات پروفایل خود را کامل کنید');
+        if (!recipientName.trim()) {
+            appMessage.warning('لطفاً نام گیرنده را وارد کنید');
+            return;
+        }
+
+        if (!recipientPhone.trim()) {
+            appMessage.warning('لطفاً شماره تماس گیرنده را وارد کنید');
             return;
         }
 
@@ -202,6 +209,8 @@ export default function PharmacyCheckoutPage() {
                 })),
                 delivery_address: deliveryAddress,
                 delivery_notes: deliveryNotes,
+                recipient_name: recipientName,
+                recipient_phone: recipientPhone,
                 payment_method: paymentMethod,
                 gateway: selectedGateway,
             };
@@ -262,7 +271,9 @@ export default function PharmacyCheckoutPage() {
         );
     }
 
-    const isFormValid = isProfileComplete() && deliveryAddress.trim().length > 0 &&
+    const isFormValid = recipientName.trim().length > 0 &&
+        recipientPhone.trim().length > 0 &&
+        deliveryAddress.trim().length > 0 &&
         !(paymentMethod === 'wallet' && !canUseWallet);
 
     return (
@@ -313,53 +324,44 @@ export default function PharmacyCheckoutPage() {
 
                                 <Divider />
 
-                                {/* بخش اطلاعات کاربر */}
+                                {/* اطلاعات گیرنده */}
                                 <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                        <Text strong>👤 اطلاعات کاربر</Text>
-                                        <Button
-                                            type="link"
-                                            icon={<EditOutlined />}
-                                            onClick={goToEditProfile}
-                                            size="small"
-                                        >
-                                            ویرایش
-                                        </Button>
+                                        <Text strong>📦 اطلاعات تحویل</Text>
+                                        {userProfile && (
+                                            <Button
+                                                type="link"
+                                                size="small"
+                                                onClick={() => {
+                                                    setRecipientName(userProfile.name || '');
+                                                    setRecipientPhone(userProfile.mobile || '');
+                                                }}
+                                            >
+                                                استفاده از اطلاعات من
+                                            </Button>
+                                        )}
                                     </div>
 
-                                    {isProfileComplete() ? (
-                                        <div style={{ padding: '12px', background: '#f6ffed', borderRadius: '8px' }}>
-                                            <div><Text strong>نام:</Text> {userProfile?.name || '—'}</div>
-                                            <div><Text strong>موبایل:</Text> {userProfile?.mobile || '—'}</div>
-                                            <div><Text strong>آدرس:</Text> {userProfile?.address || '—'}</div>
-                                            <Tag color="green" style={{ marginTop: '4px' }}>✓ اطلاعات کامل</Tag>
-                                        </div>
-                                    ) : (
-                                        <Alert
-                                            message="اطلاعات شما ناقص است"
-                                            description={
-                                                <div>
-                                                    <p>لطفاً اطلاعات زیر را در پروفایل خود تکمیل کنید:</p>
-                                                    <ul style={{ margin: '8px 0', paddingRight: '20px' }}>
-                                                        {!userProfile?.name && <li>نام و نام خانوادگی</li>}
-                                                        {!userProfile?.mobile && <li>شماره موبایل</li>}
-                                                        {!userProfile?.address && <li>آدرس</li>}
-                                                    </ul>
-                                                    <Button
-                                                        type="primary"
-                                                        size="small"
-                                                        icon={<UserAddOutlined />}
-                                                        onClick={goToEditProfile}
-                                                    >
-                                                        تکمیل اطلاعات
-                                                    </Button>
-                                                </div>
-                                            }
-                                            type="warning"
-                                            showIcon
-                                            style={{ marginTop: '8px' }}
-                                        />
-                                    )}
+                                    <Row gutter={[16, 16]}>
+                                        <Col xs={24} md={12}>
+                                            <Input
+                                                placeholder="نام گیرنده"
+                                                value={recipientName}
+                                                onChange={(e) => setRecipientName(e.target.value)}
+                                                prefix={<UserOutlined />}
+                                                size="large"
+                                            />
+                                        </Col>
+                                        <Col xs={24} md={12}>
+                                            <Input
+                                                placeholder="شماره تماس گیرنده"
+                                                value={recipientPhone}
+                                                onChange={(e) => setRecipientPhone(e.target.value)}
+                                                prefix={<PhoneOutlined />}
+                                                size="large"
+                                            />
+                                        </Col>
+                                    </Row>
                                 </div>
 
                                 <Divider />
@@ -367,18 +369,15 @@ export default function PharmacyCheckoutPage() {
                                 <div>
                                     <Text strong>آدرس تحویل:</Text>
                                     <Input.TextArea
-                                        placeholder="آدرس کامل خود را وارد کنید..."
+                                        placeholder="آدرس کامل تحویل را وارد کنید..."
                                         value={deliveryAddress}
                                         onChange={(e) => setDeliveryAddress(e.target.value)}
                                         rows={3}
                                         style={{ marginTop: '8px', borderRadius: '8px' }}
-                                        disabled={!isProfileComplete()}
                                     />
-                                    {!isProfileComplete() && (
-                                        <Text type="danger" style={{ fontSize: '12px' }}>
-                                            ⚠️ برای وارد کردن آدرس، ابتدا اطلاعات پروفایل را تکمیل کنید
-                                        </Text>
-                                    )}
+                                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                                        {userProfile?.address ? 'آدرس پیش‌فرض شما: ' + userProfile.address : ''}
+                                    </Text>
                                 </div>
 
                                 <div style={{ marginTop: '16px' }}>
@@ -400,7 +399,7 @@ export default function PharmacyCheckoutPage() {
                                     style={{ width: '100%' }}
                                 >
                                     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                                        <Radio value="wallet" disabled={!isProfileComplete()}>
+                                        <Radio value="wallet">
                                             <Space>
                                                 <WalletOutlined />
                                                 <div>
@@ -414,7 +413,7 @@ export default function PharmacyCheckoutPage() {
                                                 )}
                                             </Space>
                                         </Radio>
-                                        <Radio value="gateway" disabled={!isProfileComplete()}>
+                                        <Radio value="gateway">
                                             <Space>
                                                 <CreditCardOutlined />
                                                 <div>
@@ -428,17 +427,7 @@ export default function PharmacyCheckoutPage() {
                                     </Space>
                                 </Radio.Group>
 
-                                {!isProfileComplete() && (
-                                    <Alert
-                                        message="تکمیل اطلاعات الزامی است"
-                                        description="برای انتخاب روش پرداخت، ابتدا اطلاعات پروفایل خود را کامل کنید"
-                                        type="warning"
-                                        showIcon
-                                        style={{ marginTop: '12px' }}
-                                    />
-                                )}
-
-                                {paymentMethod === 'wallet' && !canUseWallet && isProfileComplete() && (
+                                {paymentMethod === 'wallet' && !canUseWallet && (
                                     <Alert
                                         message="موجودی کافی نیست"
                                         description="لطفاً روش پرداخت دیگری را انتخاب کنید یا کیف پول خود را شارژ کنید"
@@ -448,7 +437,7 @@ export default function PharmacyCheckoutPage() {
                                     />
                                 )}
 
-                                {paymentMethod === 'gateway' && isProfileComplete() && (
+                                {paymentMethod === 'gateway' && (
                                     <div style={{ marginTop: '16px' }}>
                                         <Text strong>انتخاب درگاه:</Text>
                                         <Radio.Group
@@ -497,26 +486,6 @@ export default function PharmacyCheckoutPage() {
                                     </Text>
                                 </div>
 
-                                {!isProfileComplete() && (
-                                    <Alert
-                                        message="تکمیل اطلاعات"
-                                        description="لطفاً ابتدا اطلاعات پروفایل خود را کامل کنید"
-                                        type="warning"
-                                        showIcon
-                                        style={{ marginBottom: '12px' }}
-                                    />
-                                )}
-
-                                {paymentMethod === 'gateway' && isProfileComplete() && (
-                                    <Alert
-                                        message="پرداخت از طریق درگاه"
-                                        description="پس از تایید سفارش به درگاه پرداخت هدایت می‌شوید"
-                                        type="info"
-                                        showIcon
-                                        style={{ marginBottom: '12px' }}
-                                    />
-                                )}
-
                                 <Button
                                     type="primary"
                                     size="large"
@@ -526,24 +495,26 @@ export default function PharmacyCheckoutPage() {
                                     disabled={!isFormValid}
                                     style={{ marginTop: '16px', borderRadius: '12px', height: '48px' }}
                                 >
-                                    {!isProfileComplete() ? 'تکمیل اطلاعات پروفایل' :
-                                        paymentMethod === 'wallet' && canUseWallet ? 'پرداخت با کیف پول' : 'تایید و ثبت سفارش'}
+                                    {paymentMethod === 'wallet' && canUseWallet ? 'پرداخت با کیف پول' : 'تایید و ثبت سفارش'}
                                 </Button>
 
-                                {!isProfileComplete() && (
-                                    <Button
-                                        type="default"
-                                        size="large"
-                                        block
-                                        icon={<UserAddOutlined />}
-                                        onClick={goToEditProfile}
-                                        style={{ marginTop: '8px', borderRadius: '12px' }}
-                                    >
-                                        رفتن به پروفایل
-                                    </Button>
+                                {!recipientName.trim() && (
+                                    <div style={{ marginTop: '8px' }}>
+                                        <Text type="danger" style={{ fontSize: '12px' }}>
+                                            ⚠️ لطفاً نام گیرنده را وارد کنید
+                                        </Text>
+                                    </div>
                                 )}
 
-                                {!deliveryAddress.trim() && isProfileComplete() && (
+                                {!recipientPhone.trim() && (
+                                    <div style={{ marginTop: '8px' }}>
+                                        <Text type="danger" style={{ fontSize: '12px' }}>
+                                            ⚠️ لطفاً شماره تماس گیرنده را وارد کنید
+                                        </Text>
+                                    </div>
+                                )}
+
+                                {!deliveryAddress.trim() && (
                                     <div style={{ marginTop: '8px' }}>
                                         <Text type="danger" style={{ fontSize: '12px' }}>
                                             ⚠️ لطفاً آدرس تحویل را وارد کنید
