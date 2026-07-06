@@ -94,3 +94,11 @@ export default {
   errorFetchingPharmacies: 'Error fetching pharmacies',
   errorFetchingProduct: 'Error fetching product',
 };
+  // ===== Pharmacy =====
+  found: 'found',
+  manufacturer: 'Manufacturer',
+  deliveryInfo: 'Delivery nationwide',
+  prescriptionInfo: 'This medication requires a valid prescription',
+  noDescription: 'No description available for this drug.',
+  errorFetchingDrugs: 'Error fetching drugs',
+  resetFilters: 'Reset filters',

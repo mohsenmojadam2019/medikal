@@ -1,69 +1,48 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { locales, defaultLocale, directionMap } from '@/lib/i18n';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getTranslation, locales, defaultLocale, directionMap } from '@/lib/i18n';
 
 const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
   const [locale, setLocale] = useState(defaultLocale);
-  const [direction, setDirection] = useState('rtl');
-  const router = useRouter();
-  const pathname = usePathname();
+  const [translations, setTranslations] = useState({});
 
-  useEffect(() => {
-    const storedLocale = localStorage.getItem('locale') || defaultLocale;
-    // اگه زبان در URL موجود نیست، تنظیم کن
-    if (pathname) {
-      const segments = pathname.split('/');
-      if (segments.length > 1 && locales.includes(segments[1])) {
-        setLocale(segments[1]);
+  const t = useCallback((key) => {
+    const keys = key.split('.');
+    let value = translations;
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k];
       } else {
-        // اگه زبان در URL نیست، به مسیر با زبان هدایت کن
-        router.push(`/${storedLocale}${pathname}`);
+        return key;
       }
     }
+    return value || key;
+  }, [translations]);
+
+  useEffect(() => {
+    const savedLocale = localStorage.getItem('locale') || defaultLocale;
+    setLocale(savedLocale);
+    setTranslations(getTranslation(savedLocale));
   }, []);
 
   const changeLanguage = (newLocale) => {
-    if (!locales.includes(newLocale)) return;
-
-    setLocale(newLocale);
-    setDirection(directionMap[newLocale]);
-    localStorage.setItem('locale', newLocale);
-
-    // تغییر مسیر با زبان جدید
-    if (pathname) {
-      const segments = pathname.split('/');
-      if (segments.length > 1 && locales.includes(segments[1])) {
-        segments[1] = newLocale;
-        router.push(segments.join('/'));
-      } else {
-        router.push(`/${newLocale}${pathname}`);
-      }
+    if (locales.includes(newLocale)) {
+      setLocale(newLocale);
+      localStorage.setItem('locale', newLocale);
+      setTranslations(getTranslation(newLocale));
+      document.documentElement.dir = directionMap[newLocale];
     }
   };
 
-  const t = (key) => {
-    try {
-      const translations = require(`@/lib/i18n/${locale}.json`);
-      return key.split('.').reduce((obj, k) => obj?.[k] || key, translations);
-    } catch (error) {
-      console.warn('Translation error for key:', key, error);
-      return key;
-    }
-  };
-
-  const value = {
-    locale,
-    direction,
-    changeLanguage,
-    t,
-  };
+  useEffect(() => {
+    document.documentElement.dir = directionMap[locale];
+  }, [locale]);
 
   return (
-    <LanguageContext.Provider value={value}>
+    <LanguageContext.Provider value={{ locale, t, changeLanguage }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -72,7 +51,7 @@ export function LanguageProvider({ children }) {
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error('useLanguage must be used within LanguageProvider');
+    throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;
 }

@@ -94,3 +94,11 @@ export default {
   errorFetchingPharmacies: 'خطأ في جلب الصيدليات',
   errorFetchingProduct: 'خطأ في جلب المنتج',
 };
+  // ===== Pharmacy =====
+  found: 'تم العثور',
+  manufacturer: 'الشركة المصنعة',
+  deliveryInfo: 'توصيل إلى جميع أنحاء البلاد',
+  prescriptionInfo: 'يتطلب هذا الدواء وصفة طبية صالحة',
+  noDescription: 'لا يوجد وصف لهذا الدواء.',
+  errorFetchingDrugs: 'خطأ في جلب الأدوية',
+  resetFilters: 'إعادة تعيين الفلاتر',

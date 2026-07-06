@@ -342,3 +342,8 @@ Route::middleware('auth:sanctum')->prefix('pharmacy')->group(function () {
         Route::get('/daily/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'daily']);
     });
 });
+
+// ============================================================
+// 6.4 DRUGS - PUBLIC (عمومی)
+// ============================================================
+Route::get('/drugs/active', [App\Http\Controllers\Admin\DrugController::class, 'activeDrugs']);
