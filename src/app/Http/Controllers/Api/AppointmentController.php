@@ -17,6 +17,9 @@ class AppointmentController extends Controller
 {
     use ApiResponse;
 
+    /**
+     * دریافت زمان‌های خالی پزشک
+     */
     public function availableSlots(Request $request, $doctorId)
     {
         $validator = Validator::make($request->all(), [
@@ -34,6 +37,7 @@ class AppointmentController extends Controller
 
         $date = $request->date;
         
+        // دریافت ساعات کاری پزشک
         $workingHours = null;
         if ($doctor->working_hours) {
             $workingHours = is_array($doctor->working_hours) 
@@ -52,6 +56,7 @@ class AppointmentController extends Controller
 
         $config = $workingHours ? array_merge($defaultWorkingHours, $workingHours) : $defaultWorkingHours;
         
+        // بررسی روز کاری
         $dayOfWeek = Carbon::parse($date)->format('l');
         $dayMapping = [
             'Saturday' => 'saturday',
@@ -128,6 +133,7 @@ class AppointmentController extends Controller
             $currentTime->addMinutes($slotDuration);
         }
 
+        // دریافت نوبت‌های رزرو شده
         $bookedAppointments = Appointment::where('doctor_id', $doctorId)
             ->whereDate('date', $date)
             ->whereIn('status', ['pending', 'confirmed', 'arrived', 'in_progress'])
@@ -165,6 +171,9 @@ class AppointmentController extends Controller
         ]);
     }
 
+    /**
+     * رزرو نوبت جدید
+     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -196,7 +205,7 @@ class AppointmentController extends Controller
             return $this->error('بیمار یافت نشد. لطفاً ابتدا ثبت نام کنید.', 404);
         }
 
-        // ✅ بررسی اینکه پزشک در این روز کار میکند
+        // بررسی اینکه آیا پزشک در این روز کار میکند
         $doctor = Doctor::find($request->doctor_id);
         if (!$doctor) {
             return $this->error('پزشک یافت نشد', 404);
@@ -228,7 +237,6 @@ class AppointmentController extends Controller
         
         $persianDay = $dayMapping[$dayOfWeek] ?? 'saturday';
         
-        // ✅ اگر پزشک در این روز کار نمیکند، خطا بده
         if (isset($config['days']) && !in_array($persianDay, $config['days'])) {
             return $this->error('پزشک در این روز حضور ندارد', 400);
         }
@@ -283,6 +291,10 @@ class AppointmentController extends Controller
             ]);
         }
 
+        // ✅ دریافت هزینه از تنظیمات پزشک
+        $fee = $doctor->getFeeForAppointment();
+
+        // ایجاد نوبت
         $appointment = new Appointment();
         $appointment->code = $this->generateAppointmentCode();
         $appointment->patient_id = $patient->id;
@@ -294,8 +306,7 @@ class AppointmentController extends Controller
         $appointment->notes = $request->notes;
         $appointment->save();
 
-        $fee = $doctor->consultation_fee ?? 0;
-        
+        // ایجاد فاکتور با هزینه تنظیم شده
         $invoice = new Invoice();
         $invoice->tenant_id = session('tenant_id', 1);
         $invoice->patient_id = $patient->id;
@@ -325,6 +336,9 @@ class AppointmentController extends Controller
         );
     }
 
+    /**
+     * دریافت لیست نوبت‌های من (بیمار)
+     */
     public function myAppointments(Request $request)
     {
         $user = auth()->user();
@@ -358,6 +372,9 @@ class AppointmentController extends Controller
         return $this->success($appointments);
     }
 
+    /**
+     * نمایش یک نوبت
+     */
     public function show($id)
     {
         try {
@@ -377,6 +394,9 @@ class AppointmentController extends Controller
         }
     }
 
+    /**
+     * لغو نوبت
+     */
     public function cancel($id)
     {
         try {
@@ -408,6 +428,9 @@ class AppointmentController extends Controller
         }
     }
 
+    /**
+     * تایید نوبت (پس از پرداخت موفق)
+     */
     public function confirm($id)
     {
         try {
@@ -431,6 +454,38 @@ class AppointmentController extends Controller
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
+    }
+
+    /**
+     * آمار نوبت‌های بیمار
+     */
+    public function myPatientStats()
+    {
+        $user = auth()->user();
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            return $this->error('بیمار یافت نشد', 404);
+        }
+
+        $total = Appointment::where('patient_id', $patient->id)->count();
+        $pending = Appointment::where('patient_id', $patient->id)->where('status', 'pending')->count();
+        $confirmed = Appointment::where('patient_id', $patient->id)->where('status', 'confirmed')->count();
+        $completed = Appointment::where('patient_id', $patient->id)->where('status', 'completed')->count();
+        $cancelled = Appointment::where('patient_id', $patient->id)->where('status', 'cancelled')->count();
+        $upcoming = Appointment::where('patient_id', $patient->id)
+            ->whereDate('date', '>=', date('Y-m-d'))
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->count();
+
+        return $this->success([
+            'total' => $total,
+            'pending' => $pending,
+            'confirmed' => $confirmed,
+            'completed' => $completed,
+            'cancelled' => $cancelled,
+            'upcoming' => $upcoming,
+        ]);
     }
 
     private function generateAppointmentCode()

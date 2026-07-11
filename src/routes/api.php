@@ -347,3 +347,116 @@ Route::middleware('auth:sanctum')->prefix('pharmacy')->group(function () {
 // 6.4 DRUGS - PUBLIC (عمومی)
 // ============================================================
 Route::get('/drugs/active', [App\Http\Controllers\Admin\DrugController::class, 'activeDrugs']);
+
+// ============================================================
+// 3.15 MEDICAL NOTES (یادداشت‌های پزشکی)
+// ============================================================
+Route::middleware('auth:sanctum')->prefix('medical-notes')->group(function () {
+    Route::get('/', [App\Http\Controllers\Api\MedicalNoteController::class, 'index']);
+    Route::post('/', [App\Http\Controllers\Api\MedicalNoteController::class, 'store']);
+    Route::get('/patient/{patientId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'patientNotes']);
+    Route::get('/doctor/{doctorId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'doctorNotes']);
+    Route::get('/summary/{patientId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'summary']);
+    Route::get('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'show']);
+    Route::put('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'update']);
+    Route::delete('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'destroy']);
+    Route::post('/{id}/share', [App\Http\Controllers\Api\MedicalNoteController::class, 'share']);
+    Route::post('/{id}/unshare', [App\Http\Controllers\Api\MedicalNoteController::class, 'unshare']);
+    Route::post('/{id}/lab-request', [App\Http\Controllers\Api\MedicalNoteController::class, 'addLabRequest']);
+    Route::post('/{id}/imaging-request', [App\Http\Controllers\Api\MedicalNoteController::class, 'addImagingRequest']);
+    Route::post('/{id}/referral', [App\Http\Controllers\Api\MedicalNoteController::class, 'addReferral']);
+});
+
+// ============================================================
+// 3.15 MEDICAL NOTES (پزشک و بیمار)
+// ============================================================
+Route::middleware('auth:sanctum')->prefix('medical-notes')->group(function () {
+    // پزشک: مشاهده یادداشت‌های خود و بیمارانش
+    Route::get('/my', [App\Http\Controllers\Api\MedicalNoteController::class, 'myNotes']);
+    Route::get('/patient/{patientId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'patientNotes']);
+    Route::get('/appointment/{appointmentId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'appointmentNote']);
+    
+    // ایجاد و مدیریت
+    Route::post('/', [App\Http\Controllers\Api\MedicalNoteController::class, 'store']);
+    Route::get('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'show']);
+    Route::put('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'update']);
+    Route::delete('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'destroy']);
+    
+    // اقدامات
+    Route::post('/{id}/share', [App\Http\Controllers\Api\MedicalNoteController::class, 'share']);
+    Route::post('/{id}/unshare', [App\Http\Controllers\Api\MedicalNoteController::class, 'unshare']);
+    Route::post('/{id}/finalize', [App\Http\Controllers\Api\MedicalNoteController::class, 'finalize']);
+    
+    // بیمار: مشاهده یادداشت‌های خود
+    Route::get('/my-notes', [App\Http\Controllers\Api\MedicalNoteController::class, 'myPatientNotes']);
+});
+
+// ============================================================
+// 6.5 DOCTOR FEE MANAGEMENT (ادمین)
+// ============================================================
+Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
+    ->prefix('admin/doctors')
+    ->group(function () {
+        Route::post('/{id}/set-fee', [App\Http\Controllers\Admin\DoctorController::class, 'setAppointmentFee']);
+        Route::get('/{id}/fee', [App\Http\Controllers\Admin\DoctorController::class, 'getAppointmentFee']);
+        Route::post('/{id}/set-free', [App\Http\Controllers\Admin\DoctorController::class, 'setFree']);
+        Route::post('/{id}/set-paid', [App\Http\Controllers\Admin\DoctorController::class, 'setPaid']);
+    });
+
+// ============================================================
+// 2.7 DRUGS - دریافت یک دارو (عمومی)
+// ============================================================
+Route::get('/drugs/{id}', [App\Http\Controllers\Admin\DrugController::class, 'show']);
+
+// ============================================================
+// 5. PHARMACY CALLBACK (عمومی)
+// ============================================================
+Route::prefix('pharmacy')->group(function () {
+    Route::get('/payment/callback', [App\Http\Controllers\Api\PharmacyController::class, 'paymentCallback'])->name('pharmacy.payment.callback');
+});
+
+// ============================================================
+// 8. LABORATORY ROUTES
+// ============================================================
+
+// مسیرهای عمومی
+Route::prefix('lab')->group(function () {
+    Route::get('/categories/active', [App\Http\Controllers\Api\LabController::class, 'activeCategories']);
+    Route::get('/tests/active', [App\Http\Controllers\Api\LabController::class, 'activeTests']);
+    Route::get('/tests/{id}', [App\Http\Controllers\Api\LabController::class, 'showTest']);
+});
+
+// مسیرهای محافظت شده
+Route::middleware('auth:sanctum')->prefix('lab')->group(function () {
+    // سفارشات
+    Route::post('/orders', [App\Http\Controllers\Api\LabController::class, 'createOrder']);
+    Route::get('/my/orders', [App\Http\Controllers\Api\LabController::class, 'myOrders']);
+    Route::get('/orders/{id}', [App\Http\Controllers\Api\LabController::class, 'showOrder']);
+    Route::put('/orders/{id}/status', [App\Http\Controllers\Api\LabController::class, 'updateOrderStatus']);
+    
+    // نتایج
+    Route::post('/results', [App\Http\Controllers\Api\LabController::class, 'addResult']);
+    Route::post('/results/bulk', [App\Http\Controllers\Api\LabController::class, 'addResults']);
+    Route::post('/results/{id}/verify', [App\Http\Controllers\Api\LabController::class, 'verifyResult']);
+    Route::delete('/results/{id}', [App\Http\Controllers\Api\LabController::class, 'deleteResult']);
+    
+    // آمار
+    Route::get('/stats', [App\Http\Controllers\Api\LabController::class, 'stats']);
+    Route::get('/my/stats', [App\Http\Controllers\Api\LabController::class, 'myStats']);
+});
+
+// مسیرهای ادمین
+Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('lab')->group(function () {
+    Route::get('/categories', [App\Http\Controllers\Api\LabController::class, 'categories']);
+    Route::post('/categories', [App\Http\Controllers\Api\LabController::class, 'storeCategory']);
+    Route::put('/categories/{id}', [App\Http\Controllers\Api\LabController::class, 'updateCategory']);
+    Route::delete('/categories/{id}', [App\Http\Controllers\Api\LabController::class, 'deleteCategory']);
+    
+    Route::get('/tests', [App\Http\Controllers\Api\LabController::class, 'tests']);
+    Route::post('/tests', [App\Http\Controllers\Api\LabController::class, 'storeTest']);
+    Route::put('/tests/{id}', [App\Http\Controllers\Api\LabController::class, 'updateTest']);
+    Route::delete('/tests/{id}', [App\Http\Controllers\Api\LabController::class, 'deleteTest']);
+    Route::post('/tests/{id}/toggle', [App\Http\Controllers\Api\LabController::class, 'toggleTestStatus']);
+    
+    Route::get('/orders', [App\Http\Controllers\Api\LabController::class, 'orders']);
+});

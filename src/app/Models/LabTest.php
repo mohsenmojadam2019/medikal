@@ -46,7 +46,7 @@ class LabTest extends Model
     // ========== Relationships ==========
     public function category()
     {
-        return $this->belongsTo(LabCategory::class);
+        return $this->belongsTo(LabCategory::class, 'category_id');
     }
 
     public function orderTests()

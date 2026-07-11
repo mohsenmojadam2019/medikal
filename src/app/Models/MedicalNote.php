@@ -16,21 +16,37 @@ class MedicalNote extends Model
         'appointment_id',
         'title',
         'content',
+        'subjective',
+        'objective',
+        'assessment',
+        'plan',
+        'diagnoses',
+        'prescriptions',
+        'lab_requests',
+        'imaging_requests',
+        'referrals',
         'type',
         'priority',
         'is_private',
         'is_shared',
+        'note_status',
         'tags',
         'metadata',
     ];
 
     protected $casts = [
-        'is_private' => 'boolean',
-        'is_shared' => 'boolean',
+        'diagnoses' => 'array',
+        'prescriptions' => 'array',
+        'lab_requests' => 'array',
+        'imaging_requests' => 'array',
+        'referrals' => 'array',
         'tags' => 'array',
         'metadata' => 'array',
+        'is_private' => 'boolean',
+        'is_shared' => 'boolean',
     ];
 
+    // ========== Relationships ==========
     public function patient()
     {
         return $this->belongsTo(Patient::class);
@@ -46,6 +62,7 @@ class MedicalNote extends Model
         return $this->belongsTo(Appointment::class);
     }
 
+    // ========== Accessors ==========
     public function getTypeLabelAttribute(): string
     {
         $labels = [
@@ -70,11 +87,17 @@ class MedicalNote extends Model
         return $labels[$this->priority] ?? $this->priority;
     }
 
-    public function getExcerptAttribute(): string
+    public function getStatusLabelAttribute(): string
     {
-        return \Illuminate\Support\Str::limit(strip_tags($this->content), 100);
+        $labels = [
+            'draft' => 'پیش‌نویس',
+            'final' => 'نهایی',
+            'shared' => 'به اشتراک گذاشته شده',
+        ];
+        return $labels[$this->note_status] ?? $this->note_status;
     }
 
+    // ========== Scopes ==========
     public function scopeByPatient($query, $patientId)
     {
         return $query->where('patient_id', $patientId);
@@ -85,14 +108,19 @@ class MedicalNote extends Model
         return $query->where('doctor_id', $doctorId);
     }
 
+    public function scopeByAppointment($query, $appointmentId)
+    {
+        return $query->where('appointment_id', $appointmentId);
+    }
+
     public function scopeByType($query, $type)
     {
         return $query->where('type', $type);
     }
 
-    public function scopeByPriority($query, $priority)
+    public function scopeFinal($query)
     {
-        return $query->where('priority', $priority);
+        return $query->where('note_status', 'final');
     }
 
     public function scopeShared($query)
@@ -100,8 +128,52 @@ class MedicalNote extends Model
         return $query->where('is_shared', true);
     }
 
-    public function scopePrivate($query)
+    // ========== Methods ==========
+    public function addDiagnosis(array $diagnosis): void
     {
-        return $query->where('is_private', true);
+        $diagnoses = $this->diagnoses ?? [];
+        $diagnoses[] = $diagnosis;
+        $this->update(['diagnoses' => $diagnoses]);
+    }
+
+    public function addPrescription(array $prescription): void
+    {
+        $prescriptions = $this->prescriptions ?? [];
+        $prescriptions[] = $prescription;
+        $this->update(['prescriptions' => $prescriptions]);
+    }
+
+    public function addLabRequest(array $labRequest): void
+    {
+        $labRequests = $this->lab_requests ?? [];
+        $labRequests[] = $labRequest;
+        $this->update(['lab_requests' => $labRequests]);
+    }
+
+    public function addImagingRequest(array $imagingRequest): void
+    {
+        $imagingRequests = $this->imaging_requests ?? [];
+        $imagingRequests[] = $imagingRequest;
+        $this->update(['imaging_requests' => $imagingRequests]);
+    }
+
+    public function addReferral(array $referral): void
+    {
+        $referrals = $this->referrals ?? [];
+        $referrals[] = $referral;
+        $this->update(['referrals' => $referrals]);
+    }
+
+    public function markAsFinal(): void
+    {
+        $this->update(['note_status' => 'final']);
+    }
+
+    public function markAsShared(): void
+    {
+        $this->update([
+            'is_shared' => true,
+            'note_status' => 'shared',
+        ]);
     }
 }

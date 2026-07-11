@@ -8,7 +8,6 @@ use App\Models\PharmacyNotification;
 use App\Enums\PharmacyOrderStatusEnum;
 use App\Enums\PharmacyOrderPaymentStatusEnum;
 use App\Models\Drug;
-use App\Models\PrescriptionItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -25,46 +24,57 @@ class PharmacyOrderService
     {
         return DB::transaction(function () use ($data) {
             $data['tenant_id'] = $this->tenantId;
+            
+            // ✅ اگر pharmacy_id وجود ندارد، از اولین داروخانه استفاده کن
+            $pharmacyId = $data['pharmacy_id'] ?? 1;
+            
+            // ✅ اگر prescription_id وجود ندارد، null بگذار
+            $prescriptionId = $data['prescription_id'] ?? null;
+            
             $order = PharmacyOrder::create([
                 'tenant_id' => $this->tenantId,
                 'patient_id' => $data['patient_id'],
-                'pharmacy_id' => $data['pharmacy_id'],
-                'prescription_id' => $data['prescription_id'],
+                'pharmacy_id' => $pharmacyId,
+                'prescription_id' => $prescriptionId,
                 'status' => PharmacyOrderStatusEnum::PENDING,
                 'payment_status' => PharmacyOrderPaymentStatusEnum::PENDING,
-                'notes' => $data['notes'] ?? null,
+                'notes' => $data['delivery_notes'] ?? $data['notes'] ?? null,
             ]);
-
-            $prescriptionItems = PrescriptionItem::where('tenant_id', $this->tenantId)
-                ->where('prescription_id', $data['prescription_id'])
-                ->get();
 
             $subtotal = 0;
             $availableItems = [];
             $unavailableItems = [];
 
-            foreach ($prescriptionItems as $item) {
-                $drug = Drug::where('tenant_id', $this->tenantId)->find($item->drug_id);
-                $isAvailable = true;
-                $price = rand(10000, 50000);
+            foreach ($data['items'] as $item) {
+                $drug = Drug::where('tenant_id', $this->tenantId)->find($item['drug_id']);
+                
+                if (!$drug) {
+                    continue;
+                }
+                
+                $isAvailable = $drug->stock >= $item['quantity'];
+                $price = $drug->price;
 
                 if ($isAvailable) {
-                    $totalPrice = $price * $item->quantity;
+                    $totalPrice = $price * $item['quantity'];
 
                     PharmacyOrderItem::create([
                         'tenant_id' => $this->tenantId,
                         'order_id' => $order->id,
-                        'drug_id' => $item->drug_id,
-                        'quantity' => $item->quantity,
+                        'drug_id' => $item['drug_id'],
+                        'quantity' => $item['quantity'],
                         'unit_price' => $price,
                         'total_price' => $totalPrice,
                         'is_available' => true,
                     ]);
 
+                    // کاهش موجودی
+                    $drug->decreaseStock($item['quantity']);
+
                     $subtotal += $totalPrice;
                     $availableItems[] = [
                         'drug_name' => $drug->name,
-                        'quantity' => $item->quantity,
+                        'quantity' => $item['quantity'],
                         'price' => $price,
                         'total' => $totalPrice,
                     ];
@@ -72,8 +82,8 @@ class PharmacyOrderService
                     PharmacyOrderItem::create([
                         'tenant_id' => $this->tenantId,
                         'order_id' => $order->id,
-                        'drug_id' => $item->drug_id,
-                        'quantity' => $item->quantity,
+                        'drug_id' => $item['drug_id'],
+                        'quantity' => $item['quantity'],
                         'unit_price' => 0,
                         'total_price' => 0,
                         'is_available' => false,
@@ -82,7 +92,7 @@ class PharmacyOrderService
 
                     $unavailableItems[] = [
                         'drug_name' => $drug->name,
-                        'quantity' => $item->quantity,
+                        'quantity' => $item['quantity'],
                     ];
                 }
             }
@@ -92,7 +102,7 @@ class PharmacyOrderService
             $order->available_items = $availableItems;
             $order->unavailable_items = $unavailableItems;
 
-            if (count($unavailableItems) == 0) {
+            if (count($unavailableItems) == 0 && count($availableItems) > 0) {
                 $order->status = PharmacyOrderStatusEnum::ALL_AVAILABLE;
             } elseif (count($availableItems) == 0) {
                 $order->status = PharmacyOrderStatusEnum::CANCELLED;

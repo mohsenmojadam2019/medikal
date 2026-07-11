@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\LabResultStatusEnum;
 use Illuminate\Database\Eloquent\Model;
 
 class LabResult extends Model
@@ -32,7 +31,6 @@ class LabResult extends Model
         'range_high' => 'float',
         'is_abnormal' => 'boolean',
         'is_critical' => 'boolean',
-        'status' => LabResultStatusEnum::class,
         'verified_at' => 'datetime',
         'metadata' => 'array',
     ];
@@ -76,18 +74,40 @@ class LabResult extends Model
 
     public function scopeCompleted($query)
     {
-        return $query->where('status', LabResultStatusEnum::COMPLETED);
+        return $query->where('status', 'completed');
     }
 
     // ========== Accessors ==========
     public function getStatusLabelAttribute(): string
     {
-        return $this->status?->label() ?? 'در انتظار';
+        $labels = [
+            'pending' => 'در انتظار',
+            'partial' => 'تکمیل بخشی',
+            'completed' => 'تکمیل شده',
+            'abnormal' => 'غیرطبیعی',
+            'critical' => 'بحرانی',
+        ];
+        return $labels[$this->status] ?? $this->status;
     }
 
     public function getStatusColorAttribute(): string
     {
-        return $this->status?->color() ?? 'secondary';
+        $colors = [
+            'pending' => 'warning',
+            'partial' => 'orange',
+            'completed' => 'success',
+            'abnormal' => 'danger',
+            'critical' => 'red',
+        ];
+        return $colors[$this->status] ?? 'default';
+    }
+
+    public function getValueDisplayAttribute(): string
+    {
+        if ($this->value !== null) {
+            return "{$this->value} {$this->unit}";
+        }
+        return '—';
     }
 
     public function getRangeDisplayAttribute(): string
@@ -100,14 +120,6 @@ class LabResult extends Model
         }
         if ($this->range_high !== null) {
             return "≤ {$this->range_high} {$this->unit}";
-        }
-        return '—';
-    }
-
-    public function getValueDisplayAttribute(): string
-    {
-        if ($this->value !== null) {
-            return "{$this->value} {$this->unit}";
         }
         return '—';
     }
@@ -127,7 +139,7 @@ class LabResult extends Model
     public function verify(): void
     {
         $this->update([
-            'status' => LabResultStatusEnum::COMPLETED,
+            'status' => 'completed',
             'verified_at' => now(),
             'verified_by' => auth()->id(),
         ]);
@@ -137,7 +149,7 @@ class LabResult extends Model
     {
         $this->update([
             'is_abnormal' => true,
-            'status' => LabResultStatusEnum::ABNORMAL,
+            'status' => 'abnormal',
         ]);
     }
 
@@ -146,7 +158,7 @@ class LabResult extends Model
         $this->update([
             'is_critical' => true,
             'is_abnormal' => true,
-            'status' => LabResultStatusEnum::CRITICAL,
+            'status' => 'critical',
         ]);
     }
 }

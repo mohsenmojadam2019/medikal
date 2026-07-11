@@ -24,7 +24,6 @@ class LabController extends Controller
     public function __construct(LabService $labService)
     {
         $this->labService = $labService;
-        $this->middleware(['auth:sanctum']);
     }
 
     // ============================================================

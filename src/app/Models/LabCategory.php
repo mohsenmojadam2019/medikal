@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class LabCategory extends Model
 {
@@ -27,7 +28,7 @@ class LabCategory extends Model
     // ========== Relationships ==========
     public function tests()
     {
-        return $this->hasMany(LabTest::class);
+        return $this->hasMany(LabTest::class, 'category_id');
     }
 
     // ========== Scopes ==========
@@ -52,7 +53,7 @@ class LabCategory extends Model
     {
         static::creating(function ($category) {
             if (empty($category->slug)) {
-                $category->slug = \Illuminate\Support\Str::slug($category->name);
+                $category->slug = Str::slug($category->name);
             }
         });
     }

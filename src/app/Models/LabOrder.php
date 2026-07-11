@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\LabOrderStatusEnum;
-use App\Enums\LabPriorityEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -34,9 +32,6 @@ class LabOrder extends Model
     ];
 
     protected $casts = [
-        'status' => LabOrderStatusEnum::class,
-        'priority' => LabPriorityEnum::class,
-        'sample_type' => LabSampleTypeEnum::class,
         'sample_collected_at' => 'datetime',
         'sample_received_at' => 'datetime',
         'result_ready_at' => 'datetime',
@@ -81,33 +76,23 @@ class LabOrder extends Model
         return $this->morphOne(Invoice::class, 'invoicable');
     }
 
-    public function notifications()
-    {
-        return $this->morphMany(Notification::class, 'notifiable');
-    }
-
     // ========== Scopes ==========
     public function scopePending($query)
     {
-        return $query->where('status', LabOrderStatusEnum::PENDING);
+        return $query->where('status', 'pending');
     }
 
     public function scopeActive($query)
     {
         return $query->whereIn('status', [
-            LabOrderStatusEnum::PENDING,
-            LabOrderStatusEnum::WAITING_PAYMENT,
-            LabOrderStatusEnum::PAID,
-            LabOrderStatusEnum::SCHEDULED,
-            LabOrderStatusEnum::SAMPLE_COLLECTED,
-            LabOrderStatusEnum::PROCESSING,
-            LabOrderStatusEnum::PARTIAL,
+            'pending', 'waiting_payment', 'paid', 'scheduled',
+            'sample_collected', 'processing', 'partial'
         ]);
     }
 
     public function scopeCompleted($query)
     {
-        return $query->where('status', LabOrderStatusEnum::COMPLETED);
+        return $query->where('status', 'completed');
     }
 
     public function scopeByPatient($query, $patientId)
@@ -120,35 +105,59 @@ class LabOrder extends Model
         return $query->where('doctor_id', $doctorId);
     }
 
-    public function scopeByDate($query, $from, $to)
-    {
-        return $query->whereBetween('created_at', [$from, $to]);
-    }
-
     // ========== Accessors ==========
     public function getStatusLabelAttribute(): string
     {
-        return $this->status?->label() ?? 'نامشخص';
+        $labels = [
+            'pending' => 'در انتظار',
+            'waiting_payment' => 'در انتظار پرداخت',
+            'paid' => 'پرداخت شده',
+            'scheduled' => 'نوبت‌دهی شده',
+            'sample_collected' => 'نمونه گرفته شده',
+            'processing' => 'در حال پردازش',
+            'partial' => 'تکمیل بخشی',
+            'completed' => 'تکمیل شده',
+            'cancelled' => 'لغو شده',
+            'rejected' => 'رد شده',
+        ];
+        return $labels[$this->status] ?? $this->status;
     }
 
     public function getStatusColorAttribute(): string
     {
-        return $this->status?->color() ?? 'secondary';
+        $colors = [
+            'pending' => 'warning',
+            'waiting_payment' => 'gold',
+            'paid' => 'cyan',
+            'scheduled' => 'blue',
+            'sample_collected' => 'purple',
+            'processing' => 'processing',
+            'partial' => 'orange',
+            'completed' => 'success',
+            'cancelled' => 'error',
+            'rejected' => 'error',
+        ];
+        return $colors[$this->status] ?? 'default';
     }
 
     public function getPriorityLabelAttribute(): string
     {
-        return $this->priority?->label() ?? 'معمولی';
+        $labels = [
+            'routine' => 'معمولی',
+            'urgent' => 'فوری',
+            'stat' => 'اورژانسی',
+        ];
+        return $labels[$this->priority] ?? $this->priority;
     }
 
     public function getPriorityColorAttribute(): string
     {
-        return $this->priority?->color() ?? 'secondary';
-    }
-
-    public function getSampleTypeLabelAttribute(): string
-    {
-        return $this->sample_type?->label() ?? 'نامشخص';
+        $colors = [
+            'routine' => 'blue',
+            'urgent' => 'orange',
+            'stat' => 'red',
+        ];
+        return $colors[$this->priority] ?? 'default';
     }
 
     public function getTotalPriceAttribute(): float
@@ -158,17 +167,12 @@ class LabOrder extends Model
 
     public function getIsCompletedAttribute(): bool
     {
-        return $this->status === LabOrderStatusEnum::COMPLETED;
+        return $this->status === 'completed';
     }
 
     public function getIsActiveAttribute(): bool
     {
-        return $this->status?->isActive() ?? false;
-    }
-
-    public function getIsFinalAttribute(): bool
-    {
-        return $this->status?->isFinal() ?? false;
+        return !in_array($this->status, ['completed', 'cancelled', 'rejected']);
     }
 
     // ========== Methods ==========
@@ -182,49 +186,15 @@ class LabOrder extends Model
         return "{$prefix}-{$year}{$month}{$day}-{$random}";
     }
 
-    public function changeStatus(LabOrderStatusEnum $status, ?string $reason = null): void
+    public function changeStatus(string $status, ?string $reason = null): void
     {
         $this->update([
             'status' => $status,
-            'cancelled_at' => $status === LabOrderStatusEnum::CANCELLED ? now() : $this->cancelled_at,
-            'cancelled_reason' => $status === LabOrderStatusEnum::CANCELLED ? $reason : $this->cancelled_reason,
-            'rejected_at' => $status === LabOrderStatusEnum::REJECTED ? now() : $this->rejected_at,
-            'rejected_reason' => $status === LabOrderStatusEnum::REJECTED ? $reason : $this->rejected_reason,
+            'cancelled_at' => $status === 'cancelled' ? now() : null,
+            'cancelled_reason' => $status === 'cancelled' ? $reason : null,
+            'rejected_at' => $status === 'rejected' ? now() : null,
+            'rejected_reason' => $status === 'rejected' ? $reason : null,
         ]);
-    }
-
-    public function markAsSampleCollected(): void
-    {
-        $this->update([
-            'status' => LabOrderStatusEnum::SAMPLE_COLLECTED,
-            'sample_collected_at' => now(),
-        ]);
-    }
-
-    public function markAsProcessing(): void
-    {
-        $this->update([
-            'status' => LabOrderStatusEnum::PROCESSING,
-            'sample_received_at' => now(),
-        ]);
-    }
-
-    public function markAsCompleted(): void
-    {
-        $this->update([
-            'status' => LabOrderStatusEnum::COMPLETED,
-            'result_ready_at' => now(),
-        ]);
-    }
-
-    public function cancel(string $reason): void
-    {
-        $this->changeStatus(LabOrderStatusEnum::CANCELLED, $reason);
-    }
-
-    public function reject(string $reason): void
-    {
-        $this->changeStatus(LabOrderStatusEnum::REJECTED, $reason);
     }
 
     // ========== Boot ==========

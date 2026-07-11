@@ -46,6 +46,7 @@ god@god:~/Videos/medikal$ curl -X POST http://localhost:8210/admin/login \
 
 
 ----------------------- front
+docker exec -it medikall-laravel sh
 docker exec -it medikal-front-1 sh
 docker exec -it medikal-admin-1 sh
 

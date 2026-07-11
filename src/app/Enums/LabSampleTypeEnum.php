@@ -29,18 +29,18 @@ enum LabSampleTypeEnum: string
         };
     }
 
-    public function icon(): string
+    public function color(): string
     {
         return match ($this) {
-            self::BLOOD => '🩸',
-            self::URINE => '💧',
-            self::STOOL => '🧻',
-            self::SALIVA => '💦',
-            self::SPUTUM => '💊',
-            self::CSF => '🧠',
-            self::TISSUE => '🔬',
-            self::SWAB => '🧫',
-            self::OTHER => '📋',
+            self::BLOOD => 'danger',
+            self::URINE => 'warning',
+            self::STOOL => 'brown',
+            self::SALIVA => 'cyan',
+            self::SPUTUM => 'orange',
+            self::CSF => 'purple',
+            self::TISSUE => 'magenta',
+            self::SWAB => 'blue',
+            self::OTHER => 'default',
         };
     }
 }

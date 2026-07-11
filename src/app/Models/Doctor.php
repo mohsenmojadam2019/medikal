@@ -2,155 +2,59 @@
 
 namespace App\Models;
 
-use App\Traits\HasSeo;
-use App\Traits\HasTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use Spatie\Image\Enums\Fit;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Doctor extends Model implements HasMedia
+class Doctor extends Model
 {
-    use SoftDeletes, HasSeo, InteractsWithMedia, HasTenant;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'tenant_id',  // ✅ اضافه شد
+        'tenant_id',
         'user_id',
         'specialty_id',
         'license_number',
         'clinic_name',
         'clinic_address',
-        'clinic_phone',
-        'clinic_email',
         'latitude',
         'longitude',
+        'clinic_phone',
+        'clinic_email',
+        'profile_image',
         'bio',
+        'biography',
+        'education',
+        'certificates',
+        'social_links',
+        'working_hours',
         'experience_years',
         'consultation_fee',
+        'appointment_fee_type',
+        'appointment_fee_amount',
+        'is_fee_editable_by_admin',
         'visit_duration',
         'is_available',
         'is_verified',
         'is_active',
         'rating',
         'total_reviews',
-        'working_hours',
-        'education',
-        'certificates',
-        'social_links',
         'metadata',
     ];
 
     protected $casts = [
+        'working_hours' => 'array',
+        'social_links' => 'array',
+        'metadata' => 'array',
+        'experience_years' => 'integer',
+        'consultation_fee' => 'decimal:2',
+        'appointment_fee_amount' => 'decimal:2',
         'is_available' => 'boolean',
         'is_verified' => 'boolean',
         'is_active' => 'boolean',
-        'rating' => 'float',
-        'consultation_fee' => 'decimal:2',
-        'latitude' => 'float',
-        'longitude' => 'float',
-        'education' => 'array',
-        'certificates' => 'array',
-        'social_links' => 'array',
-        'working_hours' => 'array',
-        'metadata' => 'array',
+        'is_fee_editable_by_admin' => 'boolean',
+        'rating' => 'decimal:2',
     ];
-    public function seo()
-    {
-        return $this->morphOne(Seo::class, 'seoable');
-    }
-
-    public function getSeoTitleAttribute()
-    {
-        return $this->full_name ?? null;
-    }
-
-    public function getSeoDescriptionAttribute()
-    {
-        return $this->bio ?? $this->biography ?? null;
-    }
-
-    public function getSeoKeywordsAttribute()
-    {
-        return $this->specialty?->name ?? null;
-    }
-    // ========== Media Library ==========
-    public function registerMediaCollections(): void
-    {
-        // عکس پروفایل پزشک
-        $this->addMediaCollection('profile_image')
-            ->singleFile()
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp'])
-            ->registerMediaConversions(function (Media $media) {
-                $this->addMediaConversion('thumb')
-                    ->width(150)
-                    ->height(150)
-                    ->fit(Fit::Crop, 150, 150)
-                    ->nonQueued();
-
-                $this->addMediaConversion('medium')
-                    ->width(300)
-                    ->height(300)
-                    ->fit(Fit::Crop, 300, 300)
-                    ->nonQueued();
-
-                $this->addMediaConversion('large')
-                    ->width(600)
-                    ->height(600)
-                    ->fit(Fit::Crop, 600, 600)
-                    ->nonQueued();
-            });
-
-        // گواهی‌های پزشک
-        $this->addMediaCollection('certificates')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'application/pdf'])
-            ->registerMediaConversions(function (Media $media) {
-                $this->addMediaConversion('thumb')
-                    ->width(200)
-                    ->height(200)
-                    ->fit(Fit::Crop, 200, 200)
-                    ->nonQueued();
-            });
-    }
-
-    // ========== Accessors ==========
-    public function getProfileImageUrlAttribute(): ?string
-    {
-        $media = $this->getFirstMedia('profile_image');
-        return $media ? $media->getUrl() : null;
-    }
-
-    public function getProfileImageThumbAttribute(): ?string
-    {
-        $media = $this->getFirstMedia('profile_image');
-        return $media ? $media->getUrl('thumb') : null;
-    }
-
-    public function getProfileImageMediumAttribute(): ?string
-    {
-        $media = $this->getFirstMedia('profile_image');
-        return $media ? $media->getUrl('medium') : null;
-    }
-
-    public function getProfileImageLargeAttribute(): ?string
-    {
-        $media = $this->getFirstMedia('profile_image');
-        return $media ? $media->getUrl('large') : null;
-    }
-
-    public function getCertificateUrlsAttribute(): array
-    {
-        return $this->getMedia('certificates')->map(function ($media) {
-            return [
-                'id' => $media->id,
-                'url' => $media->getUrl(),
-                'thumb' => $media->getUrl('thumb'),
-                'name' => $media->file_name,
-                'size' => $media->size,
-            ];
-        })->toArray();
-    }
 
     // ========== Relationships ==========
     public function user()
@@ -163,14 +67,9 @@ class Doctor extends Model implements HasMedia
         return $this->belongsTo(Specialty::class);
     }
 
-    public function clinic()
+    public function patients()
     {
-        return $this->belongsTo(Clinic::class);
-    }
-
-    public function schedules()
-    {
-        return $this->hasMany(DoctorSchedule::class);
+        return $this->hasMany(Patient::class);
     }
 
     public function appointments()
@@ -178,15 +77,19 @@ class Doctor extends Model implements HasMedia
         return $this->hasMany(Appointment::class);
     }
 
-    public function patients()
+    public function prescriptions()
     {
-        return $this->belongsToMany(Patient::class, 'doctor_patient')
-            ->withTimestamps();
+        return $this->hasMany(Prescription::class);
     }
 
-    public function ratings()
+    public function schedules()
     {
-        return $this->hasMany(Rating::class);
+        return $this->hasMany(DoctorSchedule::class);
+    }
+
+    public function primaryAddress()
+    {
+        return $this->morphOne(Address::class, 'addressable')->where('is_primary', true);
     }
 
     public function addresses()
@@ -194,66 +97,70 @@ class Doctor extends Model implements HasMedia
         return $this->morphMany(Address::class, 'addressable');
     }
 
-    public function primaryAddress()
+    public function medicalNotes()
     {
-        return $this->morphOne(Address::class, 'addressable')
-            ->where('is_primary', true);
+        return $this->hasMany(MedicalNote::class);
     }
 
     // ========== Accessors ==========
     public function getFullNameAttribute(): string
     {
-        return $this->user?->name ?? 'دکتر';
+        return $this->user?->name ?? $this->name ?? 'پزشک';
     }
 
-    public function getRatingDisplayAttribute(): string
+    public function getAppointmentFeeLabelAttribute(): string
     {
-        return number_format($this->rating, 1);
-    }
-
-    public function getFullAddressAttribute()
-    {
-        $address = $this->primaryAddress;
-        return $address ? $address->full_address : null;
-    }
-
-    public function getLocationAttribute(): ?array
-    {
-        if ($this->latitude && $this->longitude) {
-            return [
-                'lat' => $this->latitude,
-                'lng' => $this->longitude,
-            ];
+        if ($this->appointment_fee_type === 'free') {
+            return 'رایگان';
         }
-        return null;
+        return number_format($this->appointment_fee_amount ?? 0) . ' تومان';
+    }
+
+    public function getAppointmentFeeValueAttribute(): float
+    {
+        if ($this->appointment_fee_type === 'free') {
+            return 0;
+        }
+        return (float) ($this->appointment_fee_amount ?? $this->consultation_fee ?? 0);
+    }
+
+    public function isFreeAppointment(): bool
+    {
+        return $this->appointment_fee_type === 'free';
+    }
+
+    public function getFeeForAppointment(): float
+    {
+        if ($this->appointment_fee_type === 'free') {
+            return 0;
+        }
+        return (float) ($this->appointment_fee_amount ?? $this->consultation_fee ?? 0);
     }
 
     // ========== Scopes ==========
-    public function scopeAvailable($query)
+    public function scopeFreeAppointments($query)
     {
-        return $query->where('is_available', true);
+        return $query->where('appointment_fee_type', 'free');
     }
 
-    public function scopeVerified($query)
+    public function scopePaidAppointments($query)
     {
-        return $query->where('is_verified', true);
+        return $query->where('appointment_fee_type', 'paid');
     }
 
-    public function scopeActive($query)
+    public function scopeSearch($query, $term)
     {
-        return $query->where('is_active', true);
-    }
+        if (empty($term)) {
+            return $query;
+        }
 
-    public function scopeSearch($query, string $search)
-    {
-        return $query->where(function ($q) use ($search) {
-            $q->whereHas('user', function ($user) use ($search) {
-                $user->where('name', 'LIKE', "%{$search}%");
-            })->orWhere('clinic_name', 'LIKE', "%{$search}%")
-              ->orWhere('license_number', 'LIKE', "%{$search}%")
-              ->orWhereHas('specialty', function ($s) use ($search) {
-                  $s->where('name', 'LIKE', "%{$search}%");
-              });
+        return $query->where(function ($q) use ($term) {
+            $q->where('clinic_name', 'LIKE', "%{$term}%")
+                ->orWhere('license_number', 'LIKE', "%{$term}%")
+                ->orWhereHas('user', function ($q2) use ($term) {
+                    $q2->where('name', 'LIKE', "%{$term}%")
+                        ->orWhere('mobile', 'LIKE', "%{$term}%");
+                });
         });
     }
 
@@ -262,28 +169,12 @@ class Doctor extends Model implements HasMedia
         return $query->where('specialty_id', $specialtyId);
     }
 
-    public function scopeNearby($query, $lat, $lng, $radius = 10)
-    {
-        return $query->selectRaw("
-            doctors.*,
-            (6371 * acos(
-                cos(radians(?)) *
-                cos(radians(latitude)) *
-                cos(radians(longitude) - radians(?)) +
-                sin(radians(?)) *
-                sin(radians(latitude))
-            )) AS distance
-        ", [$lat, $lng, $lat])
-        ->having('distance', '<', $radius)
-        ->orderBy('distance', 'asc');
-    }
-
-    public function scopeByInsurance($query, $insuranceType)
-    {
-        return $query;
-    }
-
     // ========== Methods ==========
+    public function toggleAvailability(): void
+    {
+        $this->update(['is_available' => !$this->is_available]);
+    }
+
     public function verify(): void
     {
         $this->update(['is_verified' => true]);
@@ -292,33 +183,5 @@ class Doctor extends Model implements HasMedia
     public function unverify(): void
     {
         $this->update(['is_verified' => false]);
-    }
-
-    public function toggleAvailability(): void
-    {
-        $this->update(['is_available' => !$this->is_available]);
-    }
-
-    public function calculateDistance($lat, $lng): float
-    {
-        if (!$this->latitude || !$this->longitude) {
-            return -1;
-        }
-
-        $theta = $this->longitude - $lng;
-        $dist = sin(deg2rad($this->latitude)) * sin(deg2rad($lat)) +
-                cos(deg2rad($this->latitude)) * cos(deg2rad($lat)) * cos(deg2rad($theta));
-        $dist = acos($dist);
-        $dist = rad2deg($dist);
-        $miles = $dist * 60 * 1.1515;
-        return $miles * 1.609344;
-    }
-
-    protected static function booted()
-    {
-        static::deleting(function ($doctor) {
-            $doctor->clearMediaCollection('profile_image');
-            $doctor->clearMediaCollection('certificates');
-        });
     }
 }

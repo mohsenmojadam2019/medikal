@@ -1,6 +1,6 @@
 <?php
-// routes/admin.php
 
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AppointmentController;
 use App\Http\Controllers\Admin\BlogController;
@@ -17,7 +17,6 @@ use App\Http\Controllers\Api\PharmacyController;
 use App\Http\Controllers\Api\SurveyController;
 use App\Http\Controllers\Api\VaccinationController;
 use App\Http\Controllers\Api\WalletController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\ClinicController;
 use App\Http\Controllers\Admin\DoctorController;
 use App\Http\Controllers\Admin\DoctorProfileController;
@@ -32,14 +31,17 @@ use App\Http\Controllers\Admin\SpecialtyMediaController;
 use App\Http\Controllers\Admin\SystemController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SuperAdmin\TenantController;
-
-
+use App\Http\Controllers\Admin\MedicalNoteController;
 
 /*
 |--------------------------------------------------------------------------
 | Admin Routes
 |--------------------------------------------------------------------------
+| نسخه: 1.0.0
+| تاریخ: 2026-07-09
+|--------------------------------------------------------------------------
 */
+
 // ==========================================
 // تست - فقط برای بررسی لود شدن فایل
 // ==========================================
@@ -48,744 +50,578 @@ Route::get('/test-route', function() {
 });
 
 // ============================================================================
-// ===========================  مسیرهای عمومی ادمین (بدون احراز هویت) ===========================
+// 1. مسیرهای عمومی ادمین (بدون احراز هویت)
 // ============================================================================
-
 Route::post('/login', [AdminAuthController::class, 'loginWithEmail']);
 
 // ============================================================================
-// ===========================  مسیرهای احراز هویت ادمین (نیاز به توکن) ===========================
+// 2. مسیرهای احراز هویت ادمین (نیاز به توکن)
 // ============================================================================
-
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/logout', [AdminAuthController::class, 'logout']);
     Route::get('/me', [AdminAuthController::class, 'me']);
 });
 
-// ============================================================
-// 🔒 PROTECTED ADMIN ROUTES (با احراز هویت)
-// ============================================================
-Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
-    ->group(function () {
-        // ==========================================
-        // 👤 PROFILE MANAGEMENT
-        // ==========================================
-        Route::prefix('profile')->controller(ProfileController::class)->group(function () {
-            Route::get('/', 'show');
-            Route::put('/', 'update');
-            Route::post('/avatar', 'uploadAvatar');
-            Route::delete('/avatar', 'deleteAvatar');
-            Route::post('/change-password', 'changePassword');
-            Route::get('/activities', 'activities');
-        });
+// ============================================================================
+// 3. مسیرهای محافظت‌شده (با احراز هویت و نقش)
+// ============================================================================
+Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function () {
 
-        // -------- 1. DASHBOARD MANAGEMENT --------
-        Route::prefix('dashboard/management')->group(function () {
-            Route::get('/stats', [ManagementDashboardController::class, 'stats']);
-            Route::get('/charts', [ManagementDashboardController::class, 'charts']);
-            Route::get('/quick-stats', [ManagementDashboardController::class, 'quickStats']);
-            Route::get('/recent-activities', [ManagementDashboardController::class, 'recentActivities']);
-            Route::get('/top-doctors', [ManagementDashboardController::class, 'topDoctors']);
-            Route::get('/summary', [ManagementDashboardController::class, 'summary']);
-        });
+    // ==========================================
+    // 3.1 پروفایل ادمین
+    // ==========================================
+    Route::prefix('profile')->controller(ProfileController::class)->group(function () {
+        Route::get('/', 'show');
+        Route::put('/', 'update');
+        Route::post('/avatar', 'uploadAvatar');
+        Route::delete('/avatar', 'deleteAvatar');
+        Route::post('/change-password', 'changePassword');
+        Route::get('/activities', 'activities');
+    });
 
-        // -------- 2. CLINIC MANAGEMENT --------
-        Route::prefix('clinic')->group(function () {
-            Route::get('/', [ClinicController::class, 'show']);
-            Route::put('/', [ClinicController::class, 'update']);
-            Route::post('/upload-logo', [ClinicController::class, 'uploadLogo']);
-            Route::post('/toggle-status', [ClinicController::class, 'toggleStatus']);
-        });
+    // ==========================================
+    // 3.2 داشبورد مدیریت
+    // ==========================================
+    Route::prefix('dashboard/management')->group(function () {
+        Route::get('/stats', [ManagementDashboardController::class, 'stats']);
+        Route::get('/charts', [ManagementDashboardController::class, 'charts']);
+        Route::get('/quick-stats', [ManagementDashboardController::class, 'quickStats']);
+        Route::get('/recent-activities', [ManagementDashboardController::class, 'recentActivities']);
+        Route::get('/top-doctors', [ManagementDashboardController::class, 'topDoctors']);
+        Route::get('/summary', [ManagementDashboardController::class, 'summary']);
+    });
 
-        // -------- 3. USER MANAGEMENT --------
-        Route::prefix('users')->group(function () {
-            Route::get('/', [UserController::class, 'index']);
-            Route::post('/', [UserController::class, 'store']);
-            Route::get('/{id}', [UserController::class, 'show']);
-            Route::put('/{id}', [UserController::class, 'update']);
-            Route::delete('/{id}', [UserController::class, 'destroy']);
-            Route::post('/{id}/toggle-status', [UserController::class, 'toggleStatus']);
-            Route::post('/{id}/assign-role', [UserController::class, 'assignRole']);
-        });
+    // ==========================================
+    // 3.3 مدیریت کلینیک
+    // ==========================================
+    Route::prefix('clinic')->group(function () {
+        Route::get('/', [ClinicController::class, 'show']);
+        Route::put('/', [ClinicController::class, 'update']);
+        Route::post('/upload-logo', [ClinicController::class, 'uploadLogo']);
+        Route::post('/toggle-status', [ClinicController::class, 'toggleStatus']);
+    });
 
-        // -------- 4. ROLE MANAGEMENT --------
-        Route::prefix('roles')->group(function () {
-            Route::get('/', [RoleController::class, 'index']);
-            Route::post('/', [RoleController::class, 'store']);
-            Route::get('/{id}', [RoleController::class, 'show']);
-            Route::put('/{id}', [RoleController::class, 'update']);
-            Route::delete('/{id}', [RoleController::class, 'destroy']);
-        });
+    // ==========================================
+    // 3.4 مدیریت کاربران
+    // ==========================================
+    Route::prefix('users')->group(function () {
+        Route::get('/', [UserController::class, 'index']);
+        Route::post('/', [UserController::class, 'store']);
+        Route::get('/{id}', [UserController::class, 'show']);
+        Route::put('/{id}', [UserController::class, 'update']);
+        Route::delete('/{id}', [UserController::class, 'destroy']);
+        Route::post('/{id}/toggle-status', [UserController::class, 'toggleStatus']);
+        Route::post('/{id}/assign-role', [UserController::class, 'assignRole']);
+    });
 
-        // -------- 5. PERMISSION MANAGEMENT --------
-        Route::prefix('permissions')->group(function () {
-            Route::get('/', [PermissionController::class, 'index']);
-            Route::post('/', [PermissionController::class, 'store']);
-            Route::put('/{id}', [PermissionController::class, 'update']);
-            Route::delete('/{id}', [PermissionController::class, 'destroy']);
-            Route::post('/assign-to-role', [PermissionController::class, 'assignToRole']);
-        });
+    // ==========================================
+    // 3.5 مدیریت نقش‌ها
+    // ==========================================
+    Route::prefix('roles')->group(function () {
+        Route::get('/', [RoleController::class, 'index']);
+        Route::post('/', [RoleController::class, 'store']);
+        Route::get('/{id}', [RoleController::class, 'show']);
+        Route::put('/{id}', [RoleController::class, 'update']);
+        Route::delete('/{id}', [RoleController::class, 'destroy']);
+    });
 
-        // -------- 6. DOCTOR MANAGEMENT --------
-        Route::prefix('doctors')->group(function () {
-            Route::get('/', [DoctorController::class, 'index']);
-            Route::post('/', [DoctorController::class, 'store']);
-            Route::get('/{id}', [DoctorController::class, 'show']);
-            Route::put('/{id}', [DoctorController::class, 'update']);
-            Route::delete('/{id}', [DoctorController::class, 'destroy']);
-            Route::post('/{id}/toggle-availability', [DoctorController::class, 'toggleAvailability']);
-            Route::post('/{id}/verify', [DoctorController::class, 'verify']);
-        });
+    // ==========================================
+    // 3.6 مدیریت دسترسی‌ها
+    // ==========================================
+    Route::prefix('permissions')->group(function () {
+        Route::get('/', [PermissionController::class, 'index']);
+        Route::post('/', [PermissionController::class, 'store']);
+        Route::put('/{id}', [PermissionController::class, 'update']);
+        Route::delete('/{id}', [PermissionController::class, 'destroy']);
+        Route::post('/assign-to-role', [PermissionController::class, 'assignToRole']);
+    });
 
-
-// -------- 6.5. APPOINTMENT MANAGEMENT (ADMIN) --------
-        Route::prefix('appointments')->group(function () {
-            Route::get('/', [App\Http\Controllers\Admin\AppointmentController::class, 'index']);
-            Route::post('/', [App\Http\Controllers\Admin\AppointmentController::class, 'store']);
-            Route::get('/{id}', [App\Http\Controllers\Admin\AppointmentController::class, 'show']);
-            Route::put('/{id}', [App\Http\Controllers\Admin\AppointmentController::class, 'update']);
-            Route::delete('/{id}', [App\Http\Controllers\Admin\AppointmentController::class, 'destroy']);
-            Route::post('/{id}/status', [App\Http\Controllers\Admin\AppointmentController::class, 'changeStatus']);
-            Route::post('/{id}/confirm', [App\Http\Controllers\Admin\AppointmentController::class, 'confirm']);
-            Route::post('/{id}/cancel', [App\Http\Controllers\Admin\AppointmentController::class, 'cancel']);
-            Route::post('/{id}/start', [App\Http\Controllers\Admin\AppointmentController::class, 'start']);
-            Route::post('/{id}/complete', [App\Http\Controllers\Admin\AppointmentController::class, 'complete']);
-            Route::get('/stats', [App\Http\Controllers\Admin\AppointmentController::class, 'stats']);
-            Route::get('/doctors/{doctorId}/available-slots', [App\Http\Controllers\Admin\AppointmentController::class, 'getAvailableSlots']);
-        });
-
-        // 💊 PRESCRIPTION MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('prescriptions')->group(function () {
-            Route::get('/', [App\Http\Controllers\Admin\PrescriptionController::class, 'index']);
-            Route::post('/', [App\Http\Controllers\Admin\PrescriptionController::class, 'store']);
-            Route::get('/{id}', [App\Http\Controllers\Admin\PrescriptionController::class, 'show']);
-            Route::put('/{id}', [App\Http\Controllers\Admin\PrescriptionController::class, 'update']);
-            Route::delete('/{id}', [App\Http\Controllers\Admin\PrescriptionController::class, 'destroy']);
-            Route::post('/{id}/status', [App\Http\Controllers\Admin\PrescriptionController::class, 'changeStatus']);
-            Route::get('/stats', [App\Http\Controllers\Admin\PrescriptionController::class, 'stats']);
-        });
-// -------- 7. DOCTOR PROFILE MANAGEMENT --------
-// ... ادامه
-        // -------- 7. DOCTOR PROFILE MANAGEMENT --------
-        Route::prefix('doctors/profile')->group(function () {
+    // ==========================================
+    // 3.7 مدیریت پزشکان
+    // ==========================================
+    Route::prefix('doctors')->group(function () {
+        Route::get('/', [DoctorController::class, 'index']);
+        Route::post('/', [DoctorController::class, 'store']);
+        Route::get('/{id}', [DoctorController::class, 'show']);
+        Route::put('/{id}', [DoctorController::class, 'update']);
+        Route::delete('/{id}', [DoctorController::class, 'destroy']);
+        Route::post('/{id}/toggle-availability', [DoctorController::class, 'toggleAvailability']);
+        Route::post('/{id}/verify', [DoctorController::class, 'verify']);
+        
+        // پروفایل پزشک
+        Route::prefix('profile')->group(function () {
             Route::put('/{id}', [DoctorProfileController::class, 'update']);
             Route::post('/{id}/verify', [DoctorProfileController::class, 'verify']);
             Route::post('/{id}/unverify', [DoctorProfileController::class, 'unverify']);
             Route::put('/{id}/location', [LocationController::class, 'updateDoctorLocation']);
         });
-
-        // -------- 8. PATIENT MANAGEMENT --------
-        Route::prefix('patients')->group(function () {
-            Route::get('/', [PatientController::class, 'index']);
-            Route::post('/', [PatientController::class, 'store']);
-            Route::get('/{id}', [PatientController::class, 'show']);
-            Route::put('/{id}', [PatientController::class, 'update']);
-            Route::delete('/{id}', [PatientController::class, 'destroy']);
-            Route::post('/{id}/toggle-status', [PatientController::class, 'toggleStatus']);
-            Route::post('/{id}/verify', [PatientController::class, 'verify']);
-            Route::post('/{id}/unverify', [PatientController::class, 'unverify']);
-            Route::post('/{id}/assign-doctor', [PatientController::class, 'assignDoctor']);
-            Route::get('/{id}/medical-history', [PatientController::class, 'medicalHistory']);
-            Route::get('/{id}/statistics', [PatientController::class, 'statistics']);
-            Route::get('/without-doctor', [PatientController::class, 'withoutDoctor']);
-            Route::get('/top', [PatientController::class, 'topPatients']);
-        });
-
-        // -------- 9. SPECIALTY MANAGEMENT --------
-        Route::prefix('specialties')->group(function () {
-            Route::get('/', [SpecialtyController::class, 'index']);
-            Route::post('/', [SpecialtyController::class, 'store']);
-            Route::get('/{id}', [SpecialtyController::class, 'show']);
-            Route::put('/{id}', [SpecialtyController::class, 'update']);
-            Route::delete('/{id}', [SpecialtyController::class, 'destroy']);
-            Route::post('/{id}/toggle', [SpecialtyController::class, 'toggleStatus']);
-
-            // Specialty Media
-            Route::post('/{id}/icon', [SpecialtyMediaController::class, 'uploadIcon']);
-            Route::delete('/{id}/icon', [SpecialtyMediaController::class, 'deleteIcon']);
-            Route::get('/{id}/icon', [SpecialtyMediaController::class, 'getIcon']);
-        });
-
-        // -------- 10. DRUG MANAGEMENT --------
-        Route::prefix('drugs')->group(function () {
-            Route::get('/', [DrugController::class, 'index']);
-            Route::post('/', [DrugController::class, 'store']);
-            Route::get('/{id}', [DrugController::class, 'show']);
-            Route::put('/{id}', [DrugController::class, 'update']);
-            Route::delete('/{id}', [DrugController::class, 'destroy']);
-            Route::post('/{id}/toggle-status', [DrugController::class, 'toggleStatus']);
-            Route::post('/{id}/increase-stock', [DrugController::class, 'increaseStock']);
-            Route::post('/{id}/decrease-stock', [DrugController::class, 'decreaseStock']);
-            Route::get('/categories', [DrugController::class, 'categories']);
-        });
-
-        // -------- 11. PHARMACY MANAGEMENT --------
-        Route::prefix('pharmacies')->group(function () {
-            Route::get('/', [PharmacyManagementController::class, 'index']);
-            Route::post('/', [PharmacyManagementController::class, 'store']);
-            Route::get('/{id}', [PharmacyManagementController::class, 'show']);
-            Route::put('/{id}', [PharmacyManagementController::class, 'update']);
-            Route::delete('/{id}', [PharmacyManagementController::class, 'destroy']);
-            Route::post('/{id}/toggle-status', [PharmacyManagementController::class, 'toggleStatus']);
-            Route::post('/{id}/toggle-online', [PharmacyManagementController::class, 'toggleOnline']);
-        });
-
-        // -------- 12. PHARMACY ORDERS --------
-        Route::prefix('pharmacy')->group(function () {
-            Route::get('/admin/orders', [PharmacyController::class, 'pharmacyOrders']);
-        });
-
-        // -------- 13. REPORTS --------
-        Route::prefix('reports')->group(function () {
-            Route::get('/types', [ReportController::class, 'types']);
-            Route::post('/excel', [ReportController::class, 'excel']);
-            Route::post('/pdf', [ReportController::class, 'pdf']);
-            Route::post('/stream', [ReportController::class, 'stream']);
-        });
-
-        // -------- 14. SEO MANAGEMENT --------
-        Route::prefix('seo')->group(function () {
-            Route::get('/', [SeoController::class, 'index']);
-            Route::post('/', [SeoController::class, 'store']);
-            Route::get('/{id}', [SeoController::class, 'show']);
-            Route::put('/{id}', [SeoController::class, 'update']);
-            Route::delete('/{id}', [SeoController::class, 'destroy']);
-            Route::get('/model', [SeoController::class, 'getByModel']);
-        });
-
-        // -------- 15. NOTIFICATIONS --------
-        Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
-            // ===== مسیرهای GET =====
-            Route::get('/', 'index');
-            Route::get('/stats', 'stats');
-            Route::get('/recent', 'recent');
-            Route::get('/unread', 'unread');           // ✅ دریافت اعلان‌های خوانده نشده
-            Route::get('/unread/count', 'unreadCount'); // ✅ تعداد اعلان‌های خوانده نشده
-            Route::get('/user/{userId}', 'userNotifications');
-
-            // ===== مسیرهای با ID (بعد از مسیرهای ثابت) =====
-            Route::get('/{id}', 'show');
-            Route::delete('/{id}', 'destroy');
-            Route::post('/{id}/mark-as-read', 'markAsRead');
-
-            // ===== مسیرهای POST =====
-            Route::post('/mark-all-as-read', 'markAllAsRead');
-            Route::delete('/delete-all-read', 'deleteAllRead');
-
-            // ===== مسیرهای ارسال =====
-            Route::post('/send-to-all', 'sendToAll');
-            Route::post('/send-to-doctors', 'sendToDoctors');
-            Route::post('/send-to-patients', 'sendToPatients');
-            Route::post('/send-to-user', 'sendToUser');
-            Route::post('/send-to-doctor-patients/{doctorId}', 'sendToDoctorPatients');
-            Route::post('/send-filtered', 'sendFiltered');
-            Route::post('/send-to-users', 'sendToUsers');
-            Route::post('/send-to-role', 'sendToRole');
-        });
-
-
-        // -------- 16. BLOG MANAGEMENT --------
-        Route::prefix('blog')->group(function () {
-            // Posts
-            Route::get('/posts', [BlogController::class, 'adminPosts']);
-            Route::post('/posts', [BlogController::class, 'store']);
-            Route::get('/posts/{id}', [BlogController::class, 'adminShow']);
-            Route::put('/posts/{id}', [BlogController::class, 'update']);
-            Route::delete('/posts/{id}', [BlogController::class, 'destroy']);
-            Route::post('/posts/{id}/publish', [BlogController::class, 'publish']);
-            Route::post('/posts/{id}/unpublish', [BlogController::class, 'unpublish']);
-
-            // Categories
-            Route::get('/categories', [BlogController::class, 'adminCategories']);
-            Route::post('/categories', [BlogController::class, 'storeCategory']);
-            Route::put('/categories/{id}', [BlogController::class, 'updateCategory']);
-            Route::delete('/categories/{id}', [BlogController::class, 'deleteCategory']);
-
-            // Tags
-            Route::get('/tags', [BlogController::class, 'adminTags']);
-            Route::post('/tags', [BlogController::class, 'storeTag']);
-            Route::put('/tags/{id}', [BlogController::class, 'updateTag']);
-            Route::delete('/tags/{id}', [BlogController::class, 'deleteTag']);
-
-            // Comments
-            Route::get('/comments', [BlogController::class, 'adminComments']);
-            Route::post('/comments/{id}/approve', [BlogController::class, 'approveComment']);
-            Route::post('/comments/{id}/reject', [BlogController::class, 'rejectComment']);
-            Route::delete('/comments/{id}', [BlogController::class, 'deleteComment']);
-
-            // Stats
-            Route::get('/stats', [BlogController::class, 'stats']);
-        });
-
-        // -------- 17. WALLET MANAGEMENT --------
-        Route::prefix('wallet')->group(function () {
-            Route::get('/', [WalletController::class, 'index']);
-            Route::get('/stats', [WalletController::class, 'stats']);
-            Route::get('/{userId}', [WalletController::class, 'show']);
-            Route::post('/{userId}/toggle-status', [WalletController::class, 'toggleStatus']);
-            Route::post('/{userId}/add-bonus', [WalletController::class, 'addBonus']);
-        });
-
-        // -------- 18. INSURANCE MANAGEMENT --------
-        Route::prefix('insurance')->group(function () {
-            Route::get('/', [InsuranceController::class, 'index']);
-            Route::post('/', [InsuranceController::class, 'store']);
-            Route::get('/{id}', [InsuranceController::class, 'show']);
-            Route::put('/{id}', [InsuranceController::class, 'update']);
-            Route::delete('/{id}', [InsuranceController::class, 'destroy']);
-            Route::post('/{id}/toggle-status', [InsuranceController::class, 'toggleStatus']);
-
-            // Patient Insurance
-            Route::post('/assign-to-patient', [InsuranceController::class, 'assignToPatient']);
-            Route::get('/patients/{patientId}/insurances', [InsuranceController::class, 'patientInsurances']);
-            Route::get('/patients/{patientId}/primary', [InsuranceController::class, 'patientPrimaryInsurance']);
-            Route::put('/patient-insurances/{id}', [InsuranceController::class, 'updatePatientInsurance']);
-            Route::post('/patient-insurances/{id}/deactivate', [InsuranceController::class, 'deactivatePatientInsurance']);
-
-            // Appointment Insurance
-            Route::post('/apply-to-appointment', [InsuranceController::class, 'applyToAppointment']);
-            Route::get('/appointments/{appointmentId}', [InsuranceController::class, 'appointmentInsurance']);
-
-            // Claims
-            Route::post('/claims/{id}/approve', [InsuranceController::class, 'approveClaim']);
-            Route::post('/claims/{id}/reject', [InsuranceController::class, 'rejectClaim']);
-
-            // Reports
-            Route::get('/stats', [InsuranceController::class, 'stats']);
-            Route::get('/reports/{insuranceId}', [InsuranceController::class, 'insuranceReport']);
-        });
-
-        // -------- 19. VACCINATION MANAGEMENT --------
-        Route::prefix('vaccination')->group(function () {
-            Route::get('/', [VaccinationController::class, 'index']);
-            Route::post('/', [VaccinationController::class, 'store']);
-            Route::get('/{id}', [VaccinationController::class, 'show']);
-            Route::put('/{id}', [VaccinationController::class, 'update']);
-            Route::delete('/{id}', [VaccinationController::class, 'destroy']);
-            Route::post('/{id}/toggle-status', [VaccinationController::class, 'toggleStatus']);
-
-            // Patient Vaccinations
-            Route::post('/record', [VaccinationController::class, 'record']);
-            Route::get('/patients/{patientId}/vaccinations', [VaccinationController::class, 'patientVaccinations']);
-            Route::get('/patients/{patientId}/summary', [VaccinationController::class, 'patientSummary']);
-            Route::get('/patients/{patientId}/upcoming', [VaccinationController::class, 'upcoming']);
-            Route::get('/patients/{patientId}/overdue', [VaccinationController::class, 'overdue']);
-
-            // Reminders
-            Route::get('/patients/{patientId}/reminders', [VaccinationController::class, 'reminders']);
-            Route::post('/reminders/process', [VaccinationController::class, 'processReminders']);
-
-            // Stats
-            Route::get('/stats', [VaccinationController::class, 'stats']);
-        });
-
-        // -------- 20. SURVEY MANAGEMENT --------
-        Route::prefix('survey')->group(function () {
-            Route::get('/', [SurveyController::class, 'index']);
-            Route::post('/', [SurveyController::class, 'store']);
-            Route::get('/{id}', [SurveyController::class, 'show']);
-            Route::put('/{id}', [SurveyController::class, 'update']);
-            Route::delete('/{id}', [SurveyController::class, 'destroy']);
-            Route::post('/{id}/toggle-status', [SurveyController::class, 'toggleStatus']);
-
-            // Responses
-            Route::get('/{surveyId}/responses', [SurveyController::class, 'surveyResponses']);
-            Route::get('/patients/{patientId}/responses', [SurveyController::class, 'patientResponses']);
-
-            // Feedback
-            Route::get('/feedbacks', [SurveyController::class, 'feedbacks']);
-            Route::post('/feedbacks/{id}/reply', [SurveyController::class, 'replyFeedback']);
-            Route::post('/feedbacks/{id}/resolve', [SurveyController::class, 'resolveFeedback']);
-
-            // Stats
-            Route::get('/stats', [SurveyController::class, 'stats']);
-        });
-// ==========================================
-        // ⏰ REMINDER MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('reminders')->controller(ReminderController::class)->group(function () {
-            // ===== مسیرهای ثابت (بدون ID) - اول =====
-            Route::get('/settings', 'settings');
-            Route::put('/settings', 'updateSettings');
-            Route::post('/process', 'process');
-            Route::get('/stats', 'stats');
-            Route::get('/', 'index');
-            Route::post('/', 'store');
-
-            // ===== مسیرهای با ID - بعد از مسیرهای ثابت =====
-            Route::get('/{id}', 'show');
-            Route::put('/{id}', 'update');
-            Route::delete('/{id}', 'destroy');
-        });
-        // ==========================================
-        // 👛 WALLET MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('wallet')->controller(WalletController::class)->group(function () {
-            Route::get('/', 'index');
-            Route::get('/stats', 'stats');
-            Route::get('/{userId}', 'show');
-            Route::get('/{userId}/transactions', 'transactions');
-            Route::post('/{userId}/toggle-status', 'toggleStatus');
-            Route::post('/{userId}/add-bonus', 'addBonus');
-        });
-        // ==========================================
-        // 📊 REPORTS MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('reports')->controller(ReportController::class)->group(function () {
-            Route::get('/types', 'types');
-            Route::post('/generate', 'generate');
-            Route::post('/export-excel', 'exportExcel');
-            Route::post('/export-pdf', 'exportPdf');
-            Route::post('/stream-pdf', 'streamPdf');
-        });
-        // ==========================================
-        // 💳 PAYMENT MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('payments')->controller(PaymentController::class)->group(function () {
-            Route::get('/', 'index');
-            Route::get('/stats', 'stats');
-            Route::get('/gateways', 'gateways');
-            Route::get('/{id}', 'show');
-            Route::post('/{id}/refund', 'refund');
-        });
-        // ==========================================
-        // 🔗 WEBHOOK MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('webhook')->controller(WebhookController::class)->group(function () {
-            Route::get('/status', 'status');
-            Route::post('/toggle', 'toggle');
-            Route::get('/logs', 'logs');
-            Route::get('/settings', 'settings'); // ✅ متد settings
-            Route::put('/settings', 'updateSettings');
-            Route::post('/test', 'test');
-        });
-        // ==========================================
-        // 📝 BLOG MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('blog')->controller(BlogController::class)->group(function () {
-            // Posts
-            Route::get('/posts', 'posts');
-            Route::post('/posts', 'storePost');
-            Route::get('/posts/{id}', 'adminShowPost');
-            Route::post('/posts/{id}?_method=PUT', 'updatePost');
-            Route::put('/posts/{id}', 'updatePost');
-            Route::delete('/posts/{id}', 'deletePost');
-            Route::post('/posts/{id}/publish', 'publishPost');
-            Route::post('/posts/{id}/unpublish', 'unpublishPost');
-
-            // Categories
-            Route::get('/categories', 'adminCategories');
-            Route::post('/categories', 'storeCategory');
-            Route::put('/categories/{id}', 'updateCategory');
-            Route::delete('/categories/{id}', 'deleteCategory');
-
-            // Tags
-            Route::get('/tags', 'adminTags');
-            Route::post('/tags', 'storeTag');
-            Route::put('/tags/{id}', 'updateTag');
-            Route::delete('/tags/{id}', 'deleteTag');
-
-            // Comments
-            Route::get('/comments', 'adminComments');
-            Route::post('/comments/{id}/approve', 'approveComment');
-            Route::post('/comments/{id}/reject', 'rejectComment');
-            Route::delete('/comments/{id}', 'deleteComment');
-
-            // Stats
-            Route::get('/stats', 'stats');
-        });
-        // ==========================================
-        // 🔔 NOTIFICATION MANAGEMENT (ADMIN)
-        // ==========================================
-        // routes/admin.php
-
-        Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
-            // ===== مسیرهای ثابت (بدون ID) =====
-            Route::get('/', 'index');
-            Route::get('/stats', 'stats');
-            Route::get('/recent', 'recent');
-            Route::post('/mark-all-as-read', 'markAllAsRead');
-            Route::delete('/delete-all-read', 'deleteAllRead');
-
-            // ===== مسیرهای ارسال =====
-            Route::post('/send-to-all', 'sendToAll');
-            Route::post('/send-to-doctors', 'sendToDoctors');
-            Route::post('/send-to-patients', 'sendToPatients');
-            Route::post('/send-to-user', 'sendToUser');
-            Route::post('/send-to-doctor-patients/{doctorId}', 'sendToDoctorPatients');
-
-            // ===== مسیرهای با ID (بعد از مسیرهای ثابت) =====
-            Route::get('/{id}', 'show');
-            Route::delete('/{id}', 'destroy');
-            Route::post('/{id}/mark-as-read', 'markAsRead');
-        });
-        // ==========================================
-        // ⏰ REMINDER MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('reminders')->controller(ReminderController::class)->group(function () {
-            Route::get('/', 'index');
-            Route::post('/', 'store');
-            Route::get('/{id}', 'show');
-            Route::put('/{id}', 'update');
-            Route::delete('/{id}', 'destroy');
-            Route::post('/process', 'process');
-            Route::get('/settings', 'settings');
-            Route::put('/settings', 'updateSettings');
-            Route::get('/stats', 'stats');
-        });
-        // ==========================================
-        // 🔔 NOTIFICATION MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('notifications')->group(function () {
-            Route::get('/', [App\Http\Controllers\Admin\NotificationController::class, 'index']);
-            Route::post('/', [App\Http\Controllers\Admin\NotificationController::class, 'store']);
-            Route::get('/{id}', [App\Http\Controllers\Admin\NotificationController::class, 'show']);
-            Route::delete('/{id}', [App\Http\Controllers\Admin\NotificationController::class, 'destroy']);
-            Route::post('/{id}/mark-as-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead']);
-            Route::post('/mark-all-as-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead']);
-            Route::delete('/delete-all-read', [App\Http\Controllers\Admin\NotificationController::class, 'deleteAllRead']);
-            Route::get('/stats', [App\Http\Controllers\Admin\NotificationController::class, 'stats']);
-
-            // ارسال اعلان
-            Route::post('/send-to-all', [App\Http\Controllers\Admin\NotificationController::class, 'sendToAll']);
-            Route::post('/send-to-doctors', [App\Http\Controllers\Admin\NotificationController::class, 'sendToDoctors']);
-            Route::post('/send-to-patients', [App\Http\Controllers\Admin\NotificationController::class, 'sendToPatients']);
-        });
-        // ==========================================
-        // 📄 INVOICE MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('invoices')->group(function () {
-            Route::get('/', [App\Http\Controllers\Admin\InvoiceController::class, 'index']);
-            Route::post('/', [App\Http\Controllers\Admin\InvoiceController::class, 'store']);
-            Route::get('/{id}', [App\Http\Controllers\Admin\InvoiceController::class, 'show']);
-            Route::put('/{id}', [App\Http\Controllers\Admin\InvoiceController::class, 'update']);
-            Route::delete('/{id}', [App\Http\Controllers\Admin\InvoiceController::class, 'destroy']);
-            Route::post('/{id}/status', [App\Http\Controllers\Admin\InvoiceController::class, 'changeStatus']);
-            Route::get('/{id}/print', [App\Http\Controllers\Admin\InvoiceController::class, 'print']);
-            Route::get('/stats', [App\Http\Controllers\Admin\InvoiceController::class, 'stats']);
-        });
-        // ==========================================
-        // ⭐ RATINGS MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('ratings')->group(function () {
-            Route::get('/', [App\Http\Controllers\Admin\RatingController::class, 'index']);
-            Route::get('/{id}', [App\Http\Controllers\Admin\RatingController::class, 'show']);
-            Route::delete('/{id}', [App\Http\Controllers\Admin\RatingController::class, 'destroy']);
-            Route::post('/{id}/approve', [App\Http\Controllers\Admin\RatingController::class, 'approve']);
-            Route::post('/{id}/reject', [App\Http\Controllers\Admin\RatingController::class, 'reject']);
-            Route::post('/{id}/reply', [App\Http\Controllers\Admin\RatingController::class, 'reply']);
-            Route::get('/stats', [App\Http\Controllers\Admin\RatingController::class, 'stats']);
-        });
-        // ==========================================
-        // 🔄 REFERRAL MANAGEMENT (ADMIN)
-        // ==========================================
-        Route::prefix('referrals')->group(function () {
-            Route::get('/', [App\Http\Controllers\Admin\ReferralController::class, 'index']);
-            Route::post('/', [App\Http\Controllers\Admin\ReferralController::class, 'store']);
-            Route::get('/{id}', [App\Http\Controllers\Admin\ReferralController::class, 'show']);
-            Route::put('/{id}', [App\Http\Controllers\Admin\ReferralController::class, 'update']);
-            Route::delete('/{id}', [App\Http\Controllers\Admin\ReferralController::class, 'destroy']);
-            Route::post('/{id}/accept', [App\Http\Controllers\Admin\ReferralController::class, 'accept']);
-            Route::post('/{id}/reject', [App\Http\Controllers\Admin\ReferralController::class, 'reject']);
-            Route::post('/{id}/complete', [App\Http\Controllers\Admin\ReferralController::class, 'complete']);
-            Route::get('/stats', [App\Http\Controllers\Admin\ReferralController::class, 'stats']);
-        });
-        // -------- 21. EVENT MANAGEMENT --------
-        Route::prefix('events')->group(function () {
-            Route::get('/', [EventController::class, 'index']);
-            Route::post('/', [EventController::class, 'store']);
-            Route::get('/{id}', [EventController::class, 'show']);
-            Route::put('/{id}', [EventController::class, 'update']);
-            Route::delete('/{id}', [EventController::class, 'destroy']);
-            Route::post('/{id}/publish', [EventController::class, 'publish']);
-            Route::post('/{id}/complete', [EventController::class, 'complete']);
-
-            // Registrations
-            Route::get('/{eventId}/registrations', [EventController::class, 'eventRegistrations']);
-            Route::post('/registrations/{id}/confirm', [EventController::class, 'confirmRegistration']);
-            Route::post('/registrations/{id}/cancel', [EventController::class, 'cancelRegistration']);
-            Route::post('/registrations/{id}/attendance', [EventController::class, 'markAttendance']);
-
-            // Stats
-            Route::get('/stats/overview', [EventController::class, 'stats']);
-        });
-
-        // -------- 22. CAMPAIGN MANAGEMENT --------
-        Route::prefix('campaigns')->group(function () {
-            Route::get('/', [CampaignController::class, 'index']);
-            Route::post('/', [CampaignController::class, 'store']);
-            Route::get('/{id}', [CampaignController::class, 'show']);
-            Route::put('/{id}', [CampaignController::class, 'update']);
-            Route::delete('/{id}', [CampaignController::class, 'destroy']);
-            Route::post('/{id}/activate', [CampaignController::class, 'activate']);
-            Route::post('/{id}/pause', [CampaignController::class, 'pause']);
-            Route::post('/{id}/complete', [CampaignController::class, 'complete']);
-
-            // Interactions
-            Route::get('/{campaignId}/interactions', [CampaignController::class, 'interactions']);
-
-            // Stats
-            Route::get('/{id}/stats', [CampaignController::class, 'stats']);
-            Route::get('/stats/overall', [CampaignController::class, 'overallStats']);
-        });
-
-        // -------- 23. MEDICAL NOTES --------
-        Route::prefix('medical-notes')->group(function () {
-            Route::get('/', [MedicalNoteController::class, 'index']);
-            Route::post('/', [MedicalNoteController::class, 'store']);
-            Route::get('/{id}', [MedicalNoteController::class, 'show']);
-            Route::put('/{id}', [MedicalNoteController::class, 'update']);
-            Route::delete('/{id}', [MedicalNoteController::class, 'destroy']);
-            Route::post('/{id}/share', [MedicalNoteController::class, 'share']);
-            Route::post('/{id}/unshare', [MedicalNoteController::class, 'unshare']);
-            Route::get('/patients/{patientId}', [MedicalNoteController::class, 'patientNotes']);
-            Route::get('/doctors/{doctorId}', [MedicalNoteController::class, 'doctorNotes']);
-            Route::get('/patients/{patientId}/summary', [MedicalNoteController::class, 'summary']);
-        });
-
-        // -------- 24. LABORATORY MANAGEMENT --------
-        Route::prefix('lab')->group(function () {
-            // Tests
-            Route::post('/tests', [LabController::class, 'storeTest']);
-            Route::put('/tests/{id}', [LabController::class, 'updateTest']);
-            Route::delete('/tests/{id}', [LabController::class, 'deleteTest']);
-            Route::post('/tests/{id}/toggle-status', [LabController::class, 'toggleTestStatus']);
-
-            // Categories
-            Route::post('/categories', [LabController::class, 'storeCategory']);
-            Route::put('/categories/{id}', [LabController::class, 'updateCategory']);
-            Route::delete('/categories/{id}', [LabController::class, 'deleteCategory']);
-
-            // Orders
-            Route::get('/orders', [LabController::class, 'orders']);
-        });
-
-        // -------- 25. HOSPITAL MANAGEMENT --------
-        Route::prefix('hospital')->group(function () {
-            // Wards
-            Route::post('/wards', [HospitalController::class, 'storeWard']);
-            Route::put('/wards/{id}', [HospitalController::class, 'updateWard']);
-            Route::delete('/wards/{id}', [HospitalController::class, 'deleteWard']);
-
-            // Beds
-            Route::post('/beds', [HospitalController::class, 'storeBed']);
-            Route::put('/beds/{id}', [HospitalController::class, 'updateBed']);
-            Route::delete('/beds/{id}', [HospitalController::class, 'deleteBed']);
-            Route::post('/beds/{id}/status', [HospitalController::class, 'changeBedStatus']);
-        });
-
-        // -------- 26. DIGITAL FORMS MANAGEMENT --------
-        Route::prefix('forms')->group(function () {
-            Route::get('/', [FormController::class, 'forms']);
-            Route::post('/', [FormController::class, 'storeForm']);
-            Route::get('/{id}', [FormController::class, 'showForm']);
-            Route::put('/{id}', [FormController::class, 'updateForm']);
-            Route::delete('/{id}', [FormController::class, 'deleteForm']);
-            Route::post('/{id}/publish', [FormController::class, 'publishForm']);
-            Route::post('/{id}/archive', [FormController::class, 'archiveForm']);
-            Route::post('/{id}/duplicate', [FormController::class, 'duplicateForm']);
-
-            // Responses
-            Route::get('/responses', [FormController::class, 'responses']);
-            Route::get('/forms/{formId}/responses', [FormController::class, 'formResponses']);
-
-            // Stats
-            Route::get('/stats', [FormController::class, 'stats']);
-        });
-
-        // -------- 27. INSTALLMENT MANAGEMENT --------
-        Route::prefix('installments')->group(function () {
-            // Settings
-            Route::get('/settings', [InstallmentController::class, 'getSettings']);
-            Route::put('/settings', [InstallmentController::class, 'updateSettings']);
-            Route::post('/settings/toggle', [InstallmentController::class, 'toggleInstallments']);
-
-            // Contracts
-            Route::get('/contracts', [InstallmentController::class, 'getContracts']);
-            Route::get('/contracts/{id}', [InstallmentController::class, 'getContract']);
-            Route::post('/contracts/{id}/activate', [InstallmentController::class, 'activateContract']);
-            Route::post('/contracts/{id}/cancel', [InstallmentController::class, 'cancelContract']);
-            Route::get('/patients/{patientId}/contracts', [InstallmentController::class, 'patientContracts']);
-
-            // Installments
-            Route::get('/installments', [InstallmentController::class, 'getInstallments']);
-            Route::post('/installments/{id}/waive', [InstallmentController::class, 'waiveInstallment']);
-
-            // Stats
-            Route::get('/stats', [InstallmentController::class, 'stats']);
-        });
-
-        // -------- 28. WEBHOOK MANAGEMENT --------
-        Route::prefix('webhook')->group(function () {
-            Route::get('/status', [WebhookController::class, 'status']);
-            Route::post('/toggle', [WebhookController::class, 'toggle']);
-            Route::get('/logs', [WebhookController::class, 'logs']);
-        });
-
-        // -------- 29. SYSTEM MANAGEMENT --------
-        Route::prefix('system')->group(function () {
-            Route::get('/info', [SystemController::class, 'info']);
-            Route::get('/logs', [SystemController::class, 'logs']);
-            Route::get('/logs/{filename}', [SystemController::class, 'logContent']);
-            Route::delete('/logs/{filename}', [SystemController::class, 'deleteLog']);
-            Route::delete('/logs', [SystemController::class, 'clearLogs']);
-            Route::post('/clear-cache', [SystemController::class, 'clearCache']);
-        });
-
-        // -------- 30. BI & PREDICTIVE ANALYTICS --------
-        Route::prefix('bi')->group(function () {
-            // Predictive Analytics
-            Route::get('/predict/appointments', [BIController::class, 'predictAppointments']);
-            Route::get('/forecast/revenue', [BIController::class, 'forecastRevenue']);
-            Route::get('/segment/patients', [BIController::class, 'segmentPatients']);
-            Route::get('/analyze/doctors', [BIController::class, 'analyzeDoctors']);
-            Route::get('/analytics', [BIController::class, 'getAnalytics']);
-
-            // Custom Reports
-            Route::get('/reports', [BIController::class, 'reports']);
-            Route::post('/reports', [BIController::class, 'createReport']);
-            Route::put('/reports/{id}', [BIController::class, 'updateReport']);
-            Route::delete('/reports/{id}', [BIController::class, 'deleteReport']);
-            Route::post('/reports/{id}/generate', [BIController::class, 'generateReport']);
-
-            // Report Scheduling
-            Route::post('/schedules', [BIController::class, 'createSchedule']);
-            Route::put('/schedules/{id}', [BIController::class, 'updateSchedule']);
-            Route::delete('/schedules/{id}', [BIController::class, 'deleteSchedule']);
-
-            // Backup
-            Route::post('/backup/database', [BIController::class, 'backupDatabase']);
-            Route::post('/backup/files', [BIController::class, 'backupFiles']);
-            Route::post('/backup/{id}/restore', [BIController::class, 'restoreBackup']);
-            Route::get('/backup/history', [BIController::class, 'backupHistory']);
-            Route::delete('/backup/cleanup', [BIController::class, 'cleanupBackups']);
-
-            // Audit Log
-            Route::get('/audit-logs', [BIController::class, 'auditLogs']);
-            Route::post('/audit-logs', [BIController::class, 'logActivity']);
-
-            // Log Archive
-            Route::post('/logs/archive', [BIController::class, 'archiveLogs']);
-            Route::get('/logs/archived', [BIController::class, 'archivedLogs']);
-            Route::post('/logs/archived/{id}/restore', [BIController::class, 'restoreArchivedLog']);
-            Route::delete('/logs/archived/cleanup', [BIController::class, 'cleanupArchivedLogs']);
-
-            // Stats
-            Route::get('/stats', [BIController::class, 'stats']);
-        });
-
-        // -------- 31. SUPER ADMIN ROUTES --------
-        Route::middleware(['role:super_admin'])
-            ->prefix('super-admin')
-            ->group(function () {
-                // Tenant Management
-                Route::get('/tenants', [TenantController::class, 'index']);
-                Route::post('/tenants', [TenantController::class, 'store']);
-                Route::get('/tenants/{id}', [TenantController::class, 'show']);
-                Route::put('/tenants/{id}', [TenantController::class, 'update']);
-                Route::post('/tenants/{id}/toggle-status', [TenantController::class, 'toggleStatus']);
-                Route::get('/stats', [TenantController::class, 'stats']);
-                Route::get('/plans', [TenantController::class, 'plans']);
-            });
     });
+
+    // ==========================================
+    // 3.8 مدیریت نوبت‌ها
+    // ==========================================
+    Route::prefix('appointments')->group(function () {
+        Route::get('/', [AppointmentController::class, 'index']);
+        Route::post('/', [AppointmentController::class, 'store']);
+        Route::get('/{id}', [AppointmentController::class, 'show']);
+        Route::put('/{id}', [AppointmentController::class, 'update']);
+        Route::delete('/{id}', [AppointmentController::class, 'destroy']);
+        Route::post('/{id}/status', [AppointmentController::class, 'changeStatus']);
+        Route::post('/{id}/confirm', [AppointmentController::class, 'confirm']);
+        Route::post('/{id}/cancel', [AppointmentController::class, 'cancel']);
+        Route::post('/{id}/start', [AppointmentController::class, 'start']);
+        Route::post('/{id}/complete', [AppointmentController::class, 'complete']);
+        Route::get('/stats', [AppointmentController::class, 'stats']);
+        Route::get('/doctors/{doctorId}/available-slots', [AppointmentController::class, 'getAvailableSlots']);
+    });
+
+    // ==========================================
+    // 3.9 مدیریت نسخه‌ها
+    // ==========================================
+    Route::prefix('prescriptions')->group(function () {
+        Route::get('/', [PrescriptionController::class, 'index']);
+        Route::post('/', [PrescriptionController::class, 'store']);
+        Route::get('/{id}', [PrescriptionController::class, 'show']);
+        Route::put('/{id}', [PrescriptionController::class, 'update']);
+        Route::delete('/{id}', [PrescriptionController::class, 'destroy']);
+        Route::post('/{id}/status', [PrescriptionController::class, 'changeStatus']);
+        Route::get('/stats', [PrescriptionController::class, 'stats']);
+    });
+
+    // ==========================================
+    // 3.10 مدیریت بیماران
+    // ==========================================
+    Route::prefix('patients')->group(function () {
+        Route::get('/', [PatientController::class, 'index']);
+        Route::post('/', [PatientController::class, 'store']);
+        Route::get('/{id}', [PatientController::class, 'show']);
+        Route::put('/{id}', [PatientController::class, 'update']);
+        Route::delete('/{id}', [PatientController::class, 'destroy']);
+        Route::post('/{id}/toggle-status', [PatientController::class, 'toggleStatus']);
+        Route::post('/{id}/verify', [PatientController::class, 'verify']);
+        Route::post('/{id}/unverify', [PatientController::class, 'unverify']);
+        Route::post('/{id}/assign-doctor', [PatientController::class, 'assignDoctor']);
+        Route::get('/{id}/medical-history', [PatientController::class, 'medicalHistory']);
+        Route::get('/{id}/statistics', [PatientController::class, 'statistics']);
+        Route::get('/without-doctor', [PatientController::class, 'withoutDoctor']);
+        Route::get('/top', [PatientController::class, 'topPatients']);
+    });
+
+    // ==========================================
+    // 3.11 مدیریت تخصص‌ها
+    // ==========================================
+    Route::prefix('specialties')->group(function () {
+        Route::get('/', [SpecialtyController::class, 'index']);
+        Route::post('/', [SpecialtyController::class, 'store']);
+        Route::get('/{id}', [SpecialtyController::class, 'show']);
+        Route::put('/{id}', [SpecialtyController::class, 'update']);
+        Route::delete('/{id}', [SpecialtyController::class, 'destroy']);
+        Route::post('/{id}/toggle', [SpecialtyController::class, 'toggleStatus']);
+
+        // Specialty Media
+        Route::post('/{id}/icon', [SpecialtyMediaController::class, 'uploadIcon']);
+        Route::delete('/{id}/icon', [SpecialtyMediaController::class, 'deleteIcon']);
+        Route::get('/{id}/icon', [SpecialtyMediaController::class, 'getIcon']);
+    });
+
+    // ==========================================
+    // 3.12 مدیریت داروها
+    // ==========================================
+    Route::prefix('drugs')->group(function () {
+        Route::get('/', [DrugController::class, 'index']);
+        Route::post('/', [DrugController::class, 'store']);
+        Route::get('/{id}', [DrugController::class, 'show']);
+        Route::put('/{id}', [DrugController::class, 'update']);
+        Route::delete('/{id}', [DrugController::class, 'destroy']);
+        Route::post('/{id}/toggle-status', [DrugController::class, 'toggleStatus']);
+        Route::post('/{id}/increase-stock', [DrugController::class, 'increaseStock']);
+        Route::post('/{id}/decrease-stock', [DrugController::class, 'decreaseStock']);
+        Route::get('/categories', [DrugController::class, 'categories']);
+    });
+
+    // ==========================================
+    // 3.13 مدیریت داروخانه‌ها
+    // ==========================================
+    Route::prefix('pharmacies')->group(function () {
+        Route::get('/', [PharmacyManagementController::class, 'index']);
+        Route::post('/', [PharmacyManagementController::class, 'store']);
+        Route::get('/{id}', [PharmacyManagementController::class, 'show']);
+        Route::put('/{id}', [PharmacyManagementController::class, 'update']);
+        Route::delete('/{id}', [PharmacyManagementController::class, 'destroy']);
+        Route::post('/{id}/toggle-status', [PharmacyManagementController::class, 'toggleStatus']);
+        Route::post('/{id}/toggle-online', [PharmacyManagementController::class, 'toggleOnline']);
+    });
+
+    // ==========================================
+    // 3.14 مدیریت سفارشات داروخانه
+    // ==========================================
+    Route::prefix('pharmacy')->group(function () {
+        Route::get('/admin/orders', [PharmacyController::class, 'pharmacyOrders']);
+    });
+
+    // ==========================================
+    // 3.15 مدیریت سئو
+    // ==========================================
+    Route::prefix('seo')->group(function () {
+        Route::get('/', [SeoController::class, 'index']);
+        Route::post('/', [SeoController::class, 'store']);
+        Route::get('/{id}', [SeoController::class, 'show']);
+        Route::put('/{id}', [SeoController::class, 'update']);
+        Route::delete('/{id}', [SeoController::class, 'destroy']);
+        Route::get('/model', [SeoController::class, 'getByModel']);
+    });
+
+    // ==========================================
+    // 3.16 مدیریت اعلان‌ها
+    // ==========================================
+    Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
+        // GET
+        Route::get('/', 'index');
+        Route::get('/stats', 'stats');
+        Route::get('/recent', 'recent');
+        Route::get('/unread', 'unread');
+        Route::get('/unread/count', 'unreadCount');
+        Route::get('/user/{userId}', 'userNotifications');
+        Route::get('/{id}', 'show');
+
+        // POST
+        Route::post('/mark-all-as-read', 'markAllAsRead');
+        Route::post('/{id}/mark-as-read', 'markAsRead');
+        Route::post('/send-to-all', 'sendToAll');
+        Route::post('/send-to-doctors', 'sendToDoctors');
+        Route::post('/send-to-patients', 'sendToPatients');
+        Route::post('/send-to-user', 'sendToUser');
+        Route::post('/send-to-doctor-patients/{doctorId}', 'sendToDoctorPatients');
+        Route::post('/send-filtered', 'sendFiltered');
+        Route::post('/send-to-users', 'sendToUsers');
+        Route::post('/send-to-role', 'sendToRole');
+
+        // DELETE
+        Route::delete('/{id}', 'destroy');
+        Route::delete('/delete-all-read', 'deleteAllRead');
+    });
+
+    // ==========================================
+    // 3.17 مدیریت وبلاگ
+    // ==========================================
+    Route::prefix('blog')->controller(BlogController::class)->group(function () {
+        // Posts
+        Route::get('/posts', 'posts');
+        Route::post('/posts', 'storePost');
+        Route::get('/posts/{id}', 'adminShowPost');
+        Route::put('/posts/{id}', 'updatePost');
+        Route::delete('/posts/{id}', 'deletePost');
+        Route::post('/posts/{id}/publish', 'publishPost');
+        Route::post('/posts/{id}/unpublish', 'unpublishPost');
+
+        // Categories
+        Route::get('/categories', 'adminCategories');
+        Route::post('/categories', 'storeCategory');
+        Route::put('/categories/{id}', 'updateCategory');
+        Route::delete('/categories/{id}', 'deleteCategory');
+
+        // Tags
+        Route::get('/tags', 'adminTags');
+        Route::post('/tags', 'storeTag');
+        Route::put('/tags/{id}', 'updateTag');
+        Route::delete('/tags/{id}', 'deleteTag');
+
+        // Comments
+        Route::get('/comments', 'adminComments');
+        Route::post('/comments/{id}/approve', 'approveComment');
+        Route::post('/comments/{id}/reject', 'rejectComment');
+        Route::delete('/comments/{id}', 'deleteComment');
+
+        // Stats
+        Route::get('/stats', 'stats');
+    });
+
+    // ==========================================
+    // 3.18 مدیریت کیف پول
+    // ==========================================
+    Route::prefix('wallet')->controller(WalletController::class)->group(function () {
+        Route::get('/', 'index');
+        Route::get('/stats', 'stats');
+        Route::get('/{userId}', 'show');
+        Route::get('/{userId}/transactions', 'transactions');
+        Route::post('/{userId}/toggle-status', 'toggleStatus');
+        Route::post('/{userId}/add-bonus', 'addBonus');
+    });
+
+    // ==========================================
+    // 3.19 مدیریت گزارشات
+    // ==========================================
+    Route::prefix('reports')->controller(ReportController::class)->group(function () {
+        Route::get('/types', 'types');
+        Route::post('/generate', 'generate');
+        Route::post('/export-excel', 'exportExcel');
+        Route::post('/export-pdf', 'exportPdf');
+        Route::post('/stream-pdf', 'streamPdf');
+    });
+
+    // ==========================================
+    // 3.20 مدیریت پرداخت‌ها
+    // ==========================================
+    Route::prefix('payments')->controller(PaymentController::class)->group(function () {
+        Route::get('/', 'index');
+        Route::get('/stats', 'stats');
+        Route::get('/gateways', 'gateways');
+        Route::get('/{id}', 'show');
+        Route::post('/{id}/refund', 'refund');
+    });
+
+    // ==========================================
+    // 3.21 مدیریت وب‌هوک
+    // ==========================================
+    Route::prefix('webhook')->controller(WebhookController::class)->group(function () {
+        Route::get('/status', 'status');
+        Route::post('/toggle', 'toggle');
+        Route::get('/logs', 'logs');
+        Route::get('/settings', 'settings');
+        Route::put('/settings', 'updateSettings');
+        Route::post('/test', 'test');
+    });
+
+    // ==========================================
+    // 3.22 مدیریت یادآوری‌ها
+    // ==========================================
+    Route::prefix('reminders')->controller(ReminderController::class)->group(function () {
+        Route::get('/', 'index');
+        Route::post('/', 'store');
+        Route::get('/{id}', 'show');
+        Route::put('/{id}', 'update');
+        Route::delete('/{id}', 'destroy');
+        Route::post('/process', 'process');
+        Route::get('/settings', 'settings');
+        Route::put('/settings', 'updateSettings');
+        Route::get('/stats', 'stats');
+    });
+
+    // ==========================================
+    // 3.23 مدیریت فاکتورها
+    // ==========================================
+    Route::prefix('invoices')->group(function () {
+        Route::get('/', [InvoiceController::class, 'index']);
+        Route::post('/', [InvoiceController::class, 'store']);
+        Route::get('/{id}', [InvoiceController::class, 'show']);
+        Route::put('/{id}', [InvoiceController::class, 'update']);
+        Route::delete('/{id}', [InvoiceController::class, 'destroy']);
+        Route::post('/{id}/status', [InvoiceController::class, 'changeStatus']);
+        Route::get('/{id}/print', [InvoiceController::class, 'print']);
+        Route::get('/stats', [InvoiceController::class, 'stats']);
+    });
+
+    // ==========================================
+    // 3.24 مدیریت نظرات
+    // ==========================================
+    Route::prefix('ratings')->group(function () {
+        Route::get('/', [RatingController::class, 'index']);
+        Route::get('/{id}', [RatingController::class, 'show']);
+        Route::delete('/{id}', [RatingController::class, 'destroy']);
+        Route::post('/{id}/approve', [RatingController::class, 'approve']);
+        Route::post('/{id}/reject', [RatingController::class, 'reject']);
+        Route::post('/{id}/reply', [RatingController::class, 'reply']);
+        Route::get('/stats', [RatingController::class, 'stats']);
+    });
+
+    // ==========================================
+    // 3.25 مدیریت ارجاعات
+    // ==========================================
+    Route::prefix('referrals')->group(function () {
+        Route::get('/', [ReferralController::class, 'index']);
+        Route::post('/', [ReferralController::class, 'store']);
+        Route::get('/{id}', [ReferralController::class, 'show']);
+        Route::put('/{id}', [ReferralController::class, 'update']);
+        Route::delete('/{id}', [ReferralController::class, 'destroy']);
+        Route::post('/{id}/accept', [ReferralController::class, 'accept']);
+        Route::post('/{id}/reject', [ReferralController::class, 'reject']);
+        Route::post('/{id}/complete', [ReferralController::class, 'complete']);
+        Route::get('/stats', [ReferralController::class, 'stats']);
+    });
+
+    // ==========================================
+    // 3.26 مدیریت یادداشت‌های پزشکی
+    // ==========================================
+    Route::prefix('medical-notes')->controller(MedicalNoteController::class)->group(function () {
+        // لیست و جستجو
+        Route::get('/', 'index');
+        Route::get('/search', 'search');
+        Route::get('/stats', 'stats');
+        
+        // بیمار
+        Route::get('/patient/{patientId}', 'patientNotes');
+        Route::get('/patient-summary/{patientId}', 'patientSummary');
+        
+        // CRUD
+        Route::post('/', 'store');
+        Route::get('/{id}', 'show');
+        Route::put('/{id}', 'update');
+        Route::delete('/{id}', 'destroy');
+        Route::post('/{id}/status', 'changeStatus');
+        
+        // خروجی
+        Route::post('/export', 'export');
+    });
+
+    // ==========================================
+    // 3.27 مدیریت بیمه
+    // ==========================================
+    Route::prefix('insurance')->group(function () {
+        Route::get('/', [InsuranceController::class, 'index']);
+        Route::post('/', [InsuranceController::class, 'store']);
+        Route::get('/{id}', [InsuranceController::class, 'show']);
+        Route::put('/{id}', [InsuranceController::class, 'update']);
+        Route::delete('/{id}', [InsuranceController::class, 'destroy']);
+        Route::post('/{id}/toggle-status', [InsuranceController::class, 'toggleStatus']);
+
+        // Patient Insurance
+        Route::post('/assign-to-patient', [InsuranceController::class, 'assignToPatient']);
+        Route::get('/patients/{patientId}/insurances', [InsuranceController::class, 'patientInsurances']);
+        Route::get('/patients/{patientId}/primary', [InsuranceController::class, 'patientPrimaryInsurance']);
+        Route::put('/patient-insurances/{id}', [InsuranceController::class, 'updatePatientInsurance']);
+        Route::post('/patient-insurances/{id}/deactivate', [InsuranceController::class, 'deactivatePatientInsurance']);
+
+        // Appointment Insurance
+        Route::post('/apply-to-appointment', [InsuranceController::class, 'applyToAppointment']);
+        Route::get('/appointments/{appointmentId}', [InsuranceController::class, 'appointmentInsurance']);
+
+        // Claims
+        Route::post('/claims/{id}/approve', [InsuranceController::class, 'approveClaim']);
+        Route::post('/claims/{id}/reject', [InsuranceController::class, 'rejectClaim']);
+
+        // Reports
+        Route::get('/stats', [InsuranceController::class, 'stats']);
+        Route::get('/reports/{insuranceId}', [InsuranceController::class, 'insuranceReport']);
+    });
+
+    // ==========================================
+    // 3.28 مدیریت واکسیناسیون
+    // ==========================================
+    Route::prefix('vaccination')->group(function () {
+        Route::get('/', [VaccinationController::class, 'index']);
+        Route::post('/', [VaccinationController::class, 'store']);
+        Route::get('/{id}', [VaccinationController::class, 'show']);
+        Route::put('/{id}', [VaccinationController::class, 'update']);
+        Route::delete('/{id}', [VaccinationController::class, 'destroy']);
+        Route::post('/{id}/toggle-status', [VaccinationController::class, 'toggleStatus']);
+
+        // Patient Vaccinations
+        Route::post('/record', [VaccinationController::class, 'record']);
+        Route::get('/patients/{patientId}/vaccinations', [VaccinationController::class, 'patientVaccinations']);
+        Route::get('/patients/{patientId}/summary', [VaccinationController::class, 'patientSummary']);
+        Route::get('/patients/{patientId}/upcoming', [VaccinationController::class, 'upcoming']);
+        Route::get('/patients/{patientId}/overdue', [VaccinationController::class, 'overdue']);
+
+        // Reminders
+        Route::get('/patients/{patientId}/reminders', [VaccinationController::class, 'reminders']);
+        Route::post('/reminders/process', [VaccinationController::class, 'processReminders']);
+
+        // Stats
+        Route::get('/stats', [VaccinationController::class, 'stats']);
+    });
+
+    // ==========================================
+    // 3.29 مدیریت نظرسنجی
+    // ==========================================
+    Route::prefix('survey')->group(function () {
+        Route::get('/', [SurveyController::class, 'index']);
+        Route::post('/', [SurveyController::class, 'store']);
+        Route::get('/{id}', [SurveyController::class, 'show']);
+        Route::put('/{id}', [SurveyController::class, 'update']);
+        Route::delete('/{id}', [SurveyController::class, 'destroy']);
+        Route::post('/{id}/toggle-status', [SurveyController::class, 'toggleStatus']);
+
+        // Responses
+        Route::get('/{surveyId}/responses', [SurveyController::class, 'surveyResponses']);
+        Route::get('/patients/{patientId}/responses', [SurveyController::class, 'patientResponses']);
+
+        // Feedback
+        Route::get('/feedbacks', [SurveyController::class, 'feedbacks']);
+        Route::post('/feedbacks/{id}/reply', [SurveyController::class, 'replyFeedback']);
+        Route::post('/feedbacks/{id}/resolve', [SurveyController::class, 'resolveFeedback']);
+
+        // Stats
+        Route::get('/stats', [SurveyController::class, 'stats']);
+    });
+
+    // ==========================================
+    // 3.30 مدیریت سیستم
+    // ==========================================
+    Route::prefix('system')->group(function () {
+        Route::get('/info', [SystemController::class, 'info']);
+        Route::get('/logs', [SystemController::class, 'logs']);
+        Route::get('/logs/{filename}', [SystemController::class, 'logContent']);
+        Route::delete('/logs/{filename}', [SystemController::class, 'deleteLog']);
+        Route::delete('/logs', [SystemController::class, 'clearLogs']);
+        Route::post('/clear-cache', [SystemController::class, 'clearCache']);
+    });
+
+    // ==========================================
+    // 3.31 هوش تجاری (BI)
+    // ==========================================
+    Route::prefix('bi')->group(function () {
+        // Predictive Analytics
+        Route::get('/predict/appointments', [BIController::class, 'predictAppointments']);
+        Route::get('/forecast/revenue', [BIController::class, 'forecastRevenue']);
+        Route::get('/segment/patients', [BIController::class, 'segmentPatients']);
+        Route::get('/analyze/doctors', [BIController::class, 'analyzeDoctors']);
+        Route::get('/analytics', [BIController::class, 'getAnalytics']);
+
+        // Custom Reports
+        Route::get('/reports', [BIController::class, 'reports']);
+        Route::post('/reports', [BIController::class, 'createReport']);
+        Route::put('/reports/{id}', [BIController::class, 'updateReport']);
+        Route::delete('/reports/{id}', [BIController::class, 'deleteReport']);
+        Route::post('/reports/{id}/generate', [BIController::class, 'generateReport']);
+
+        // Report Scheduling
+        Route::post('/schedules', [BIController::class, 'createSchedule']);
+        Route::put('/schedules/{id}', [BIController::class, 'updateSchedule']);
+        Route::delete('/schedules/{id}', [BIController::class, 'deleteSchedule']);
+
+        // Backup
+        Route::post('/backup/database', [BIController::class, 'backupDatabase']);
+        Route::post('/backup/files', [BIController::class, 'backupFiles']);
+        Route::post('/backup/{id}/restore', [BIController::class, 'restoreBackup']);
+        Route::get('/backup/history', [BIController::class, 'backupHistory']);
+        Route::delete('/backup/cleanup', [BIController::class, 'cleanupBackups']);
+
+        // Audit Log
+        Route::get('/audit-logs', [BIController::class, 'auditLogs']);
+        Route::post('/audit-logs', [BIController::class, 'logActivity']);
+
+        // Log Archive
+        Route::post('/logs/archive', [BIController::class, 'archiveLogs']);
+        Route::get('/logs/archived', [BIController::class, 'archivedLogs']);
+        Route::post('/logs/archived/{id}/restore', [BIController::class, 'restoreArchivedLog']);
+        Route::delete('/logs/archived/cleanup', [BIController::class, 'cleanupArchivedLogs']);
+
+        // Stats
+        Route::get('/stats', [BIController::class, 'stats']);
+    });
+
+}); // End auth:sanctum + role
+
+// ============================================================================
+// 4. مسیرهای سوپرادمین (فقط super_admin)
+// ============================================================================
+Route::middleware(['auth:sanctum', 'role:super_admin'])
+    ->prefix('super-admin')
+    ->group(function () {
+        // مدیریت Tenant
+        Route::get('/tenants', [TenantController::class, 'index']);
+        Route::post('/tenants', [TenantController::class, 'store']);
+        Route::get('/tenants/{id}', [TenantController::class, 'show']);
+        Route::put('/tenants/{id}', [TenantController::class, 'update']);
+        Route::post('/tenants/{id}/toggle-status', [TenantController::class, 'toggleStatus']);
+        Route::get('/stats', [TenantController::class, 'stats']);
+        Route::get('/plans', [TenantController::class, 'plans']);
+    });
+
+// ==========================================
+// 💰 DOCTOR APPOINTMENT FEE MANAGEMENT (ADMIN)
+// ==========================================
+Route::prefix('doctors')->group(function () {
+    Route::post('/{id}/set-fee', [App\Http\Controllers\Admin\DoctorController::class, 'setAppointmentFee']);
+    Route::get('/{id}/fee', [App\Http\Controllers\Admin\DoctorController::class, 'getAppointmentFee']);
+});

@@ -33,4 +33,4 @@ export {
 
 export { default as seoService } from './admin/seo';
 export { default as landingService } from './admin/landing';
-export { default as clinicService } from './admin/clinic';
+export { default as clinicService } from './admin/clinic';export { default as labService } from "./admin/lab";

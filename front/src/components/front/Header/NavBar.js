@@ -1,45 +1,177 @@
 'use client';
 
-import { Menu } from 'antd';
+import { useState, useEffect } from 'react';
+import { Menu, Button, Drawer, Dropdown, Space, Badge, Avatar, Divider, Typography } from 'antd';
+import { 
+  HomeOutlined, CalendarOutlined, MedicineBoxOutlined,
+  UserOutlined, LogoutOutlined, 
+  MenuOutlined, GlobalOutlined, ShoppingCartOutlined
+} from '@ant-design/icons';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useLanguage } from '@/lib/context/LanguageContext';
 
-export default function NavBar() {
-  const { t, locale } = useLanguage();
-  const pathname = usePathname();
+const { Text } = Typography;
 
-  const navItems = [
-    { key: 'home', label: t('nav.home'), icon: 'fa-home', path: '/' },
-    { key: 'doctors', label: t('nav.doctors'), icon: 'fa-user-md', path: '/doctors' },
-    { key: 'specialties', label: t('nav.specialties'), icon: 'fa-stethoscope', path: '/specialties' },
-    { key: 'appointments', label: t('nav.appointments'), icon: 'fa-calendar-check', path: '/appointments' },
-    { key: 'lab', label: t('nav.lab'), icon: 'fa-flask', path: '/lab' },
-    { key: 'pharmacy', label: t('nav.pharmacy'), icon: 'fa-pills', path: '/pharmacy' },
-    { key: 'records', label: t('nav.records'), icon: 'fa-file-medical', path: '/records' },
-    { key: 'blog', label: t('nav.blog'), icon: 'fa-blog', path: '/blog' },
-    { key: 'support', label: t('nav.support'), icon: 'fa-headset', path: '/support' },
+const NavBar = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { t, locale, changeLanguage } = useLanguage();
+  const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
+  const [user, setUser] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchUser();
+    }
+    updateCartCount();
+    
+    // گوش دادن به تغییرات سبد خرید
+    const handleCartUpdate = () => {
+      updateCartCount();
+    };
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    return () => window.removeEventListener('cartUpdated', handleCartUpdate);
+  }, []);
+
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUser(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
+
+  const updateCartCount = () => {
+    const cart = JSON.parse(localStorage.getItem('pharmacyCart') || '[]');
+    setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    router.push(`/${locale}/login`);
+  };
+
+  const menuItems = [
+    {
+      key: 'home',
+      icon: <HomeOutlined />,
+      label: <Link href={`/${locale}`}>{t('nav.home')}</Link>,
+    },
+    {
+      key: 'appointments',
+      icon: <CalendarOutlined />,
+      label: <Link href={`/${locale}/appointments/new`}>{t('nav.appointments')}</Link>,
+    },
+    {
+      key: 'pharmacy',
+      icon: <MedicineBoxOutlined />,
+      label: <Link href={`/${locale}/pharmacy`}>🏥 {t('nav.pharmacy')}</Link>,
+    },
+    {
+      key: 'cart',
+      icon: <Badge count={cartCount} size="small">
+        <ShoppingCartOutlined style={{ fontSize: '20px' }} />
+      </Badge>,
+      label: <Link href={`/${locale}/pharmacy/cart`}>{t('pharmacy.cart')}</Link>,
+    },
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: user ? (
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: 'profile',
+                label: <Link href={`/${locale}/profile`}>{t('profile.title')}</Link>,
+              },
+              {
+                key: 'appointments',
+                label: <Link href={`/${locale}/profile/appointments`}>{t('profile.appointmentsList')}</Link>,
+              },
+              {
+                key: 'pharmacy-orders',
+                label: <Link href={`/${locale}/profile/pharmacy-orders`}>سفارشات داروخانه</Link>,
+              },
+              {
+                key: 'logout',
+                label: t('auth.logout') || 'خروج',
+                onClick: handleLogout,
+              },
+            ]
+          }}
+        >
+          <Space>
+            <Avatar size="small" icon={<UserOutlined />} />
+            <span>{user?.name || t('profile.title')}</span>
+          </Space>
+        </Dropdown>
+      ) : (
+        <Link href={`/${locale}/login`}>{t('auth.login')}</Link>
+      ),
+    },
   ];
 
-  const selectedKey = navItems.find(item => pathname?.includes(item.path))?.key || 'home';
-
   return (
-    <div className="nav-bar">
-      <div className="container">
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'space-between',
+      width: '100%',
+      gap: '16px'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        flex: 1,
+        gap: '8px'
+      }}>
         <Menu
           mode="horizontal"
-          selectedKeys={[selectedKey]}
-          items={navItems.map(item => ({
-            key: item.key,
-            label: (
-              <Link href={`/${locale}${item.path}`}>
-                <i className={`fas ${item.icon}`} /> {item.label}
-              </Link>
-            ),
-          }))}
-          style={{ background: 'transparent', border: 'none' }}
+          selectedKeys={[pathname.split('/')[2] || 'home']}
+          items={menuItems}
+          style={{ 
+            border: 'none', 
+            background: 'transparent',
+            minWidth: 'auto',
+            flex: 1,
+          }}
         />
+      </div>
+
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '8px',
+      }}>
+        <Dropdown
+          menu={{
+            items: [
+              { key: 'fa', label: 'فارسی', onClick: () => changeLanguage('fa') },
+              { key: 'en', label: 'English', onClick: () => changeLanguage('en') },
+              { key: 'ar', label: 'العربية', onClick: () => changeLanguage('ar') },
+            ]
+          }}
+        >
+          <Button type="text" icon={<GlobalOutlined />} style={{ fontSize: '14px' }}>
+            {locale === 'fa' ? 'فا' : locale === 'en' ? 'EN' : 'ع'}
+          </Button>
+        </Dropdown>
       </div>
     </div>
   );
-}
+};
+
+export default NavBar;
