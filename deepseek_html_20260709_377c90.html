@@ -1,0 +1,2271 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پلتفرم مدیکال کیان | راهکار جامع مدیریت سلامت</title>
+
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        /* ========================================
+           RESET & BASE
+        ======================================== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563EB;
+            --primary-light: #3B82F6;
+            --primary-dark: #1D4ED8;
+            --secondary: #0EA5E9;
+            --accent: #8B5CF6;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --pink: #EC4899;
+
+            --white: #FFFFFF;
+            --gray-50: #F8FAFC;
+            --gray-100: #F1F5F9;
+            --gray-200: #E2E8F0;
+            --gray-300: #CBD5E1;
+            --gray-400: #94A3B8;
+            --gray-500: #64748B;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1E293B;
+            --gray-900: #0F172A;
+
+            --gradient-primary: linear-gradient(135deg, #2563EB 0%, #8B5CF6 100%);
+            --gradient-hero: linear-gradient(135deg, #EFF6FF 0%, #F0F5FF 50%, #F5F3FF 100%);
+            --gradient-cta: linear-gradient(135deg, #2563EB 0%, #8B5CF6 100%);
+            --gradient-card: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.10);
+            --shadow-2xl: 0 30px 80px rgba(37, 99, 235, 0.12);
+            --shadow-glow: 0 0 60px rgba(37, 99, 235, 0.08);
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --radius-2xl: 32px;
+
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+            --font-primary: 'Vazirmatn', sans-serif;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background: var(--white);
+            color: var(--gray-800);
+            line-height: 1.7;
+            direction: rtl;
+            overflow-x: hidden;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ========================================
+           KEYFRAMES - انیمیشن‌ها
+        ======================================== */
+        @keyframes float {
+            0%,
+            100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-20px) rotate(2deg);
+            }
+        }
+
+        @keyframes float-slow {
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        @keyframes pulse-glow {
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(37, 99, 235, 0.15);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(37, 99, 235, 0.30);
+            }
+        }
+
+        @keyframes slide-up {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slide-left {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes scale-in {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes rotate-slow {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        @keyframes blob {
+            0%,
+            100% {
+                border-radius: 60% 40% 50% 50% / 40% 50% 60% 50%;
+            }
+            50% {
+                border-radius: 40% 60% 50% 50% / 50% 40% 50% 60%;
+            }
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .animate-on-scroll.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ========================================
+           BUTTONS
+        ======================================== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 36px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: var(--font-primary);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: var(--white);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 40px rgba(37, 99, 235, 0.45);
+        }
+
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg) translateX(-100%);
+            transition: 0.6s;
+        }
+
+        .btn-primary:hover::after {
+            transform: rotate(45deg) translateX(100%);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: var(--white);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-white {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-white:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-ghost {
+            background: rgba(37, 99, 235, 0.06);
+            color: var(--primary);
+            border: 2px solid transparent;
+        }
+
+        .btn-ghost:hover {
+            background: var(--primary);
+            color: var(--white);
+            transform: translateY(-3px);
+        }
+
+        .btn-lg {
+            padding: 20px 48px;
+            font-size: 18px;
+        }
+
+        .btn-sm {
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* ========================================
+           SECTION HEADERS
+        ======================================== */
+        .section-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .section-header .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(139, 92, 246, 0.08));
+            color: var(--primary);
+            padding: 6px 24px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(37, 99, 235, 0.06);
+        }
+
+        .section-header h2 {
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+
+        .section-header h2 span {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section-header p {
+            font-size: 18px;
+            color: var(--gray-500);
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        /* ========================================
+           HEADER
+        ======================================== */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 16px 0;
+            transition: var(--transition);
+            background: transparent;
+        }
+
+        .header.scrolled {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: var(--shadow-sm);
+            padding: 10px 0;
+        }
+
+        .header .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--gray-900);
+            transition: var(--transition);
+        }
+
+        .header .logo .icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 18px;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .header .logo span {
+            color: var(--primary);
+        }
+
+        .header .nav {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .header .nav a {
+            color: var(--gray-600);
+            font-weight: 500;
+            font-size: 15px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .header .nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            right: 0;
+            width: 0;
+            height: 2px;
+            background: var(--gradient-primary);
+            transition: var(--transition);
+        }
+
+        .header .nav a:hover::after {
+            width: 100%;
+        }
+
+        .header .nav a:hover {
+            color: var(--primary);
+        }
+
+        .header .nav .btn-nav {
+            background: var(--gradient-primary);
+            color: var(--white);
+            padding: 10px 28px;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            font-size: 14px;
+            transition: var(--transition);
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+        }
+
+        .header .nav .btn-nav:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+        }
+
+        .header .nav .btn-nav::after {
+            display: none;
+        }
+
+        .header .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--gray-900);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* ========================================
+           HERO
+        ======================================== */
+        .hero {
+            min-height: 100vh;
+            background: var(--gradient-hero);
+            display: flex;
+            align-items: center;
+            padding: 140px 0 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: blob 8s ease-in-out infinite;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            left: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: blob 10s ease-in-out infinite reverse;
+        }
+
+        .hero .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-content .badge-hero {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(37, 99, 235, 0.06);
+            color: var(--primary);
+            padding: 6px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border: 1px solid rgba(37, 99, 235, 0.08);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .hero-content h1 {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--gray-900);
+            line-height: 1.15;
+            margin-bottom: 20px;
+        }
+
+        .hero-content h1 span {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-content p {
+            font-size: 18px;
+            color: var(--gray-500);
+            line-height: 1.8;
+            margin-bottom: 32px;
+            max-width: 520px;
+        }
+
+        .hero-content .actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+
+        .hero-content .trust-logos {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .hero-content .trust-logos span {
+            color: var(--gray-400);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .hero-content .trust-logos .logo-item {
+            color: var(--gray-600);
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-content .trust-logos .logo-item i {
+            color: var(--primary);
+            font-size: 14px;
+        }
+
+        .hero-image {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .hero-image .main-illustration {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .hero-image .main-illustration .floating-doctor {
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-2xl);
+            border: 1px solid rgba(37, 99, 235, 0.06);
+            animation: float 4s ease-in-out infinite;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-image .main-illustration .floating-doctor .doctor-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #EFF6FF, #F5F3FF);
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 56px;
+            color: var(--primary);
+            border: 4px solid rgba(37, 99, 235, 0.1);
+            position: relative;
+        }
+
+        .hero-image .main-illustration .floating-doctor .doctor-avatar .pulse-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid rgba(37, 99, 235, 0.15);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .hero-image .main-illustration .floating-doctor h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-900);
+            text-align: center;
+        }
+
+        .hero-image .main-illustration .floating-doctor .specialty {
+            text-align: center;
+            color: var(--gray-500);
+            font-size: 14px;
+        }
+
+        .hero-image .main-illustration .floating-doctor .rating {
+            text-align: center;
+            color: var(--warning);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .hero-image .main-illustration .floating-doctor .rating span {
+            color: var(--gray-400);
+            font-size: 13px;
+        }
+
+        .hero-image .main-illustration .floating-badge {
+            position: absolute;
+            background: var(--white);
+            border-radius: var(--radius-md);
+            padding: 14px 20px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid rgba(37, 99, 235, 0.06);
+            animation: float-slow 3s ease-in-out infinite;
+            z-index: 3;
+        }
+
+        .hero-image .main-illustration .floating-badge:nth-child(2) {
+            top: -10px;
+            right: -30px;
+            animation-delay: 0.3s;
+        }
+
+        .hero-image .main-illustration .floating-badge:nth-child(3) {
+            bottom: 40px;
+            left: -40px;
+            animation-delay: 0.8s;
+        }
+
+        .hero-image .main-illustration .floating-badge .icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .hero-image .main-illustration .floating-badge .icon.blue {
+            background: rgba(37, 99, 235, 0.08);
+            color: var(--primary);
+        }
+
+        .hero-image .main-illustration .floating-badge .icon.green {
+            background: rgba(16, 185, 129, 0.08);
+            color: var(--success);
+        }
+
+        .hero-image .main-illustration .floating-badge .icon.purple {
+            background: rgba(139, 92, 246, 0.08);
+            color: var(--accent);
+        }
+
+        .hero-image .main-illustration .floating-badge .text {
+            font-size: 13px;
+        }
+
+        .hero-image .main-illustration .floating-badge .text strong {
+            display: block;
+            font-size: 15px;
+            color: var(--gray-900);
+        }
+
+        .hero-image .main-illustration .floating-badge .text .sub {
+            color: var(--gray-400);
+            font-size: 12px;
+        }
+
+        .hero-image .main-illustration .floating-icon {
+            position: absolute;
+            font-size: 32px;
+            opacity: 0.15;
+            color: var(--primary);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .hero-image .main-illustration .floating-icon:nth-child(4) {
+            top: 10%;
+            right: -15%;
+            animation-delay: 0.5s;
+            font-size: 40px;
+        }
+
+        .hero-image .main-illustration .floating-icon:nth-child(5) {
+            bottom: 20%;
+            left: -10%;
+            animation-delay: 1.2s;
+            font-size: 28px;
+        }
+
+        .hero-image .main-illustration .floating-icon:nth-child(6) {
+            top: 40%;
+            right: -20%;
+            animation-delay: 0.8s;
+            font-size: 36px;
+            opacity: 0.08;
+        }
+
+        /* ========================================
+           CLIENTS
+        ======================================== */
+        .clients {
+            padding: 50px 0;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .clients .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .clients .label {
+            color: var(--gray-400);
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .clients .logos {
+            display: flex;
+            align-items: center;
+            gap: 48px;
+            flex-wrap: wrap;
+        }
+
+        .clients .logos .logo-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--gray-500);
+            font-size: 16px;
+            font-weight: 600;
+            transition: var(--transition);
+            opacity: 0.6;
+        }
+
+        .clients .logos .logo-item i {
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+        .clients .logos .logo-item:hover {
+            opacity: 1;
+            color: var(--gray-800);
+            transform: translateY(-2px);
+        }
+
+        /* ========================================
+           PROBLEM
+        ======================================== */
+        .problem {
+            padding: 80px 0;
+            background: var(--gray-50);
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .problem-card {
+            background: var(--white);
+            border-radius: var(--radius-md);
+            padding: 28px 24px;
+            text-align: center;
+            border: 1px solid var(--gray-100);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .problem-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transition: var(--transition);
+        }
+
+        .problem-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .problem-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-lg);
+            border-color: transparent;
+        }
+
+        .problem-card .icon {
+            font-size: 38px;
+            margin-bottom: 12px;
+            display: block;
+            animation: float-slow 3s ease-in-out infinite;
+        }
+
+        .problem-card:nth-child(2) .icon {
+            animation-delay: 0.5s;
+        }
+        .problem-card:nth-child(3) .icon {
+            animation-delay: 1s;
+        }
+        .problem-card:nth-child(4) .icon {
+            animation-delay: 1.5s;
+        }
+
+        .problem-card h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 6px;
+        }
+
+        .problem-card p {
+            font-size: 14px;
+            color: var(--gray-500);
+        }
+
+        /* ========================================
+           FEATURES
+        ======================================== */
+        .features {
+            padding: 80px 0;
+            background: var(--white);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            display: flex;
+            gap: 20px;
+            padding: 28px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-100);
+            transition: var(--transition);
+            background: var(--white);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--gradient-primary);
+            transform: scaleY(0);
+            transition: var(--transition);
+        }
+
+        .feature-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-4px);
+        }
+
+        .feature-card .icon {
+            flex-shrink: 0;
+            width: 60px;
+            height: 60px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            transition: var(--transition);
+        }
+
+        .feature-card .icon.blue {
+            background: rgba(37, 99, 235, 0.08);
+            color: var(--primary);
+        }
+
+        .feature-card .icon.green {
+            background: rgba(16, 185, 129, 0.08);
+            color: var(--success);
+        }
+
+        .feature-card .icon.purple {
+            background: rgba(139, 92, 246, 0.08);
+            color: var(--accent);
+        }
+
+        .feature-card .icon.orange {
+            background: rgba(245, 158, 11, 0.08);
+            color: var(--warning);
+        }
+
+        .feature-card .icon.pink {
+            background: rgba(236, 72, 153, 0.08);
+            color: var(--pink);
+        }
+
+        .feature-card:hover .icon {
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        .feature-card .content h4 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 6px;
+        }
+
+        .feature-card .content p {
+            font-size: 15px;
+            color: var(--gray-500);
+            line-height: 1.6;
+        }
+
+        .feature-card .content .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(37, 99, 235, 0.06);
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 14px;
+            border-radius: 12px;
+            margin-top: 8px;
+        }
+
+        /* ========================================
+           BENEFITS
+        ======================================== */
+        .benefits {
+            padding: 80px 0;
+            background: var(--gray-50);
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .benefit-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 36px 28px;
+            text-align: center;
+            border: 1px solid var(--gray-100);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .benefit-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transition: var(--transition);
+        }
+
+        .benefit-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+            border-color: transparent;
+        }
+
+        .benefit-card .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+            animation: float-slow 4s ease-in-out infinite;
+        }
+
+        .benefit-card:nth-child(2) .icon {
+            animation-delay: 0.5s;
+        }
+        .benefit-card:nth-child(3) .icon {
+            animation-delay: 1s;
+        }
+        .benefit-card:nth-child(4) .icon {
+            animation-delay: 1.5s;
+        }
+        .benefit-card:nth-child(5) .icon {
+            animation-delay: 2s;
+        }
+        .benefit-card:nth-child(6) .icon {
+            animation-delay: 2.5s;
+        }
+
+        .benefit-card .number {
+            display: inline-block;
+            background: rgba(37, 99, 235, 0.06);
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 2px 14px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        .benefit-card h4 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .benefit-card p {
+            font-size: 15px;
+            color: var(--gray-500);
+            line-height: 1.7;
+        }
+
+        /* ========================================
+           PRICING
+        ======================================== */
+        .pricing {
+            padding: 80px 0;
+            background: var(--white);
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .pricing-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 36px 28px;
+            border: 1px solid var(--gray-100);
+            text-align: center;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .pricing-card.popular {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-2xl);
+            background: var(--white);
+        }
+
+        .pricing-card.popular::before {
+            content: '⭐ محبوب‌ترین';
+            position: absolute;
+            top: -12px;
+            right: 50%;
+            transform: translateX(50%);
+            background: var(--gradient-primary);
+            color: var(--white);
+            padding: 4px 24px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .pricing-card .name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .pricing-card .price {
+            font-size: 42px;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 12px 0 4px;
+        }
+
+        .pricing-card .price small {
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--gray-400);
+        }
+
+        .pricing-card .description {
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-bottom: 20px;
+        }
+
+        .pricing-card .features-list {
+            text-align: right;
+            margin-bottom: 24px;
+        }
+
+        .pricing-card .features-list li {
+            padding: 10px 0;
+            font-size: 14px;
+            color: var(--gray-600);
+            border-bottom: 1px solid var(--gray-50);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pricing-card .features-list li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-card .features-list li i {
+            color: var(--success);
+            font-size: 14px;
+        }
+
+        .pricing-card .features-list li .fa-times {
+            color: var(--gray-300);
+        }
+
+        .pricing-card .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* ========================================
+           TESTIMONIALS
+        ======================================== */
+        .testimonials {
+            padding: 80px 0;
+            background: var(--gray-50);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .testimonial-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            border: 1px solid var(--gray-100);
+            transition: var(--transition);
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-lg);
+            border-color: transparent;
+        }
+
+        .testimonial-card .stars {
+            color: var(--warning);
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .testimonial-card blockquote {
+            font-size: 15px;
+            color: var(--gray-700);
+            line-height: 1.8;
+            margin-bottom: 16px;
+            font-style: italic;
+        }
+
+        .testimonial-card .user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .testimonial-card .user .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .testimonial-card .user .info .name {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .testimonial-card .user .info .role {
+            font-size: 13px;
+            color: var(--gray-400);
+        }
+
+        /* ========================================
+           CTA
+        ======================================== */
+        .cta-section {
+            padding: 80px 0;
+            background: var(--gradient-primary);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: blob 8s ease-in-out infinite;
+        }
+
+        .cta-section::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: blob 10s ease-in-out infinite reverse;
+        }
+
+        .cta-section .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-section h2 {
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--white);
+            margin-bottom: 16px;
+        }
+
+        .cta-section h2 span {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: underline;
+            text-underline-offset: 8px;
+            text-decoration-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .cta-section p {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.8);
+            max-width: 500px;
+            margin: 0 auto 32px;
+        }
+
+        .cta-section .actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 32px;
+        }
+
+        .cta-section .btn-white {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .cta-section .btn-white:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .cta-section .btn-outline-white {
+            background: transparent;
+            color: var(--white);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .cta-section .btn-outline-white:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--white);
+            transform: translateY(-3px);
+        }
+
+        .cta-section .trust-badges {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        .cta-section .trust-badges .badge {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cta-section .trust-badges .badge i {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* ========================================
+           FOOTER
+        ======================================== */
+        .footer {
+            background: var(--gray-900);
+            color: rgba(255, 255, 255, 0.6);
+            padding: 60px 0 0;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 40px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .footer .brand .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--white);
+            margin-bottom: 12px;
+        }
+
+        .footer .brand .logo .icon {
+            width: 38px;
+            height: 38px;
+            background: var(--gradient-primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--white);
+        }
+
+        .footer .brand .logo span {
+            color: var(--primary-light);
+        }
+
+        .footer .brand p {
+            font-size: 14px;
+            line-height: 1.7;
+            max-width: 280px;
+        }
+
+        .footer h4 {
+            color: var(--white);
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .footer ul li {
+            margin-bottom: 10px;
+        }
+
+        .footer ul li a {
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .footer ul li a:hover {
+            color: var(--white);
+        }
+
+        .footer .social {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .footer .social a {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .footer .social a:hover {
+            background: var(--primary);
+            color: var(--white);
+            transform: translateY(-2px);
+        }
+
+        .footer-bottom {
+            padding: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        /* ========================================
+           RESPONSIVE
+        ======================================== */
+        @media (max-width: 1024px) {
+            .hero .container {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hero-content p {
+                margin: 0 auto 32px;
+            }
+
+            .hero-content .actions {
+                justify-content: center;
+            }
+
+            .hero-content .trust-logos {
+                justify-content: center;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .benefits-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .pricing-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .testimonials-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .problem-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .hero-image .main-illustration .floating-badge {
+                display: none;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header .nav {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--white);
+                padding: 24px;
+                flex-direction: column;
+                gap: 16px;
+                box-shadow: var(--shadow-lg);
+                border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            }
+
+            .header .nav.open {
+                display: flex;
+            }
+
+            .header .nav a {
+                color: var(--gray-600);
+            }
+
+            .header .nav .btn-nav {
+                width: 100%;
+                text-align: center;
+            }
+
+            .header .mobile-toggle {
+                display: block;
+            }
+
+            .hero-content h1 {
+                font-size: 32px;
+            }
+
+            .hero-content .trust-logos {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .benefits-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+                max-width: 400px;
+                margin: 0 auto;
+            }
+
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .problem-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .section-header h2 {
+                font-size: 28px;
+            }
+
+            .cta-section h2 {
+                font-size: 28px;
+            }
+
+            .clients .logos {
+                gap: 16px;
+                justify-content: center;
+            }
+
+            .hero-image .main-illustration .floating-icon {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-content h1 {
+                font-size: 26px;
+            }
+
+            .hero-content .actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .pricing-card .price {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================
+    HEADER
+    ============================================ -->
+    <header class="header" id="header">
+        <div class="container">
+            <a href="#" class="logo">
+                <div class="icon"><i class="fas fa-heartbeat"></i></div>
+                کیان<span>سلامت</span>
+            </a>
+
+            <nav class="nav" id="nav">
+                <a href="#features">امکانات</a>
+                <a href="#benefits">مزایا</a>
+                <a href="#pricing">تعرفه‌ها</a>
+                <a href="#testimonials">نظرات</a>
+                <a href="#contact" class="btn-nav">درخواست دمو</a>
+            </nav>
+
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- ============================================
+    HERO
+    ============================================ -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="badge-hero">
+                    <i class="fas fa-rocket"></i>
+                    راهکار جامع مدیریت سلامت
+                </div>
+                <h1>
+                    پلتفرم <span>مدیکال کیان</span><br />
+                    تحول در مدیریت <span>سلامت</span>
+                </h1>
+                <p>
+                    یک پلتفرم یکپارچه برای مدیریت نوبت‌دهی، داروخانه، آزمایشگاه،
+                    پرونده الکترونیک و ارتباط با بیماران. راهکاری کامل برای کلینیک‌ها،
+                    داروخانه‌ها و پزشکان.
+                </p>
+                <div class="actions">
+                    <a href="#contact" class="btn btn-primary btn-lg">
+                        درخواست دمو <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <a href="#features" class="btn btn-outline btn-lg">
+                        مشاهده امکانات
+                    </a>
+                </div>
+                <div class="trust-logos">
+                    <span>همکاری با بیش از</span>
+                    <span class="logo-item"><i class="fas fa-check-circle"></i> ۵۰۰+ مرکز درمانی</span>
+                    <span class="logo-item"><i class="fas fa-check-circle"></i> ۱,۲۰۰+ پزشک</span>
+                    <span class="logo-item"><i class="fas fa-check-circle"></i> ۳۰۰+ داروخانه</span>
+                </div>
+            </div>
+
+            <div class="hero-image">
+                <div class="main-illustration">
+                    <!-- کارت پزشک شناور -->
+                    <div class="floating-doctor">
+                        <div class="doctor-avatar">
+                            <i class="fas fa-user-md"></i>
+                            <div class="pulse-ring"></div>
+                        </div>
+                        <h3>دکتر علی محمدی</h3>
+                        <div class="specialty">متخصص قلب و عروق</div>
+                        <div class="rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <span>۴.۹ (۱۵۲ نظر)</span>
+                        </div>
+                    </div>
+
+                    <!-- بج شناور ۱ - نوبت -->
+                    <div class="floating-badge" style="top:-10px; right:-30px;">
+                        <div class="icon blue"><i class="fas fa-calendar-check"></i></div>
+                        <div class="text">
+                            <strong>نوبت‌دهی هوشمند</strong>
+                            <span class="sub">مدیریت آسان نوبت‌ها</span>
+                        </div>
+                    </div>
+
+                    <!-- بج شناور ۲ - داروخانه -->
+                    <div class="floating-badge" style="bottom:40px; left:-40px;">
+                        <div class="icon green"><i class="fas fa-pills"></i></div>
+                        <div class="text">
+                            <strong>داروخانه آنلاین</strong>
+                            <span class="sub">مدیریت موجودی لحظه‌ای</span>
+                        </div>
+                    </div>
+
+                    <!-- آیکون‌های شناور دکوری -->
+                    <div class="floating-icon" style="top:10%; right:-15%;">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                    <div class="floating-icon" style="bottom:20%; left:-10%;">
+                        <i class="fas fa-flask"></i>
+                    </div>
+                    <div class="floating-icon" style="top:40%; right:-20%;">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+    CLIENTS
+    ============================================ -->
+    <section class="clients">
+        <div class="container">
+            <span class="label">اعتماد مراکز درمانی پیشرو</span>
+            <div class="logos">
+                <span class="logo-item"><i class="fas fa-hospital"></i> کلینیک مهر</span>
+                <span class="logo-item"><i class="fas fa-hospital"></i> بیمارستان شفا</span>
+                <span class="logo-item"><i class="fas fa-hospital"></i> مرکز سلامت پارس</span>
+                <span class="logo-item"><i class="fas fa-hospital"></i> کلینیک نور</span>
+                <span class="logo-item"><i class="fas fa-store"></i> داروخانه سبز</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+    PROBLEM
+    ============================================ -->
+    <section class="problem">
+        <div class="container">
+            <div class="section-header animate-on-scroll">
+                <div class="badge">⚠️ چالش‌های امروز</div>
+                <h2>مدیریت سلامت <span>سخت</span> و <span>پراکنده</span> شده</h2>
+                <p>کلینیک‌ها، داروخانه‌ها و پزشکان با چالش‌های متعددی روبرو هستند</p>
+            </div>
+
+            <div class="problem-grid">
+                <div class="problem-card animate-on-scroll">
+                    <span class="icon">📋</span>
+                    <h4>سیستم‌های جداگانه</h4>
+                    <p>نوبت‌دهی، داروخانه، آزمایشگاه هر کدام سیستم مجزا دارند</p>
+                </div>
+                <div class="problem-card animate-on-scroll">
+                    <span class="icon">📱</span>
+                    <h4>دسترسی محدود</h4>
+                    <p>پزشکان و بیماران به اطلاعات در لحظه دسترسی ندارند</p>
+                </div>
+                <div class="problem-card animate-on-scroll">
+                    <span class="icon">📊</span>
+                    <h4>گزارشات دستی</h4>
+                    <p>تحلیل داده‌ها و گزارشات به صورت دستی و زمان‌بر انجام می‌شود</p>
+                </div>
+                <div class="problem-card animate-on-scroll">
+                    <span class="icon">💸</span>
+                    <h4>هزینه‌های بالا</h4>
+                    <p>هزینه‌های نگهداری و پشتیبانی چندین سیستم جداگانه</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+    FEATURES
+    ============================================ -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header animate-on-scroll">
+                <div class="badge">✨ امکانات</div>
+                <h2>هر آنچه برای <span>مدیریت سلامت</span> نیاز دارید</h2>
+                <p>پلتفرم یکپارچه مدیکال کیان، تمام نیازهای شما را پوشش می‌دهد</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card animate-on-scroll">
+                    <div class="icon blue"><i class="fas fa-calendar-check"></i></div>
+                    <div class="content">
+                        <h4>سیستم نوبت‌دهی هوشمند</h4>
+                        <p>مدیریت نوبت‌های پزشکان، بیماران و زمان‌بندی به صورت آنلاین و خودکار</p>
+                        <span class="tag">🎯 افزایش بهره‌وری ۴۰٪</span>
+                    </div>
+                </div>
+
+                <div class="feature-card animate-on-scroll">
+                    <div class="icon green"><i class="fas fa-pills"></i></div>
+                    <div class="content">
+                        <h4>مدیریت داروخانه</h4>
+                        <p>مدیریت موجودی، سفارشات، فروش و ارتباط با بیماران در یک پلتفرم</p>
+                        <span class="tag">📦 مدیریت موجودی لحظه‌ای</span>
+                    </div>
+                </div>
+
+                <div class="feature-card animate-on-scroll">
+                    <div class="icon purple"><i class="fas fa-flask"></i></div>
+                    <div class="content">
+                        <h4>سیستم مدیریت آزمایشگاه</h4>
+                        <p>ثبت سفارش، پیگیری نمونه‌ها، ثبت نتایج و ارسال به بیماران</p>
+                        <span class="tag">🧪 یکپارچگی کامل</span>
+                    </div>
+                </div>
+
+                <div class="feature-card animate-on-scroll">
+                    <div class="icon orange"><i class="fas fa-folder-open"></i></div>
+                    <div class="content">
+                        <h4>پرونده الکترونیک سلامت</h4>
+                        <p>ذخیره و مدیریت سوابق پزشکی، نسخه‌ها، نتایج آزمایشات بیماران</p>
+                        <span class="tag">📋 دسترسی ۲۴/۷</span>
+                    </div>
+                </div>
+
+                <div class="feature-card animate-on-scroll">
+                    <div class="icon pink"><i class="fas fa-video"></i></div>
+                    <div class="content">
+                        <h4>مشاوره آنلاین</h4>
+                        <p>امکان ویزیت تلفنی و تصویری برای پزشکان و بیماران</p>
+                        <span class="tag">📱 خدمات از راه دور</span>
+                    </div>
+                </div>
+
+                <div class="feature-card animate-on-scroll">
+                    <div class="icon blue"><i class="fas fa-wallet"></i></div>
+                    <div class="content">
+                        <h4>کیف پول و پرداخت</h4>
+                        <p>سیستم پرداخت یکپارچه، کیف پول دیجیتال و تسویه حساب خودکار</p>
+                        <span class="tag">💳 پرداخت امن</span>
+                    </div>
+                </div>
+
+                <div class="feature-card animate-on-scroll">
+                    <div class="icon purple"><i class="fas fa-chart-line"></i></div>
+                    <div class="content">
+                        <h4>داشبورد و گزارشات</h4>
+                        <p>گزارشات پیشرفته، تحلیل داده‌ها و بینش‌های عملی برای تصمیم‌گیری بهتر</p>
+                        <span class="tag">📊 تحلیل هوشمند</span>
+                    </div>
+                </div>
+
+                <div class="feature-card animate-on-scroll">
+                    <div class="icon green"><i class="fas fa-bell"></i></div>
+                    <div class="content">
+                        <h4>نوتیفیکیشن و یادآوری</h4>
+                        <p>یادآوری نوبت‌ها، پیگیری وضعیت سفارشات و اطلاع‌رسانی به بیماران</p>
+                        <span class="tag">🔔 افزایش رضایت</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+    BENEFITS
+    ============================================ -->
+    <section class="benefits" id="benefits">
+        <div class="container">
+            <div class="section-header animate-on-scroll">
+                <div class="badge">🌟 مزایا</div>
+                <h2>چرا <span>مدیکال کیان</span> را انتخاب کنید؟</h2>
+                <p>مزایای منحصربه‌فرد پلتفرم برای کسب‌وکار شما</p>
+            </div>
+
+            <div class="benefits-grid">
+                <div class="benefit-card animate-on-scroll">
+                    <span class="number">۰۱</span>
+                    <span class="icon">🚀</span>
+                    <h4>افزایش بهره‌وری</h4>
+                    <p>کاهش زمان مدیریت، افزایش دقت و بهبود کارایی تیم شما</p>
+                </div>
+
+                <div class="benefit-card animate-on-scroll">
+                    <span class="number">۰۲</span>
+                    <span class="icon">💰</span>
+                    <h4>کاهش هزینه‌ها</h4>
+                    <p>حذف سیستم‌های جداگانه و کاهش هزینه‌های نگهداری تا ۶۰٪</p>
+                </div>
+
+                <div class="benefit-card animate-on-scroll">
+                    <span class="number">۰۳</span>
+                    <span class="icon">📈</span>
+                    <h4>افزایش درآمد</h4>
+                    <p>افزایش تعداد بیماران، بهبود رضایت و کاهش نوبت‌های لغو شده</p>
+                </div>
+
+                <div class="benefit-card animate-on-scroll">
+                    <span class="number">۰۴</span>
+                    <span class="icon">🔒</span>
+                    <h4>امنیت بالا</h4>
+                    <p>رمزگذاری اطلاعات، پشتیبان‌گیری خودکار و رعایت حریم خصوصی</p>
+                </div>
+
+                <div class="benefit-card animate-on-scroll">
+                    <span class="number">۰۵</span>
+                    <span class="icon">📱</span>
+                    <h4>دسترسی همیشه</h4>
+                    <p>دسترسی از هر دستگاه، هر زمان و هر مکان به اطلاعات</p>
+                </div>
+
+                <div class="benefit-card animate-on-scroll">
+                    <span class="number">۰۶</span>
+                    <span class="icon">🔄</span>
+                    <h4>یکپارچگی کامل</h4>
+                    <p>همه خدمات در یک پلتفرم متصل و هماهنگ</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+    PRICING
+    ============================================ -->
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <div class="section-header animate-on-scroll">
+                <div class="badge">💰 تعرفه‌ها</div>
+                <h2>پلن‌های <span>مناسب</span> کسب‌وکار شما</h2>
+                <p>با توجه به نیاز و اندازه کسب‌وکار، پلن مناسب را انتخاب کنید</p>
+            </div>
+
+            <div class="pricing-grid">
+                <!-- Plan 1 -->
+                <div class="pricing-card animate-on-scroll">
+                    <div class="name">شروع</div>
+                    <div class="price">رایگان <small>تا ۳ ماه</small></div>
+                    <div class="description">مناسب برای شروع و آشنایی</div>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> نوبت‌دهی پایه</li>
+                        <li><i class="fas fa-check"></i> پروفایل پزشکان</li>
+                        <li><i class="fas fa-check"></i> ۵۰ نوبت در ماه</li>
+                        <li><i class="fas fa-check"></i> پشتیبانی آنلاین</li>
+                        <li><i class="fas fa-times"></i> داروخانه</li>
+                        <li><i class="fas fa-times"></i> آزمایشگاه</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-ghost">شروع کنید</a>
+                </div>
+
+                <!-- Plan 2 (Popular) -->
+                <div class="pricing-card popular animate-on-scroll">
+                    <div class="name">حرفه‌ای</div>
+                    <div class="price">۲,۹۰۰,۰۰۰ <small>تومان/ماه</small></div>
+                    <div class="description">مناسب برای کلینیک‌ها و مراکز درمانی</div>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> همه امکانات پایه</li>
+                        <li><i class="fas fa-check"></i> نوبت‌دهی پیشرفته</li>
+                        <li><i class="fas fa-check"></i> داروخانه کامل</li>
+                        <li><i class="fas fa-check"></i> سیستم آزمایشگاه</li>
+                        <li><i class="fas fa-check"></i> پرونده الکترونیک</li>
+                        <li><i class="fas fa-check"></i> مشاوره آنلاین</li>
+                        <li><i class="fas fa-check"></i> گزارشات پیشرفته</li>
+                        <li><i class="fas fa-check"></i> پشتیبانی ۲۴/۷</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-primary">شروع کنید</a>
+                </div>
+
+                <!-- Plan 3 -->
+                <div class="pricing-card animate-on-scroll">
+                    <div class="name">سازمانی</div>
+                    <div class="price">۴,۹۰۰,۰۰۰ <small>تومان/ماه</small></div>
+                    <div class="description">مناسب برای بیمارستان‌ها و زنجیره‌ها</div>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> همه امکانات حرفه‌ای</li>
+                        <li><i class="fas fa-check"></i> مدیریت چندمرکزی</li>
+                        <li><i class="fas fa-check"></i> API کامل</li>
+                        <li><i class="fas fa-check"></i> یکپارچگی با بیمه</li>
+                        <li><i class="fas fa-check"></i> داشبورد سفارشی</li>
+                        <li><i class="fas fa-check"></i> پشتیبانی اختصاصی</li>
+                        <li><i class="fas fa-check"></i> آموزش تیم</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-ghost">تماس بگیرید</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+    TESTIMONIALS
+    ============================================ -->
+    <section class="testimonials" id="testimonials">
+        <div class="container">
+            <div class="section-header animate-on-scroll">
+                <div class="badge">💬 نظرات</div>
+                <h2>مدیران درمانی چه <span>می‌گویند</span>؟</h2>
+                <p>تجربه واقعی مدیران کلینیک‌ها و داروخانه‌ها با مدیکال کیان</p>
+            </div>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card animate-on-scroll">
+                    <div class="stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <blockquote>
+                        "مدیکال کیان تحول بزرگی در مدیریت کلینیک ما ایجاد کرد.
+                        نوبت‌دهی، داروخانه و پرونده الکترونیک یکپارچه شدند."
+                    </blockquote>
+                    <div class="user">
+                        <div class="avatar">م</div>
+                        <div class="info">
+                            <div class="name">دکتر مهدی رضایی</div>
+                            <div class="role">مدیر کلینیک مهر</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card animate-on-scroll">
+                    <div class="stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <blockquote>
+                        "مدیریت داروخانه با کیان بسیار ساده شد. موجودی لحظه‌ای،
+                        سفارشات آنلاین و ارتباط با بیماران عالی است."
+                    </blockquote>
+                    <div class="user">
+                        <div class="avatar">ز</div>
+                        <div class="info">
+                            <div class="name">زهرا حسینی</div>
+                            <div class="role">مدیر داروخانه سبز</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card animate-on-scroll">
+                    <div class="stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <blockquote>
+                        "پلتفرم کیان به ما کمک کرد تا خدمات آزمایشگاهی را آنلاین
+                        کنیم و رضایت بیماران را به ۹۸٪ برسانیم."
+                    </blockquote>
+                    <div class="user">
+                        <div class="avatar">ع</div>
+                        <div class="info">
+                            <div class="name">دکتر علی کریمی</div>
+                            <div class="role">مدیر آزمایشگاه پارس</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+    CTA
+    ============================================ -->
+    <section class="cta-section" id="contact">
+        <div class="container">
+            <h2>آماده تحول در <span>مدیریت سلامت</span> هستید؟</h2>
+            <p>همین حالا درخواست دمو کنید و از مزایای پلتفرم مدیکال کیان بهره‌مند شوید.</p>
+            <div class="actions">
+                <a href="#" class="btn btn-white btn-lg">
+                    درخواست دمو <i class="fas fa-arrow-left"></i>
+                </a>
+                <a href="#" class="btn btn-outline-white btn-lg">
+                    تماس با ما
+                </a>
+            </div>
+            <div class="trust-badges">
+                <span class="badge"><i class="fas fa-shield-alt"></i> تضمین کیفیت</span>
+                <span class="badge"><i class="fas fa-headset"></i> پشتیبانی ۲۴/۷</span>
+                <span class="badge"><i class="fas fa-lock"></i> امنیت بالا</span>
+                <span class="badge"><i class="fas fa-gem"></i> آپدیت رایگان</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+    FOOTER
+    ============================================ -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="brand">
+                    <div class="logo">
+                        <div class="icon"><i class="fas fa-heartbeat"></i></div>
+                        کیان<span>سلامت</span>
+                    </div>
+                    <p>
+                        راهکار جامع مدیریت سلامت برای کلینیک‌ها، داروخانه‌ها و پزشکان.
+                        یکپارچه‌سازی نوبت‌دهی، داروخانه، آزمایشگاه و پرونده الکترونیک.
+                    </p>
+                    <div class="social">
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-telegram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+
+                <div>
+                    <h4>خدمات</h4>
+                    <ul>
+                        <li><a href="#">نوبت‌دهی هوشمند</a></li>
+                        <li><a href="#">مدیریت داروخانه</a></li>
+                        <li><a href="#">سیستم آزمایشگاه</a></li>
+                        <li><a href="#">پرونده الکترونیک</a></li>
+                        <li><a href="#">مشاوره آنلاین</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4>اطلاعات</h4>
+                    <ul>
+                        <li><a href="#">درباره ما</a></li>
+                        <li><a href="#">قوانین و مقررات</a></li>
+                        <li><a href="#">حریم خصوصی</a></li>
+                        <li><a href="#">سوالات متداول</a></li>
+                        <li><a href="#">وبلاگ</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4>تماس با ما</h4>
+                    <ul style="line-height: 2.2;">
+                        <li><i class="fas fa-phone" style="color:var(--primary-light);"></i> ۰۲۱-۱۲۳۴۵۶۷۸</li>
+                        <li><i class="fas fa-envelope" style="color:var(--primary-light);"></i> info@kian.health</li>
+                        <li><i class="fas fa-map-marker-alt" style="color:var(--primary-light);"></i> تهران، خیابان ولیعصر</li>
+                        <li><i class="fas fa-clock" style="color:var(--primary-light);"></i> ۹:۰۰ - ۱۸:۰۰</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <span>© ۲۰۲۴ پلتفرم کیان. تمامی حقوق محفوظ است.</span>
+                <span>ساخته شده با ❤️ برای سلامت جامعه</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ============================================
+    JAVASCRIPT
+    ============================================ -->
+    <script>
+        // ============================================
+        // HEADER SCROLL
+        // ============================================
+        const header = document.getElementById('header');
+
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // ============================================
+        // MOBILE TOGGLE
+        // ============================================
+        const mobileToggle = document.getElementById('mobileToggle');
+        const nav = document.getElementById('nav');
+
+        mobileToggle.addEventListener('click', function() {
+            nav.classList.toggle('open');
+            const icon = this.querySelector('i');
+            if (nav.classList.contains('open')) {
+                icon.className = 'fas fa-times';
+            } else {
+                icon.className = 'fas fa-bars';
+            }
+        });
+
+        // ============================================
+        // SMOOTH SCROLL
+        // ============================================
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href === '#') return;
+
+                e.preventDefault();
+                const target = document.querySelector(href);
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    nav.classList.remove('open');
+                    const icon = mobileToggle.querySelector('i');
+                    if (icon) icon.className = 'fas fa-bars';
+                }
+            });
+        });
+
+        // ============================================
+        // SCROLL ANIMATIONS (Intersection Observer)
+        // ============================================
+        const animateElements = document.querySelectorAll('.animate-on-scroll');
+
+        const observerOptions = {
+            threshold: 0.15,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.classList.add('visible');
+                    }, index * 100);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        animateElements.forEach(el => observer.observe(el));
+
+        // ============================================
+        // CONSOLE
+        // ============================================
+        console.log('🏥 پلتفرم مدیکال کیان - راهکار جامع مدیریت سلامت');
+        console.log('📧 info@kian.health | 📞 ۰۲۱-۱۲۳۴۵۶۷۸');
+        console.log('✨ طراحی شده با ❤️ برای سلامت جامعه');
+    </script>
+
+</body>
+</html>
