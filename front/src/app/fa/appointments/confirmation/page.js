@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { 
   Card, Row, Col, Button, Typography, Spin, Tag, 
   Divider, Space, QRCode, message, Alert, Statistic
@@ -21,7 +21,7 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
 
-export default function ConfirmationPage() {
+function ConfirmationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useLanguage();
@@ -315,5 +315,13 @@ export default function ConfirmationPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function ConfirmationPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <ConfirmationContent />
+    </Suspense>
   );
 }

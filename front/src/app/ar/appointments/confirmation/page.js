@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { 
   Card, Row, Col, Button, Typography, Spin, Tag, 
   Divider, Space, QRCode, message, Alert, Statistic
@@ -21,7 +21,7 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
 
-export default function ConfirmationPage() {
+function ConfirmationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useLanguage();
@@ -33,11 +33,6 @@ export default function ConfirmationPage() {
   const getToken = () => localStorage.getItem('token');
 
   useEffect(() => {
-    // بررسی وضعیت پرداخت از URL (برای درگاه)
-    const status = searchParams.get('status');
-    const paymentId = searchParams.get('payment_id');
-
-    // دریافت اطلاعات از localStorage
     const stored = localStorage.getItem('appointmentConfirmation');
     if (stored) {
       try {
@@ -46,7 +41,6 @@ export default function ConfirmationPage() {
         if (data.invoiceId) {
           fetchInvoice(data.invoiceId);
         }
-        // پاک کردن از localStorage
         localStorage.removeItem('appointmentConfirmation');
         setLoading(false);
         return;
@@ -54,8 +48,6 @@ export default function ConfirmationPage() {
         // ignore
       }
     }
-
-    // اگر اطلاعاتی در localStorage نبود
     router.push(`/${locale}/profile/appointments`);
   }, []);
 
@@ -88,7 +80,6 @@ export default function ConfirmationPage() {
       message.warning('فاکتوری برای دانلود وجود ندارد');
       return;
     }
-    // این قابلیت نیاز به API جدید دارد
     message.info('قابلیت دانلود PDF به زودی اضافه می‌شود');
   };
 
@@ -130,8 +121,6 @@ export default function ConfirmationPage() {
       <main style={{ minHeight: 'calc(100vh - 200px)' }}>
         <div style={{ maxWidth: '800px', margin: '40px auto', padding: '0 20px' }}>
           <Breadcrumb />
-
-          {/* وضعیت نوبت */}
           <Alert
             message={
               isSuccess ? (
@@ -158,9 +147,7 @@ export default function ConfirmationPage() {
             showIcon
             style={{ marginBottom: '24px', borderRadius: '12px' }}
           />
-
           <Row gutter={[24, 24]}>
-            {/* اطلاعات نوبت */}
             <Col xs={24} lg={16}>
               <Card title="📋 اطلاعات نوبت" style={{ borderRadius: '12px' }}>
                 <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -180,7 +167,6 @@ export default function ConfirmationPage() {
                       </div>
                     </Col>
                   </Row>
-
                   <Row gutter={[16, 16]}>
                     <Col span={12}>
                       <div>
@@ -199,9 +185,7 @@ export default function ConfirmationPage() {
                       </div>
                     </Col>
                   </Row>
-
                   <Divider />
-
                   <Row gutter={[16, 16]}>
                     <Col span={12}>
                       <div>
@@ -220,7 +204,6 @@ export default function ConfirmationPage() {
                       </div>
                     </Col>
                   </Row>
-
                   {appointment.discount > 0 && (
                     <div>
                       <Text type="secondary">تخفیف</Text>
@@ -228,7 +211,6 @@ export default function ConfirmationPage() {
                       <Tag color="gold">{appointment.discount.toLocaleString()} تومان</Tag>
                     </div>
                   )}
-
                   {appointment.invoiceNumber && (
                     <div>
                       <Text type="secondary">شماره فاکتور</Text>
@@ -239,8 +221,6 @@ export default function ConfirmationPage() {
                 </Space>
               </Card>
             </Col>
-
-            {/* QR Code و اقدامات */}
             <Col xs={24} lg={8}>
               <Card title="📱 کارت نوبت" style={{ borderRadius: '12px', textAlign: 'center' }}>
                 <div style={{ 
@@ -263,22 +243,12 @@ export default function ConfirmationPage() {
                 <Text type="secondary" style={{ fontSize: '12px' }}>
                   کد QR را در مطب نمایش دهید
                 </Text>
-
                 <Divider />
-
                 <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                  <Button 
-                    icon={<PrinterOutlined />} 
-                    onClick={handlePrint}
-                    block
-                  >
+                  <Button icon={<PrinterOutlined />} onClick={handlePrint} block>
                     پرینت فاکتور
                   </Button>
-                  <Button 
-                    icon={<DownloadOutlined />} 
-                    onClick={handleDownloadPDF}
-                    block
-                  >
+                  <Button icon={<DownloadOutlined />} onClick={handleDownloadPDF} block>
                     دانلود PDF
                   </Button>
                   <Button 
@@ -291,7 +261,6 @@ export default function ConfirmationPage() {
                   </Button>
                 </Space>
               </Card>
-
               <Card style={{ borderRadius: '12px', marginTop: '16px' }}>
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <Button 
@@ -315,5 +284,13 @@ export default function ConfirmationPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function ConfirmationPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <ConfirmationContent />
+    </Suspense>
   );
 }
