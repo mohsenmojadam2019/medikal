@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Card, Row, Col, Button, Typography, Spin, Tag, 
@@ -43,7 +43,7 @@ function formatDateForAPI(date) {
   return `${year}-${month}-${day}`;
 }
 
-export default function NewAppointmentPage() {
+function NewAppointmentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { locale } = useLanguage();
@@ -128,11 +128,9 @@ export default function NewAppointmentPage() {
         const slots = data.data?.slots || [];
         setAvailableSlots(slots);
         
-        // ✅ فقط اگر هیچ زمانی موجود نبود، پیام نمایش بده
         if (slots.length === 0) {
           appMessage.info('هیچ زمانی برای این تاریخ موجود نیست');
         }
-        // ✅ حذف پیام موفقیت با تعداد زمان‌ها
       } else {
         appMessage.error(data.message || 'خطا در دریافت زمان‌ها');
         setAvailableSlots([]);
@@ -197,8 +195,6 @@ export default function NewAppointmentPage() {
         notes: '',
       };
 
-      console.log('📝 Booking data:', bookData);
-
       const res = await fetch(`${API_URL}/api/appointments`, {
         method: 'POST',
         headers: {
@@ -209,7 +205,6 @@ export default function NewAppointmentPage() {
       });
 
       const data = await res.json();
-      console.log('📦 Booking response:', data);
 
       if (data.success) {
         const appointment = data.data;
@@ -485,5 +480,13 @@ export default function NewAppointmentPage() {
 
       <Footer />
     </>
+  );
+}
+
+export default function NewAppointmentPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <NewAppointmentContent />
+    </Suspense>
   );
 }
