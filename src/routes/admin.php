@@ -625,3 +625,32 @@ Route::prefix('doctors')->group(function () {
     Route::post('/{id}/set-fee', [App\Http\Controllers\Admin\DoctorController::class, 'setAppointmentFee']);
     Route::get('/{id}/fee', [App\Http\Controllers\Admin\DoctorController::class, 'getAppointmentFee']);
 });
+
+// ============================================================
+// AiChat Admin Routes - مدیریت دکتر آنلاین
+// ============================================================
+Route::prefix('v1/admin/chat')->middleware(['auth:sanctum', 'admin'])->group(function () {
+
+    // مدیریت پرامپت‌ها
+    Route::get('/prompts', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'index']);
+    Route::post('/prompts', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'store']);
+    Route::put('/prompts/{id}', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'update']);
+    Route::delete('/prompts/{id}', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'destroy']);
+    Route::post('/prompts/{id}/toggle', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'toggle']);
+
+    // مدیریت تنظیمات
+    Route::get('/settings', [App\Http\Controllers\Admin\AiChat\SettingsController::class, 'index']);
+    Route::put('/settings', [App\Http\Controllers\Admin\AiChat\SettingsController::class, 'update']);
+
+    // مدیریت مدل‌ها
+    Route::get('/models', [App\Http\Controllers\Admin\AiChat\ModelController::class, 'index']);
+    Route::post('/models/test', [App\Http\Controllers\Admin\AiChat\ModelController::class, 'test']);
+
+    // آمار و گزارشات
+    Route::get('/analytics', [App\Http\Controllers\Admin\AiChat\AnalyticsController::class, 'index']);
+    Route::get('/analytics/queries', [App\Http\Controllers\Admin\AiChat\AnalyticsController::class, 'queries']);
+    Route::get('/analytics/export', [App\Http\Controllers\Admin\AiChat\AnalyticsController::class, 'export']);
+
+    // پاکسازی دستی
+    Route::post('/cleanup', [App\Http\Controllers\Admin\AiChat\CleanupController::class, 'run']);
+});

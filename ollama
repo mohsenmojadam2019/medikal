@@ -1,0 +1,18 @@
+sudo systemctl start ollama
+
+sudo systemctl enable ollama
+ollama -v
+
+Environment="OLLAMA_HOST=0.0.0.0"
+
+
+# ورود به کانتینر لاراول
+docker exec -it medikall-laravel /bin/bash
+
+# تست اتصال
+curl http://host.docker.internal:11434/api/tags
+
+
+
+
+

@@ -460,3 +460,40 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('lab')->gr
     
     Route::get('/orders', [App\Http\Controllers\Api\LabController::class, 'orders']);
 });
+
+// ============================================================
+// AiChat Routes - دکتر آنلاین
+// ============================================================
+Route::prefix('v1/chat')->middleware(['auth:sanctum'])->group(function () {
+
+    // مدیریت جلسات
+    Route::post('/start', [App\Http\Controllers\Api\AiChat\ChatController::class, 'start']);
+    Route::get('/active', [App\Http\Controllers\Api\AiChat\ChatController::class, 'active']);
+    Route::post('/close', [App\Http\Controllers\Api\AiChat\ChatController::class, 'close']);
+    Route::post('/extend', [App\Http\Controllers\Api\AiChat\ChatController::class, 'extend']);
+    Route::delete('/destroy', [App\Http\Controllers\Api\AiChat\ChatController::class, 'destroy']);
+
+    // ارسال پیام و تاریخچه
+    Route::post('/send', [App\Http\Controllers\Api\AiChat\ChatController::class, 'send']);
+    Route::get('/history', [App\Http\Controllers\Api\AiChat\ChatController::class, 'history']);
+
+    // بازخورد
+    Route::post('/feedback', [App\Http\Controllers\Api\AiChat\ChatController::class, 'feedback']);
+
+    // سوالات پزشکی
+    Route::prefix('medical')->group(function () {
+        Route::post('/ask', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'ask']);
+        Route::post('/symptom-check', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'symptomCheck']);
+        Route::get('/history', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'history']);
+        Route::get('/categories', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'categories']);
+        Route::get('/stats', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'stats']);
+    });
+
+    // مدیریت فایل‌ها
+    Route::prefix('files')->group(function () {
+        Route::post('/upload', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'upload']);
+        Route::get('/list', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'list']);
+        Route::get('/download/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'download']);
+        Route::delete('/delete/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'delete']);
+    });
+});

@@ -47,15 +47,16 @@ return [
         Illuminate\Validation\ValidationServiceProvider::class,
         Illuminate\View\ViewServiceProvider::class,
 
-        // Packages
+        // ===== Packages =====
         Spatie\Permission\PermissionServiceProvider::class,
         Spatie\Backup\BackupServiceProvider::class,
         Spatie\MediaLibrary\MediaLibraryServiceProvider::class,
 
-        // App
+        // ===== App Providers =====
         App\Providers\AppServiceProvider::class,
 
-
+        // ===== AiChat Service Provider =====
+        App\AiChat\Providers\AiChatServiceProvider::class,
     ],
 
     'aliases' => [

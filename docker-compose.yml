@@ -24,8 +24,46 @@ services:
     depends_on:
       - medikall-mysql
       - medikall-redis
+#      - medikall-ollama
   #      - medikall-mongodb
   #    command: /bin/bash -c "php-fpm | /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf"
+
+
+  # ===== Ollama Service (AI) =====
+#  medikall-ollama:
+#    image: ollama/ollama:latest
+#    container_name: medikall-ollama
+#    restart: unless-stopped
+#    ports:
+#      - "11434:11434"
+#    volumes:
+#      - ./ollama_data:/root/.ollama
+#    environment:
+#      - OLLAMA_HOST=0.0.0.0
+#      - OLLAMA_ORIGINS=*
+#      - OLLAMA_MODELS=/root/.ollama/models
+#    networks:
+#      - medikall-main-network
+#    # دانلود خودکار مدل هنگام استارت
+#    command: >
+#      sh -c "ollama serve &
+#             sleep 10 &&
+#             ollama pull qwen3:14b || true &&
+#             ollama pull llama3.1 || true &&
+#             wait"
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+#      start_period: 40s
+
+
+
+
+
+
+
 
   #Nginx Service
   medikall-webserver:
