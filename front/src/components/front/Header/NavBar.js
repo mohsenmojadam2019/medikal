@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Menu, Button, Drawer, Dropdown, Space, Badge, Avatar, Divider, Typography } from 'antd';
-import { 
+import {
   HomeOutlined, CalendarOutlined, MedicineBoxOutlined,
-  UserOutlined, LogoutOutlined, 
-  MenuOutlined, GlobalOutlined, ShoppingCartOutlined
+  UserOutlined, LogoutOutlined,
+  MenuOutlined, GlobalOutlined, ShoppingCartOutlined,
+  RobotOutlined  // ← اضافه شد
 } from '@ant-design/icons';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -27,7 +28,7 @@ const NavBar = () => {
       fetchUser();
     }
     updateCartCount();
-    
+
     // گوش دادن به تغییرات سبد خرید
     const handleCartUpdate = () => {
       updateCartCount();
@@ -80,6 +81,15 @@ const NavBar = () => {
       label: <Link href={`/${locale}/pharmacy`}>🏥 {t('nav.pharmacy')}</Link>,
     },
     {
+      key: 'ai-chat',  // ← اضافه شد
+      icon: <RobotOutlined style={{ color: '#1890ff' }} />,
+      label: (
+          <Link href={`/${locale}/ai-chat`} style={{ color: '#1890ff', fontWeight: '500' }}>
+            🧠 هوش مصنوعی
+          </Link>
+      ),
+    },
+    {
       key: 'cart',
       icon: <Badge count={cartCount} size="small">
         <ShoppingCartOutlined style={{ fontSize: '20px' }} />
@@ -90,87 +100,87 @@ const NavBar = () => {
       key: 'profile',
       icon: <UserOutlined />,
       label: user ? (
-        <Dropdown
-          menu={{
-            items: [
-              {
-                key: 'profile',
-                label: <Link href={`/${locale}/profile`}>{t('profile.title')}</Link>,
-              },
-              {
-                key: 'appointments',
-                label: <Link href={`/${locale}/profile/appointments`}>{t('profile.appointmentsList')}</Link>,
-              },
-              {
-                key: 'pharmacy-orders',
-                label: <Link href={`/${locale}/profile/pharmacy-orders`}>سفارشات داروخانه</Link>,
-              },
-              {
-                key: 'logout',
-                label: t('auth.logout') || 'خروج',
-                onClick: handleLogout,
-              },
-            ]
-          }}
-        >
-          <Space>
-            <Avatar size="small" icon={<UserOutlined />} />
-            <span>{user?.name || t('profile.title')}</span>
-          </Space>
-        </Dropdown>
+          <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'profile',
+                    label: <Link href={`/${locale}/profile`}>{t('profile.title')}</Link>,
+                  },
+                  {
+                    key: 'appointments',
+                    label: <Link href={`/${locale}/profile/appointments`}>{t('profile.appointmentsList')}</Link>,
+                  },
+                  {
+                    key: 'pharmacy-orders',
+                    label: <Link href={`/${locale}/profile/pharmacy-orders`}>سفارشات داروخانه</Link>,
+                  },
+                  {
+                    key: 'logout',
+                    label: t('auth.logout') || 'خروج',
+                    onClick: handleLogout,
+                  },
+                ]
+              }}
+          >
+            <Space>
+              <Avatar size="small" icon={<UserOutlined />} />
+              <span>{user?.name || t('profile.title')}</span>
+            </Space>
+          </Dropdown>
       ) : (
-        <Link href={`/${locale}/login`}>{t('auth.login')}</Link>
+          <Link href={`/${locale}/login`}>{t('auth.login')}</Link>
       ),
     },
   ];
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'space-between',
-      width: '100%',
-      gap: '16px'
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        flex: 1,
-        gap: '8px'
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        gap: '16px'
       }}>
-        <Menu
-          mode="horizontal"
-          selectedKeys={[pathname.split('/')[2] || 'home']}
-          items={menuItems}
-          style={{ 
-            border: 'none', 
-            background: 'transparent',
-            minWidth: 'auto',
-            flex: 1,
-          }}
-        />
-      </div>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          flex: 1,
+          gap: '8px'
+        }}>
+          <Menu
+              mode="horizontal"
+              selectedKeys={[pathname.split('/')[2] || 'home']}
+              items={menuItems}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                minWidth: 'auto',
+                flex: 1,
+              }}
+          />
+        </div>
 
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '8px',
-      }}>
-        <Dropdown
-          menu={{
-            items: [
-              { key: 'fa', label: 'فارسی', onClick: () => changeLanguage('fa') },
-              { key: 'en', label: 'English', onClick: () => changeLanguage('en') },
-              { key: 'ar', label: 'العربية', onClick: () => changeLanguage('ar') },
-            ]
-          }}
-        >
-          <Button type="text" icon={<GlobalOutlined />} style={{ fontSize: '14px' }}>
-            {locale === 'fa' ? 'فا' : locale === 'en' ? 'EN' : 'ع'}
-          </Button>
-        </Dropdown>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <Dropdown
+              menu={{
+                items: [
+                  { key: 'fa', label: 'فارسی', onClick: () => changeLanguage('fa') },
+                  { key: 'en', label: 'English', onClick: () => changeLanguage('en') },
+                  { key: 'ar', label: 'العربية', onClick: () => changeLanguage('ar') },
+                ]
+              }}
+          >
+            <Button type="text" icon={<GlobalOutlined />} style={{ fontSize: '14px' }}>
+              {locale === 'fa' ? 'فا' : locale === 'en' ? 'EN' : 'ع'}
+            </Button>
+          </Dropdown>
+        </div>
       </div>
-    </div>
   );
 };
 

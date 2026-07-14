@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -41,6 +40,7 @@ export default function AppointmentsPage() {
         },
       });
       const data = await res.json();
+      console.log('📦 Appointments response:', data);
 
       if (data.success) {
         let appointmentsData = [];
@@ -69,13 +69,13 @@ export default function AppointmentsPage() {
 
   const getStatus = (status) => {
     const map = {
-      confirmed: { color: 'success', icon: <CheckCircleOutlined />, label: 'تایید شده' },
-      pending: { color: 'warning', icon: <ClockCircleOutlined />, label: 'در انتظار' },
-      completed: { color: 'blue', icon: <CheckCircleOutlined />, label: 'انجام شده' },
-      cancelled: { color: 'error', icon: <CloseCircleOutlined />, label: 'لغو شده' },
-      in_progress: { color: 'processing', icon: <ClockCircleOutlined />, label: 'در حال انجام' },
-      arrived: { color: 'success', icon: <CheckCircleOutlined />, label: 'حاضر' },
-      no_show: { color: 'error', icon: <CloseCircleOutlined />, label: 'حاضر نشده' },
+      confirmed: { color: 'success', icon: <CheckCircleOutlined />, label: t('confirmed') || 'تایید شده' },
+      pending: { color: 'warning', icon: <ClockCircleOutlined />, label: t('pending') || 'در انتظار' },
+      completed: { color: 'blue', icon: <CheckCircleOutlined />, label: t('completed') || 'انجام شده' },
+      cancelled: { color: 'error', icon: <CloseCircleOutlined />, label: t('cancelled') || 'لغو شده' },
+      in_progress: { color: 'processing', icon: <ClockCircleOutlined />, label: t('inProgress') || 'در حال انجام' },
+      arrived: { color: 'success', icon: <CheckCircleOutlined />, label: t('arrived') || 'حاضر' },
+      no_show: { color: 'error', icon: <CloseCircleOutlined />, label: t('noShow') || 'حاضر نشده' },
     };
     return map[status] || map.pending;
   };
@@ -92,13 +92,13 @@ export default function AppointmentsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        appMessage.success('نوبت با موفقیت لغو شد');
+        appMessage.success(t('appointmentCancelled') || 'نوبت با موفقیت لغو شد');
         fetchAppointments();
       } else {
-        appMessage.error(data.message || 'خطا در لغو نوبت');
+        appMessage.error(data.message || t('errorCancelling') || 'خطا در لغو نوبت');
       }
     } catch (error) {
-      appMessage.error('خطا در ارتباط با سرور');
+      appMessage.error(t('serverError') || 'خطا در ارتباط با سرور');
     }
   };
 
@@ -123,7 +123,7 @@ export default function AppointmentsPage() {
 
   const columns = [
     {
-      title: 'پزشک',
+      title: t('doctor') || 'پزشک',
       dataIndex: 'doctor',
       key: 'doctor',
       render: (doctor) => {
@@ -132,7 +132,7 @@ export default function AppointmentsPage() {
       },
     },
     {
-      title: 'تخصص',
+      title: t('specialty') || 'تخصص',
       dataIndex: 'doctor',
       key: 'specialty',
       render: (doctor) => {
@@ -141,7 +141,7 @@ export default function AppointmentsPage() {
       },
     },
     {
-      title: 'تاریخ',
+      title: t('date') || 'تاریخ',
       dataIndex: 'date',
       key: 'date',
       render: (date) => {
@@ -154,7 +154,7 @@ export default function AppointmentsPage() {
       },
     },
     {
-      title: 'ساعت',
+      title: t('time') || 'ساعت',
       dataIndex: 'start_time',
       key: 'time',
       render: (time) => {
@@ -163,7 +163,7 @@ export default function AppointmentsPage() {
       },
     },
     {
-      title: 'وضعیت',
+      title: t('status') || 'وضعیت',
       dataIndex: 'status',
       key: 'status',
       render: (status) => {
@@ -173,7 +173,7 @@ export default function AppointmentsPage() {
       },
     },
     {
-      title: 'عملیات',
+      title: t('actions') || 'عملیات',
       key: 'action',
       render: (_, record) => (
           <Space>
@@ -184,7 +184,7 @@ export default function AppointmentsPage() {
                     size="small"
                     onClick={() => handleCancel(record.id)}
                 >
-                  لغو
+                  {t('cancel') || 'لغو'}
                 </Button>
             )}
             <Button
@@ -192,7 +192,7 @@ export default function AppointmentsPage() {
                 size="small"
                 onClick={() => router.push(`/${locale}/doctors/${record.doctor_id}`)}
             >
-              مشاهده پزشک
+              {t('viewDoctor') || 'مشاهده پزشک'}
             </Button>
           </Space>
       ),
@@ -208,8 +208,8 @@ export default function AppointmentsPage() {
 
             <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <Title level={2}>📅 نوبت‌ها</Title>
-                <Text type="secondary">مدیریت نوبت‌های شما</Text>
+                <Title level={2}>📅 {t('appointments') || 'نوبت‌ها'}</Title>
+                <Text type="secondary">{t('manageAppointments') || 'مدیریت نوبت‌های شما'}</Text>
               </div>
               <Button
                   type="primary"
@@ -217,14 +217,14 @@ export default function AppointmentsPage() {
                   onClick={() => router.push(`/${locale}/appointments/new`)}
                   size="large"
               >
-                نوبت جدید
+                {t('newAppointment') || 'نوبت جدید'}
               </Button>
             </div>
 
             <Card style={{ borderRadius: '16px' }}>
               <Tabs activeKey={activeTab} onChange={setActiveTab}>
                 <TabPane
-                    tab={`نوبت‌های پیش رو (${upcomingAppointments.length})`}
+                    tab={`${t('upcoming') || 'نوبت‌های پیش رو'} (${upcomingAppointments.length})`}
                     key="upcoming"
                 >
                   {upcomingAppointments.length > 0 ? (
@@ -235,11 +235,11 @@ export default function AppointmentsPage() {
                           pagination={{ pageSize: 10 }}
                       />
                   ) : (
-                      <Empty description="هیچ نوبت پیش رویی ندارید" />
+                      <Empty description={t('noUpcomingAppointments') || 'هیچ نوبت پیش رویی ندارید'} />
                   )}
                 </TabPane>
                 <TabPane
-                    tab={`نوبت‌های گذشته (${pastAppointments.length})`}
+                    tab={`${t('past') || 'نوبت‌های گذشته'} (${pastAppointments.length})`}
                     key="past"
                 >
                   {pastAppointments.length > 0 ? (
@@ -250,7 +250,7 @@ export default function AppointmentsPage() {
                           pagination={{ pageSize: 10 }}
                       />
                   ) : (
-                      <Empty description="هیچ نوبت گذشته‌ای ندارید" />
+                      <Empty description={t('noPastAppointments') || 'هیچ نوبت گذشته‌ای ندارید'} />
                   )}
                 </TabPane>
               </Tabs>

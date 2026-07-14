@@ -51,7 +51,7 @@ function AdminLayoutContent({ children }) {
         token: {
           colorPrimary: '#2563eb',
           borderRadius: 8,
-          fontFamily: 'Vazirmatn, sans-serif',
+          // fontFamily: 'Vazirmatn, sans-serif',
         },
         components: {
           Layout: {

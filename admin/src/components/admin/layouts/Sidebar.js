@@ -27,6 +27,7 @@ import {
   ApiOutlined,
   SettingOutlined,
   HeartFilled,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -42,6 +43,45 @@ export default function Sidebar({ collapsed, onCollapse }) {
       icon: <DashboardOutlined />,
       label: <Link href="/admin">{t('dashboard', 'نمای کلی')}</Link>,
     },
+    // ===== بخش هوش مصنوعی =====
+    {
+      key: 'ai-chat',
+      icon: <RobotOutlined />,
+      label: 'هوش مصنوعی',
+      children: [
+        {
+          key: 'ai-chat',
+          icon: <DashboardOutlined />,
+          label: <Link href="/admin/ai-chat">داشبورد</Link>,
+        },
+        {
+          key: 'ai-chat-prompts',
+          icon: <FileTextOutlined />,
+          label: <Link href="/admin/ai-chat/prompts">مدیریت پرامپت‌ها</Link>,
+        },
+        {
+          key: 'ai-chat-models',
+          icon: <RobotOutlined />,
+          label: <Link href="/admin/ai-chat/models">مدیریت مدل‌ها</Link>,
+        },
+        {
+          key: 'ai-chat-sessions',
+          icon: <MessageOutlined />,
+          label: <Link href="/admin/ai-chat/sessions">جلسات چت</Link>,
+        },
+        {
+          key: 'ai-chat-analytics',
+          icon: <BarChartOutlined />,
+          label: <Link href="/admin/ai-chat/analytics">گزارشات</Link>,
+        },
+        {
+          key: 'ai-chat-settings',
+          icon: <SettingOutlined />,
+          label: <Link href="/admin/ai-chat/settings">تنظیمات</Link>,
+        },
+      ],
+    },
+    // ===== ادامه منوهای قبلی =====
     {
       type: 'group',
       label: t('management', 'مدیریت'),
@@ -197,74 +237,83 @@ export default function Sidebar({ collapsed, onCollapse }) {
 
   const getSelectedKey = () => {
     const path = pathname || '/admin';
+    if (path.startsWith('/admin/ai-chat')) {
+      if (path === '/admin/ai-chat') return ['ai-chat'];
+      if (path.includes('/prompts')) return ['ai-chat-prompts'];
+      if (path.includes('/models')) return ['ai-chat-models'];
+      if (path.includes('/sessions')) return ['ai-chat-sessions'];
+      if (path.includes('/analytics')) return ['ai-chat-analytics'];
+      if (path.includes('/settings')) return ['ai-chat-settings'];
+    }
     const key = path.replace('/admin/', '').replace('/', '') || 'dashboard';
     return [key];
   };
 
   return (
-    <Sider
-      collapsible
-      collapsed={collapsed}
-      onCollapse={onCollapse}
-      width={280}
-      theme="light"
-      style={{
-        height: '100vh',
-        position: 'fixed',
-        right: 0,
-        top: 0,
-        bottom: 0,
-        zIndex: 100,
-        borderLeft: '1px solid #e8e8f0',
-        overflow: 'auto',
-        background: '#ffffff',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '16px 20px',
-          borderBottom: '1px solid #e8e8f0',
-          marginBottom: '8px',
-        }}
+      <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={onCollapse}
+          width={280}
+          theme="light"
+          style={{
+            height: '100vh',
+            position: 'fixed',
+            right: 0,
+            top: 0,
+            bottom: 0,
+            zIndex: 100,
+            borderLeft: '1px solid #e8e8f0',
+            overflow: 'auto',
+            background: '#ffffff',
+          }}
       >
         <div
-          style={{
-            width: 46,
-            height: 46,
-            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ffffff',
-            fontSize: 22,
-            flexShrink: 0,
-            boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
-          }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '16px 20px',
+              borderBottom: '1px solid #e8e8f0',
+              marginBottom: '8px',
+            }}
         >
-          <HeartFilled />
-        </div>
-        {!collapsed && (
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
-              کلینیک<span style={{ color: '#2563eb' }}>یار</span>
-            </div>
-            <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 400, marginTop: -2 }}>
-              {t('system_management', 'سیستم مدیریت سلامت')}
-            </div>
+          <div
+              style={{
+                width: 46,
+                height: 46,
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                borderRadius: 12,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                fontSize: 22,
+                flexShrink: 0,
+                boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
+              }}
+          >
+            <HeartFilled />
           </div>
-        )}
-      </div>
+          {!collapsed && (
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
+                  کلینیک<span style={{ color: '#2563eb' }}>یار</span>
+                </div>
+                <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 400, marginTop: -2 }}>
+                  {t('system_management', 'سیستم مدیریت سلامت')}
+                </div>
+              </div>
+          )}
+        </div>
 
-      <Menu
-        mode="inline"
-        selectedKeys={getSelectedKey()}
-        items={menuItems}
-        style={{ border: 'none', background: 'transparent' }}
-      />
-    </Sider>
+        <Menu
+            mode="inline"
+            selectedKeys={getSelectedKey()}
+            defaultOpenKeys={['ai-chat']}
+            items={menuItems}
+            style={{ border: 'none', background: 'transparent' }}
+        />
+      </Sider>
   );
 }
