@@ -2,6 +2,8 @@
 # Laravel (src)
 # ==========================================
 src/vendor/
+src/.env
+src/.env.example
 src/node_modules/
 
 src/.env.*.local
