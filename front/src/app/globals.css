@@ -385,9 +385,9 @@ body {
 }
 
 /* ===== SECTION ===== */
-.section {
-  margin: 32px 0;
-}
+/*.section {*/
+/*  margin: 32px 0;*/
+/*}*/
 
 .section-header {
   display: flex;
