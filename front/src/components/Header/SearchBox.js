@@ -8,7 +8,7 @@ export default function SearchBox() {
     <div className="search-box">
       <Input
         size="large"
-        placeholder="جستجوی پزشک، تخصص، مطب یا خدمات..."
+        placeholder="جستجو"
         prefix={<SearchOutlined />}
         suffix={<span className="search-shortcut">Ctrl + K</span>}
         onPressEnter={(e) => {

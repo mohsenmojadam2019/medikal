@@ -1,27 +1,58 @@
+// /home/god/Videos/medikal/front/src/middleware.js
 import { NextResponse } from 'next/server';
 
-// مسیرهای عمومی (نیاز به لاگین ندارن)
-const publicPaths = ['/login', '/register', '/verify', '/'];
+// ✅ مسیرهای عمومی (بدون نیاز به لاگین)
+const publicPaths = [
+  '/',
+  '/login',
+  '/register',
+  '/verify',
+  '/doctors',
+  '/about',
+  '/contact'
+];
 
-// مسیرهای لاگین و ثبت‌نام (اگه لاگین باشی، نمیتونی بری)
-const authPaths = ['/login', '/register', '/verify'];
+// ✅ مسیرهای محافظت‌شده (نیاز به لاگین)
+const protectedPaths = [
+  '/appointments/checkout', // ✅ تسویه حساب نیاز به لاگین دارد
+  '/appointments/my', // ✅ لیست نوبت‌های من
+  '/profile',
+  '/dashboard',
+  '/appointments/history',
+  '/appointments/confirmation' // ✅ صفحه تأیید نهایی
+];
 
 export function middleware(request) {
-  const token = request.cookies.get('token')?.value || 
-                request.headers.get('authorization')?.replace('Bearer ', '');
-  
+  const token = request.cookies.get('token')?.value ||
+      request.headers.get('authorization')?.replace('Bearer ', '');
+
   const { pathname } = request.nextUrl;
-  
-  // اگه کاربر لاگین هست و میخواد بره به صفحات لاگین/ثبت‌نام
-  if (token && authPaths.includes(pathname)) {
+
+  // ✅ اجازه دسترسی به فایل‌های استاتیک
+  if (pathname.startsWith('/_next') ||
+      pathname.startsWith('/images') ||
+      pathname.startsWith('/fonts') ||
+      pathname.startsWith('/api')) {
+    return NextResponse.next();
+  }
+
+  // ✅ اگر کاربر لاگین است و به صفحات لاگین/ثبت‌نام برود
+  if (token && ['/login', '/register', '/verify'].includes(pathname)) {
     return NextResponse.redirect(new URL('/', request.url));
   }
-  
-  // اگه کاربر لاگین نیست و میخواد بره به صفحات محافظت شده
-  if (!token && !publicPaths.includes(pathname) && !pathname.startsWith('/_next')) {
-    return NextResponse.redirect(new URL('/login', request.url));
+
+  // ✅ بررسی مسیرهای محافظت‌شده
+  const isProtected = protectedPaths.some(path => pathname.startsWith(path));
+
+  // ✅ اگر کاربر لاگین نیست و به مسیر محافظت‌شده رفته
+  if (!token && isProtected) {
+    const url = new URL('/login', request.url);
+    // ✅ ذخیره مسیر فعلی برای بازگشت بعد از لاگین
+    url.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(url);
   }
-  
+
+  // ✅ مسیر /appointments/new آزاد است (بدون لاگین)
   return NextResponse.next();
 }
 

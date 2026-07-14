@@ -1,15 +1,16 @@
+// /home/god/Videos/medikal/front/src/app/fa/appointments/new/page.js
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Card, Row, Col, Button, Typography, Spin, Tag,
-  Space, Divider, Avatar, Empty, App
+  Space, Divider, Avatar, Empty, App, Alert, Modal
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined,
   LeftOutlined, EnvironmentOutlined, PhoneOutlined,
-  DollarOutlined, ReloadOutlined
+  DollarOutlined, ReloadOutlined, UserOutlined, LoginOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
@@ -20,6 +21,7 @@ import PersianCalendar from '@/components/shared/PersianCalendar';
 
 const { Title, Text } = Typography;
 
+// تبدیل تاریخ میلادی به شمسی
 function toPersianDate(date) {
   if (!date || !(date instanceof Date) || isNaN(date)) return '';
   try {
@@ -35,6 +37,7 @@ function toPersianDate(date) {
   }
 }
 
+// فرمت تاریخ برای API (YYYY-MM-DD)
 function formatDateForAPI(date) {
   if (!date || !(date instanceof Date) || isNaN(date)) return '';
   const year = date.getFullYear();
@@ -48,10 +51,18 @@ export default function NewAppointmentPage() {
   const searchParams = useSearchParams();
   const { locale } = useLanguage();
   const { message: appMessage } = App.useApp();
+
+  // دریافت doctorId از query string
   const doctorId = searchParams.get('doctorId');
+  console.log('🔍 doctorId from URL:', doctorId);
 
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -61,78 +72,110 @@ export default function NewAppointmentPage() {
   const [loadingBook, setLoadingBook] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
-  const getToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('token');
-    }
-    return null;
-  };
 
+  // بررسی doctorId از چند منبع
+  useEffect(() => {
+    let finalDoctorId = doctorId;
+
+    if (!finalDoctorId && typeof window !== 'undefined') {
+      finalDoctorId = localStorage.getItem('selectedDoctorId');
+      console.log('📦 doctorId from localStorage:', finalDoctorId);
+    }
+
+    if (!finalDoctorId) {
+      setError('شناسه پزشک یافت نشد');
+      setLoading(false);
+      appMessage.error('شناسه پزشک یافت نشد. لطفاً از صفحه پزشکان اقدام کنید.');
+      setRedirecting(true);
+      const timer = setTimeout(() => {
+        router.push(`/${locale}/doctors`);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+
+    if (!doctorId && finalDoctorId) {
+      console.log('🔄 Adding doctorId to URL:', finalDoctorId);
+      router.replace(`/${locale}/appointments/new?doctorId=${finalDoctorId}`);
+    }
+  }, [doctorId, locale, router, appMessage]);
+
+  // بررسی وضعیت لاگین
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, []);
+
+  // دریافت اطلاعات پزشک
   useEffect(() => {
     const fetchDoctor = async () => {
-      if (!doctorId) {
-        appMessage.error('شناسه پزشک یافت نشد');
-        router.push(`/${locale}/doctors`);
-        return;
-      }
+      const finalDoctorId = doctorId || localStorage.getItem('selectedDoctorId');
+      if (!finalDoctorId) return;
 
       try {
-        const token = getToken();
-        const res = await fetch(`${API_URL}/api/doctors/${doctorId}/public`, {
+        setError(null);
+        console.log('🌐 Fetching doctor:', `${API_URL}/api/doctors/${finalDoctorId}/public`);
+
+        const res = await fetch(`${API_URL}/api/doctors/${finalDoctorId}/public`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
+
+        console.log('📡 Response status:', res.status);
+
+        if (!res.ok) {
+          if (res.status === 404) {
+            throw new Error('پزشک مورد نظر یافت نشد');
+          }
+          throw new Error(`خطا در دریافت اطلاعات پزشک (${res.status})`);
+        }
+
         const data = await res.json();
-        if (data.success) {
+        console.log('📦 Doctor data:', data);
+
+        if (data.success && data.data) {
           setDoctor(data.data);
         } else {
-          appMessage.error(data.message || 'خطا در دریافت اطلاعات پزشک');
+          throw new Error(data.message || 'اطلاعات پزشک نامعتبر است');
         }
       } catch (error) {
         console.error('Error fetching doctor:', error);
-        appMessage.error('خطا در ارتباط با سرور');
+        setError(error.message || 'خطا در دریافت اطلاعات پزشک');
+        appMessage.error(error.message || 'خطا در دریافت اطلاعات پزشک');
       } finally {
         setLoading(false);
       }
     };
 
     fetchDoctor();
-  }, [doctorId, locale, router, appMessage]);
+  }, [doctorId, appMessage, API_URL]);
 
+  // دریافت زمان‌های موجود
   const fetchAvailableSlots = useCallback(async (date) => {
-    if (!doctorId) return;
+    const finalDoctorId = doctorId || localStorage.getItem('selectedDoctorId');
+    if (!finalDoctorId) return;
 
     setLoadingSlots(true);
     try {
-      const token = getToken();
       const dateStr = formatDateForAPI(date);
+      console.log('🌐 Fetching slots:', `${API_URL}/api/appointments/doctors/${finalDoctorId}/available-slots?date=${dateStr}`);
 
-      if (!dateStr) {
-        appMessage.error('تاریخ نامعتبر است');
-        setLoadingSlots(false);
-        return;
-      }
-
-      const res = await fetch(`${API_URL}/api/appointments/doctors/${doctorId}/available-slots?date=${dateStr}`, {
+      const res = await fetch(`${API_URL}/api/appointments/doctors/${finalDoctorId}/available-slots?date=${dateStr}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
       const data = await res.json();
+      console.log('📦 Slots data:', data);
 
       if (data.success) {
         const slots = data.data?.slots || [];
         setAvailableSlots(slots);
 
-        // ✅ فقط اگر هیچ زمانی موجود نبود، پیام نمایش بده
         if (slots.length === 0) {
           appMessage.info('هیچ زمانی برای این تاریخ موجود نیست');
         }
-        // ✅ حذف پیام موفقیت با تعداد زمان‌ها
       } else {
         appMessage.error(data.message || 'خطا در دریافت زمان‌ها');
         setAvailableSlots([]);
@@ -146,12 +189,15 @@ export default function NewAppointmentPage() {
     }
   }, [doctorId, API_URL, appMessage]);
 
+  // بارگذاری زمان‌ها با تغییر تاریخ
   useEffect(() => {
-    if (doctorId && selectedDate) {
+    const finalDoctorId = doctorId || localStorage.getItem('selectedDoctorId');
+    if (finalDoctorId && selectedDate && doctor) {
       fetchAvailableSlots(selectedDate);
     }
-  }, [doctorId, selectedDate, fetchAvailableSlots]);
+  }, [doctorId, selectedDate, fetchAvailableSlots, doctor]);
 
+  // تغییر تاریخ
   const handleDateChange = (date) => {
     if (date && date instanceof Date && !isNaN(date)) {
       setSelectedDate(date);
@@ -159,6 +205,7 @@ export default function NewAppointmentPage() {
     }
   };
 
+  // انتخاب زمان
   const handleSlotSelect = (slot) => {
     if (!slot.is_available) {
       appMessage.warning('این زمان قبلاً رزرو شده است');
@@ -167,7 +214,13 @@ export default function NewAppointmentPage() {
     setSelectedSlot(slot);
   };
 
+  // رزرو نوبت
   const handleBook = async () => {
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+      return;
+    }
+
     if (!selectedSlot) {
       appMessage.warning('لطفاً یک زمان را انتخاب کنید');
       return;
@@ -175,7 +228,8 @@ export default function NewAppointmentPage() {
 
     setLoadingBook(true);
     try {
-      const token = getToken();
+      const token = localStorage.getItem('token');
+      const finalDoctorId = doctorId || localStorage.getItem('selectedDoctorId');
       const dateStr = formatDateForAPI(selectedDate);
 
       let timeStr = selectedSlot.start_time || selectedSlot.time || '';
@@ -191,7 +245,7 @@ export default function NewAppointmentPage() {
       }
 
       const bookData = {
-        doctor_id: parseInt(doctorId),
+        doctor_id: parseInt(finalDoctorId),
         date: dateStr,
         start_time: timeStr,
         notes: '',
@@ -216,8 +270,8 @@ export default function NewAppointmentPage() {
         const appointmentId = appointment.id;
 
         const appointmentData = {
-          doctorId: doctorId,
-          doctorName: doctor?.name || doctor?.full_name || 'پزشک',
+          doctorId: finalDoctorId,
+          doctorName: doctor?.user?.name || doctor?.name || 'پزشک',
           doctorSpecialty: doctor?.specialty?.name || 'عمومی',
           date: dateStr,
           time: timeStr,
@@ -227,6 +281,7 @@ export default function NewAppointmentPage() {
         };
 
         localStorage.setItem('appointmentData', JSON.stringify(appointmentData));
+        localStorage.removeItem('selectedDoctorId');
 
         appMessage.success('نوبت با موفقیت رزرو شد');
         router.push(`/${locale}/appointments/checkout`);
@@ -246,6 +301,25 @@ export default function NewAppointmentPage() {
     }
   };
 
+  // هدایت به صفحه لاگین
+  const handleGoToLogin = () => {
+    setShowLoginModal(false);
+    const finalDoctorId = doctorId || localStorage.getItem('selectedDoctorId');
+    const tempAppointmentData = {
+      doctorId: finalDoctorId,
+      doctorName: doctor?.user?.name || doctor?.name || 'پزشک',
+      doctorSpecialty: doctor?.specialty?.name || 'عمومی',
+      date: formatDateForAPI(selectedDate),
+      time: selectedSlot?.time || selectedSlot?.start_time || '',
+      doctorFee: parseFloat(doctor?.consultation_fee) || 0,
+      timestamp: Date.now(),
+      fromPage: 'new-appointment'
+    };
+    localStorage.setItem('tempAppointment', JSON.stringify(tempAppointmentData));
+    router.push(`/${locale}/login?redirect=/${locale}/appointments/checkout`);
+  };
+
+  // غیرفعال کردن تاریخ‌های گذشته
   const disabledDate = (date) => {
     if (!date || !(date instanceof Date) || isNaN(date)) return true;
     const todayDate = new Date();
@@ -253,6 +327,7 @@ export default function NewAppointmentPage() {
     return date < todayDate;
   };
 
+  // نمایش لودینگ
   if (loading) {
     return (
         <>
@@ -263,21 +338,74 @@ export default function NewAppointmentPage() {
     );
   }
 
-  if (!doctor) {
+  // نمایش خطا
+  if (error) {
     return (
         <>
           <Header />
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <Title level={4}>پزشک یافت نشد</Title>
-            <Button type="primary" onClick={() => router.push(`/${locale}/doctors`)}>
-              بازگشت به لیست پزشکان
-            </Button>
-          </div>
+          <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)' }}>
+            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px' }}>
+              <Card style={{ borderRadius: '16px', textAlign: 'center', padding: '40px 20px' }}>
+                <Alert
+                    message="خطا"
+                    description={error}
+                    type="error"
+                    showIcon
+                    style={{ marginBottom: '24px' }}
+                />
+                {redirecting ? (
+                    <div>
+                      <Spin />
+                      <div style={{ marginTop: 12 }}>
+                        <Text type="secondary">در حال انتقال به صفحه پزشکان...</Text>
+                      </div>
+                    </div>
+                ) : (
+                    <Button
+                        type="primary"
+                        onClick={() => router.push(`/${locale}/doctors`)}
+                        size="large"
+                    >
+                      بازگشت به لیست پزشکان
+                    </Button>
+                )}
+              </Card>
+            </div>
+          </main>
           <Footer />
         </>
     );
   }
 
+  // اگر پزشک وجود نداشت
+  if (!doctor) {
+    return (
+        <>
+          <Header />
+          <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)' }}>
+            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px' }}>
+              <Card style={{ borderRadius: '16px', textAlign: 'center', padding: '40px 20px' }}>
+                <Empty
+                    image={<UserOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />}
+                    description="پزشک مورد نظر یافت نشد"
+                />
+                <Button
+                    type="primary"
+                    onClick={() => router.push(`/${locale}/doctors`)}
+                    size="large"
+                    style={{ marginTop: 16 }}
+                >
+                  بازگشت به لیست پزشکان
+                </Button>
+              </Card>
+            </div>
+          </main>
+          <Footer />
+        </>
+    );
+  }
+
+  // نمایش اصلی صفحه
   return (
       <>
         <Header />
@@ -289,24 +417,25 @@ export default function NewAppointmentPage() {
             <Text type="secondary">اطلاعات پزشک را بررسی و زمان مورد نظر را انتخاب کنید</Text>
 
             <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
+              {/* ستون اطلاعات پزشک */}
               <Col xs={24} lg={8}>
                 <Card
                     title="👨‍⚕️ اطلاعات پزشک"
-                    style={{ borderRadius: '16px' }}
+                    style={{ borderRadius: '16px', height: '100%' }}
                     styles={{ body: { padding: '16px' } }}
                 >
                   <Space orientation="vertical" style={{ width: '100%' }} size="middle">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <Avatar
                           size={64}
-                          src={doctor?.avatar}
+                          src={doctor?.profile_image}
                           style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
                       >
-                        {doctor?.name?.charAt(0) || doctor?.full_name?.charAt(0)}
+                        {doctor?.user?.name?.charAt(0) || 'د'}
                       </Avatar>
                       <div>
                         <Text strong style={{ fontSize: '16px' }}>
-                          {doctor?.name || doctor?.full_name}
+                          {doctor?.user?.name || 'پزشک'}
                         </Text>
                         <div>
                           <Tag color="blue">{doctor?.specialty?.name || 'عمومی'}</Tag>
@@ -324,11 +453,11 @@ export default function NewAppointmentPage() {
                     <div>
                       <Text type="secondary">اطلاعات تماس</Text>
                       <div style={{ marginTop: '4px' }}>
-                        {doctor?.phone && (
-                            <div><PhoneOutlined /> {doctor.phone}</div>
+                        {doctor?.clinic_phone && (
+                            <div><PhoneOutlined /> {doctor.clinic_phone}</div>
                         )}
-                        {doctor?.address && (
-                            <div><EnvironmentOutlined /> {doctor.address}</div>
+                        {doctor?.clinic_address && (
+                            <div><EnvironmentOutlined /> {doctor.clinic_address}</div>
                         )}
                       </div>
                     </div>
@@ -344,10 +473,22 @@ export default function NewAppointmentPage() {
                           </div>
                         </>
                     )}
+
+                    <Divider style={{ margin: '8px 0' }} />
+                    <div style={{ background: isLoggedIn ? '#f6ffed' : '#fffbe6', padding: '8px 12px', borderRadius: '8px' }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                        {isLoggedIn ? (
+                            <>✅ شما وارد حساب کاربری خود شده‌اید</>
+                        ) : (
+                            <>🔑 برای رزرو نهایی نیاز به ورود دارید</>
+                        )}
+                      </Text>
+                    </div>
                   </Space>
                 </Card>
               </Col>
 
+              {/* ستون انتخاب زمان */}
               <Col xs={24} lg={16}>
                 <Card
                     title="🕐 انتخاب زمان"
@@ -482,6 +623,64 @@ export default function NewAppointmentPage() {
             </Row>
           </div>
         </main>
+
+        {/* مودال لاگین */}
+        <Modal
+            title="🔐 برای ادامه نیاز به ورود دارید"
+            open={showLoginModal}
+            onCancel={() => setShowLoginModal(false)}
+            footer={[
+              <Button key="cancel" onClick={() => setShowLoginModal(false)}>
+                انصراف
+              </Button>,
+              <Button
+                  key="login"
+                  type="primary"
+                  icon={<LoginOutlined />}
+                  onClick={handleGoToLogin}
+                  size="large"
+              >
+                ورود / ثبت‌نام
+              </Button>,
+            ]}
+            width={480}
+            centered
+        >
+          <div style={{ padding: '20px 0' }}>
+            <Alert
+                message="برای تکمیل رزرو نوبت، لطفاً ابتدا وارد حساب کاربری خود شوید."
+                description="اگر حساب کاربری ندارید، می‌توانید به راحتی ثبت‌نام کنید."
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+            />
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text type="secondary">پزشک:</Text>
+                <Text strong>{doctor?.user?.name || doctor?.name}</Text>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text type="secondary">تاریخ:</Text>
+                <Text strong>{toPersianDate(selectedDate)}</Text>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text type="secondary">زمان:</Text>
+                <Text strong>{selectedSlot?.time || selectedSlot?.start_time?.substring(0, 5) || '---'}</Text>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text type="secondary">هزینه:</Text>
+                <Text strong style={{ color: '#2563eb' }}>
+                  {parseFloat(doctor?.consultation_fee || 0).toLocaleString()} تومان
+                </Text>
+              </div>
+            </div>
+            <div style={{ marginTop: 16, textAlign: 'center' }}>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                پس از ورود، اطلاعات نوبت شما ذخیره خواهد شد.
+              </Text>
+            </div>
+          </div>
+        </Modal>
 
         <Footer />
       </>

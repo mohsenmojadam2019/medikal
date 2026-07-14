@@ -55,8 +55,6 @@ return [
         // ===== App Providers =====
         App\Providers\AppServiceProvider::class,
 
-        // ===== AiChat Service Provider =====
-        App\AiChat\Providers\AiChatServiceProvider::class,
     ],
 
     'aliases' => [

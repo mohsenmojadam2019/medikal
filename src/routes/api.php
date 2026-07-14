@@ -77,7 +77,42 @@ Route::prefix('pharmacy')->group(function () {
 // ============================================================
 
 Route::middleware('auth:sanctum')->group(function () {
+// ============================================================
+// AiChat Routes - دکتر آنلاین
+// ============================================================
+    Route::prefix('chat')->group(function () {
 
+        // مدیریت جلسات
+        Route::post('/start', [App\Http\Controllers\Api\AiChat\ChatController::class, 'start']);
+        Route::get('/active', [App\Http\Controllers\Api\AiChat\ChatController::class, 'active']);
+        Route::post('/close', [App\Http\Controllers\Api\AiChat\ChatController::class, 'close']);
+        Route::post('/extend', [App\Http\Controllers\Api\AiChat\ChatController::class, 'extend']);
+        Route::delete('/destroy', [App\Http\Controllers\Api\AiChat\ChatController::class, 'destroy']);
+
+        // ارسال پیام و تاریخچه
+        Route::post('/send', [App\Http\Controllers\Api\AiChat\ChatController::class, 'send']);
+        Route::get('/history', [App\Http\Controllers\Api\AiChat\ChatController::class, 'history']);
+
+        // بازخورد
+        Route::post('/feedback', [App\Http\Controllers\Api\AiChat\ChatController::class, 'feedback']);
+
+        // سوالات پزشکی
+        Route::prefix('medical')->group(function () {
+            Route::post('/ask', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'ask']);
+            Route::post('/symptom-check', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'symptomCheck']);
+            Route::get('/history', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'history']);
+            Route::get('/categories', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'categories']);
+            Route::get('/stats', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'stats']);
+        });
+
+        // مدیریت فایل‌ها
+        Route::prefix('files')->group(function () {
+            Route::post('/upload', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'upload']);
+            Route::get('/list', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'list']);
+            Route::get('/download/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'download']);
+            Route::delete('/delete/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'delete']);
+        });
+    });
     // ============================================================
     // 3.1 AUTH
     // ============================================================
@@ -115,7 +150,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // ⚠️ این دو مسیر نیاز به بررسی دارند - ممکن است در کنترلر نباشند
         // Route::get('/my/doctor/appointments', [AppointmentController::class, 'myDoctorAppointments']);
         // Route::get('/my/doctor/stats', [AppointmentController::class, 'myDoctorStats']);
-        
+
         Route::post('/', [AppointmentController::class, 'store']);
         Route::get('/{id}', [AppointmentController::class, 'show']);
         Route::put('/{id}', [AppointmentController::class, 'update']);
@@ -225,7 +260,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders/{id}', [PharmacyController::class, 'show']);
         Route::post('/orders/{id}/pay', [PharmacyController::class, 'pay']);
         Route::post('/orders/{id}/cancel', [PharmacyController::class, 'cancel']);
-        
+
         // نوتیفیکیشن‌ها
         Route::get('/notifications', [PharmacyController::class, 'notifications']);
         Route::post('/notifications/{id}/read', [PharmacyController::class, 'markNotificationAsRead']);
@@ -375,18 +410,18 @@ Route::middleware('auth:sanctum')->prefix('medical-notes')->group(function () {
     Route::get('/my', [App\Http\Controllers\Api\MedicalNoteController::class, 'myNotes']);
     Route::get('/patient/{patientId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'patientNotes']);
     Route::get('/appointment/{appointmentId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'appointmentNote']);
-    
+
     // ایجاد و مدیریت
     Route::post('/', [App\Http\Controllers\Api\MedicalNoteController::class, 'store']);
     Route::get('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'show']);
     Route::put('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'update']);
     Route::delete('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'destroy']);
-    
+
     // اقدامات
     Route::post('/{id}/share', [App\Http\Controllers\Api\MedicalNoteController::class, 'share']);
     Route::post('/{id}/unshare', [App\Http\Controllers\Api\MedicalNoteController::class, 'unshare']);
     Route::post('/{id}/finalize', [App\Http\Controllers\Api\MedicalNoteController::class, 'finalize']);
-    
+
     // بیمار: مشاهده یادداشت‌های خود
     Route::get('/my-notes', [App\Http\Controllers\Api\MedicalNoteController::class, 'myPatientNotes']);
 });
@@ -433,13 +468,13 @@ Route::middleware('auth:sanctum')->prefix('lab')->group(function () {
     Route::get('/my/orders', [App\Http\Controllers\Api\LabController::class, 'myOrders']);
     Route::get('/orders/{id}', [App\Http\Controllers\Api\LabController::class, 'showOrder']);
     Route::put('/orders/{id}/status', [App\Http\Controllers\Api\LabController::class, 'updateOrderStatus']);
-    
+
     // نتایج
     Route::post('/results', [App\Http\Controllers\Api\LabController::class, 'addResult']);
     Route::post('/results/bulk', [App\Http\Controllers\Api\LabController::class, 'addResults']);
     Route::post('/results/{id}/verify', [App\Http\Controllers\Api\LabController::class, 'verifyResult']);
     Route::delete('/results/{id}', [App\Http\Controllers\Api\LabController::class, 'deleteResult']);
-    
+
     // آمار
     Route::get('/stats', [App\Http\Controllers\Api\LabController::class, 'stats']);
     Route::get('/my/stats', [App\Http\Controllers\Api\LabController::class, 'myStats']);
@@ -451,13 +486,13 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('lab')->gr
     Route::post('/categories', [App\Http\Controllers\Api\LabController::class, 'storeCategory']);
     Route::put('/categories/{id}', [App\Http\Controllers\Api\LabController::class, 'updateCategory']);
     Route::delete('/categories/{id}', [App\Http\Controllers\Api\LabController::class, 'deleteCategory']);
-    
+
     Route::get('/tests', [App\Http\Controllers\Api\LabController::class, 'tests']);
     Route::post('/tests', [App\Http\Controllers\Api\LabController::class, 'storeTest']);
     Route::put('/tests/{id}', [App\Http\Controllers\Api\LabController::class, 'updateTest']);
     Route::delete('/tests/{id}', [App\Http\Controllers\Api\LabController::class, 'deleteTest']);
     Route::post('/tests/{id}/toggle', [App\Http\Controllers\Api\LabController::class, 'toggleTestStatus']);
-    
+
     Route::get('/orders', [App\Http\Controllers\Api\LabController::class, 'orders']);
 });
 

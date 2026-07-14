@@ -1,15 +1,16 @@
+// /home/god/Videos/medikal/front/src/app/fa/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Card, Row, Col, Button, Typography, Spin, Empty, Tag, Rate, message, Space, 
+import {
+  Card, Row, Col, Button, Typography, Spin, Empty, Tag, Rate, message, Space,
   Statistic, Divider, Skeleton, Input
 } from 'antd';
-import { 
-  EnvironmentOutlined, StarOutlined, 
-  UserOutlined, CalendarOutlined, ClockCircleOutlined, 
+import {
+  EnvironmentOutlined, StarOutlined,
+  UserOutlined, CalendarOutlined, ClockCircleOutlined,
   ShoppingCartOutlined, PhoneOutlined,
-  MailOutlined, TeamOutlined, 
+  MailOutlined, TeamOutlined,
   DollarOutlined, MedicineBoxOutlined, SafetyOutlined,
   HomeOutlined
 } from '@ant-design/icons';
@@ -47,7 +48,9 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (data.success) {
-        setSpecialties(data.data || []);
+        // ✅ فقط تخصص‌هایی که حداقل ۱ پزشک دارند
+        const filtered = (data.data || []).filter(s => (s.doctors_count || 0) > 0);
+        setSpecialties(filtered);
       }
     } catch (error) {
       console.error('Error fetching specialties:', error);
@@ -65,7 +68,6 @@ export default function HomePage() {
       const data = await res.json();
       if (data.success) {
         const doctorsData = data.data?.data || [];
-        // مرتب‌سازی بر اساس امتیاز
         const sorted = [...doctorsData].sort((a, b) => {
           const ratingA = parseFloat(a.rating) || 0;
           const ratingB = parseFloat(b.rating) || 0;
@@ -88,7 +90,8 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (data.success) {
-        setDrugs((data.data || []).slice(0, 6));
+        const drugsData = Array.isArray(data.data) ? data.data : [];
+        setDrugs(drugsData.slice(0, 6));
       }
     } catch (error) {
       console.error('Error fetching drugs:', error);
@@ -123,11 +126,7 @@ export default function HomePage() {
   }, []);
 
   const handleBookAppointment = (doctorId) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push(`/${locale}/login`);
-      return;
-    }
+    localStorage.setItem('selectedDoctorId', String(doctorId));
     router.push(`/${locale}/appointments/new?doctorId=${doctorId}`);
   };
 
@@ -142,379 +141,374 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <>
-        <Header />
-        <div className="container" style={{ padding: '40px 0' }}>
-          <Skeleton active avatar paragraph={{ rows: 8 }} />
-          <Divider />
-          <Row gutter={[16, 16]}>
-            {[1, 2, 3, 4].map(i => (
-              <Col xs={24} sm={12} lg={6} key={i}>
-                <Skeleton active avatar paragraph={{ rows: 4 }} />
-              </Col>
-            ))}
-          </Row>
-          <Divider />
-          <Row gutter={[16, 16]}>
-            {[1, 2, 3, 4].map(i => (
-              <Col xs={24} sm={12} lg={6} key={i}>
-                <Skeleton active avatar paragraph={{ rows: 4 }} />
-              </Col>
-            ))}
-          </Row>
-        </div>
-        <Footer />
-      </>
+        <>
+          <Header />
+          <div className="container" style={{ padding: '40px 0' }}>
+            <Skeleton active avatar paragraph={{ rows: 8 }} />
+            <Divider />
+            <Row gutter={[16, 16]}>
+              {[1, 2, 3, 4].map(i => (
+                  <Col xs={24} sm={12} lg={6} key={i}>
+                    <Skeleton active avatar paragraph={{ rows: 4 }} />
+                  </Col>
+              ))}
+            </Row>
+            <Divider />
+            <Row gutter={[16, 16]}>
+              {[1, 2, 3, 4].map(i => (
+                  <Col xs={24} sm={12} lg={6} key={i}>
+                    <Skeleton active avatar paragraph={{ rows: 4 }} />
+                  </Col>
+              ))}
+            </Row>
+          </div>
+          <Footer />
+        </>
     );
   }
 
   return (
-    <>
-      <Header />
-      <main>
-        {/* Hero Section */}
-        <div className="container">
-          <div className="hero hero-primary">
-            <div className="hero-content">
+      <>
+        <Header />
+        <main>
+          {/* Hero Section */}
+          <div className="container" style={{ marginBottom: '40px' }}>
+            <div className="hero hero-primary">
+              <div className="hero-content">
               <span className="hero-badge">
                 <i className="fas fa-bolt" /> نوبت‌دهی هوشمند
               </span>
-              <h1>
-                نوبت خود را <span>سریع و آسان</span> رزرو کنید
-              </h1>
-              <p>
-                بیش از {stats.doctors || 500} پزشک متخصص در {specialties.length || 30} تخصص مختلف، 
-                آماده ارائه خدمت به شما هستند. نوبت‌دهی آنلاین، پرداخت امن و پرونده الکترونیک.
-              </p>
-              <div className="hero-actions">
-                <Link href={`/${locale}/doctors`}>
-                  <Button type="primary" size="large" className="hero-cta">
-                    <i className="fas fa-arrow-left" /> شروع کنید
-                  </Button>
-                </Link>
-                <Button size="large" className="hero-cta-outline" onClick={() => {
-                  document.getElementById('specialties-section').scrollIntoView({ behavior: 'smooth' });
-                }}>
-                  <i className="fas fa-play" /> نحوه کار
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* آمار */}
-        <section className="container">
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-icon blue">
-                <UserOutlined />
-              </div>
-              <div className="stat-info">
-                <div className="number">{stats.doctors || 500}+</div>
-                <div className="label">پزشک متخصص</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon green">
-                <CalendarOutlined />
-              </div>
-              <div className="stat-info">
-                <div className="number">{stats.appointments || 12400}+</div>
-                <div className="label">نوبت رزرو شده</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon purple">
-                <StarOutlined />
-              </div>
-              <div className="stat-info">
-                <div className="number">{stats.rating || 4.9}</div>
-                <div className="label">میانگین امتیاز</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon orange">
-                <TeamOutlined />
-              </div>
-              <div className="stat-info">
-                <div className="number">{stats.satisfaction || 98}%</div>
-                <div className="label">رضایت بیماران</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* بخش تخصص‌ها */}
-        <section className="container section" id="specialties-section">
-          <div className="section-header">
-            <div className="section-header-left">
-              <h2>
-                <i className="fas fa-stethoscope" style={{ color: 'var(--primary)' }} /> تخصص‌های پزشکی
-              </h2>
-              <span className="tag">{specialties.length} تخصص</span>
-              <span className="tag hot">محبوب</span>
-            </div>
-            <Link href={`/${locale}/specialties`}>
-              مشاهده همه <i className="fas fa-chevron-left" />
-            </Link>
-          </div>
-
-          {specialties.length > 0 ? (
-            <Card>
-              <div className="specialties-grid">
-                {specialties.slice(0, 12).map((specialty) => (
-                  <Link
-                    key={specialty.id}
-                    href={`/${locale}/doctors?specialty=${specialty.id}`}
-                    className="specialty-item"
-                  >
-                    <div className="specialty-icon">
-                      {specialty.icon || '🔬'}
-                    </div>
-                    <span>{specialty.name}</span>
-                    <span className="count">{specialty.doctors_count || 0} پزشک</span>
+                <h1>
+                  نوبت خود را <span>سریع و آسان</span> رزرو کنید
+                </h1>
+                <p>
+                  بیش از {stats.doctors || 500} پزشک متخصص در {specialties.length || 30} تخصص مختلف،
+                  آماده ارائه خدمت به شما هستند. نوبت‌دهی آنلاین، پرداخت امن و پرونده الکترونیک.
+                </p>
+                <div className="hero-actions">
+                  <Link href={`/${locale}/doctors`}>
+                    <Button type="primary" size="large" className="hero-cta">
+                      <i className="fas fa-arrow-left" /> شروع کنید
+                    </Button>
                   </Link>
-                ))}
+                  <Button size="large" className="hero-cta-outline" onClick={() => {
+                    document.getElementById('specialties-section').scrollIntoView({ behavior: 'smooth' });
+                  }}>
+                    <i className="fas fa-play" /> نحوه کار
+                  </Button>
+                </div>
               </div>
-            </Card>
-          ) : (
-            <Empty description="هیچ تخصصی یافت نشد" />
-          )}
-        </section>
-
-        {/* بخش پزشکان برتر */}
-        <section className="container section">
-          <div className="section-header">
-            <div className="section-header-left">
-              <h2>
-                <i className="fas fa-star" style={{ color: 'var(--warning)' }} /> پزشکان برتر
-              </h2>
-              <span className="tag">پرامتیاز</span>
             </div>
-            <Link href={`/${locale}/doctors`}>
-              مشاهده همه <i className="fas fa-chevron-left" />
-            </Link>
           </div>
 
-          {doctors.length > 0 ? (
-            <div className="doctors-grid">
-              {doctors.map((doctor, index) => (
-                <div key={doctor.id} className="doctor-card">
-                  {index === 0 && <span className="featured">ویژه</span>}
-                  <div className="doctor-top">
-                    <div className="doctor-avatar">
-                      {doctor.full_name?.charAt(0) || '👨‍⚕️'}
-                    </div>
-                    <div className="doctor-info">
-                      <h3>{doctor.full_name || 'پزشک'}</h3>
-                      <div className="specialty">{doctor.specialty?.name || 'تخصص'}</div>
-                      <div className="clinic">
-                        <HomeOutlined /> {doctor.clinic_name || 'آدرس مطب'}
-                      </div>
-                    </div>
+          {/* آمار */}
+          <section className="container" style={{ marginBottom: '48px' }}>
+            <div className="stats-row">
+              <div className="stat-card">
+                <div className="stat-icon blue">
+                  <UserOutlined />
+                </div>
+                <div className="stat-info">
+                  <div className="number">{stats.doctors || 500}+</div>
+                  <div className="label">پزشک متخصص</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon green">
+                  <CalendarOutlined />
+                </div>
+                <div className="stat-info">
+                  <div className="number">{stats.appointments || 12400}+</div>
+                  <div className="label">نوبت رزرو شده</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon purple">
+                  <StarOutlined />
+                </div>
+                <div className="stat-info">
+                  <div className="number">{stats.rating || 4.9}</div>
+                  <div className="label">میانگین امتیاز</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon orange">
+                  <TeamOutlined />
+                </div>
+                <div className="stat-info">
+                  <div className="number">{stats.satisfaction || 98}%</div>
+                  <div className="label">رضایت بیماران</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* بخش تخصص‌ها */}
+          <section className="container section" id="specialties-section" style={{ marginBottom: '48px' }}>
+            <div className="section-header">
+              <div className="section-header-left">
+                <h2>
+                  <i className="fas fa-stethoscope" style={{ color: '#2563eb' }} /> تخصص‌های پزشکی
+                </h2>
+                <span className="tag">{specialties.length} تخصص</span>
+                <span className="tag hot">محبوب</span>
+              </div>
+              <Link href={`/${locale}/specialties`}>
+                مشاهده همه <i className="fas fa-chevron-left" />
+              </Link>
+            </div>
+
+            {specialties.length > 0 ? (
+                <Card>
+                  <div className="specialties-grid">
+                    {specialties.slice(0, 12).map((specialty) => (
+                        <Link
+                            key={specialty.id}
+                            href={`/${locale}/doctors?specialty=${specialty.id}`}
+                            className="specialty-item"
+                        >
+                          <div className="specialty-icon">
+                            {specialty.icon ? <i className={`fas fa-${specialty.icon}`} /> : '🔬'}
+                          </div>
+                          <span>{specialty.name}</span>
+                          <span className="count">{specialty.doctors_count || 0} پزشک</span>
+                        </Link>
+                    ))}
                   </div>
-                  <div className="doctor-meta">
-                    <div className="doctor-rating">
-                      <Rate disabled defaultValue={parseFloat(doctor.rating) || 0} allowHalf style={{ fontSize: '14px' }} />
-                      <span className="count">({doctor.total_reviews || 0} نظر)</span>
-                    </div>
-                    <span className={`doctor-availability ${!doctor.is_available ? 'busy' : ''}`}>
+                </Card>
+            ) : (
+                <Empty description="هیچ تخصصی یافت نشد" />
+            )}
+          </section>
+
+          {/* بخش پزشکان برتر */}
+          <section className="container section" style={{ marginBottom: '48px' }}>
+            <div className="section-header">
+              <div className="section-header-left">
+                <h2>
+                  <i className="fas fa-star" style={{ color: '#f59e0b' }} /> پزشکان برتر
+                </h2>
+                <span className="tag">پرامتیاز</span>
+              </div>
+              <Link href={`/${locale}/doctors`}>
+                مشاهده همه <i className="fas fa-chevron-left" />
+              </Link>
+            </div>
+
+            {doctors.length > 0 ? (
+                <div className="doctors-grid">
+                  {doctors.map((doctor, index) => (
+                      <div key={doctor.id} className="doctor-card">
+                        {index === 0 && <span className="featured">ویژه</span>}
+                        <div className="doctor-top">
+                          <div className="doctor-avatar">
+                            {doctor.user?.name?.charAt(0) || doctor.full_name?.charAt(0) || '👨‍⚕️'}
+                          </div>
+                          <div className="doctor-info">
+                            <h3>{doctor.user?.name || doctor.full_name || 'پزشک'}</h3>
+                            <div className="specialty">{doctor.specialty?.name || 'تخصص'}</div>
+                            <div className="clinic">
+                              <HomeOutlined /> {doctor.clinic_name || 'آدرس مطب'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="doctor-meta">
+                          <div className="doctor-rating">
+                            <Rate disabled defaultValue={parseFloat(doctor.rating) || 0} allowHalf style={{ fontSize: '14px' }} />
+                            <span className="count">({doctor.total_reviews || 0} نظر)</span>
+                          </div>
+                          <span className={`doctor-availability ${!doctor.is_available ? 'busy' : ''}`}>
                       <i className="fas fa-circle" /> {doctor.is_available ? 'نوبت دارد' : 'نوبت محدود'}
                     </span>
-                  </div>
-                  <div className="doctor-price">
-                    {parseInt(doctor.consultation_fee || 0).toLocaleString()} <small>تومان</small>
-                  </div>
-                  <div className="doctor-actions">
-                    <Button
-                      type="primary"
-                      className="btn-book"
-                      onClick={() => handleBookAppointment(doctor.id)}
-                    >
-                      رزرو نوبت
-                    </Button>
-                    <Button
-                      className="btn-book outline"
-                      onClick={() => router.push(`/${locale}/doctors/${doctor.id}`)}
-                    >
-                      پروفایل
-                    </Button>
-                  </div>
+                        </div>
+                        <div className="doctor-price">
+                          {parseInt(doctor.consultation_fee || 0).toLocaleString()} <small>تومان</small>
+                        </div>
+                        <div className="doctor-actions">
+                          <Button
+                              type="primary"
+                              className="btn-book"
+                              onClick={() => handleBookAppointment(doctor.id)}
+                          >
+                            رزرو نوبت
+                          </Button>
+                          <Button
+                              className="btn-book outline"
+                              onClick={() => router.push(`/${locale}/doctors/${doctor.id}`)}
+                          >
+                            پروفایل
+                          </Button>
+                        </div>
+                      </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <Empty description="هیچ پزشکی یافت نشد" />
-          )}
-        </section>
+            ) : (
+                <Empty description="هیچ پزشکی یافت نشد" />
+            )}
+          </section>
 
-        {/* بنرها */}
-        <section className="container section">
-          <div className="banners-grid">
-            <div className="banner-card b1">
-              <div className="icon">📱</div>
-              <h3>نوبت‌دهی آنلاین</h3>
-              <p>۲۴ ساعته، ۷ روز هفته</p>
-              <Link href={`/${locale}/appointments`} className="banner-link">
-                بیشتر بدانید <i className="fas fa-arrow-left" />
-              </Link>
-            </div>
-            <div className="banner-card b2">
-              <div className="icon">💳</div>
-              <h3>پرداخت امن</h3>
-              <p>زرین‌پال | آسان‌پرداخت | درگاه ملی</p>
-              <Link href={`/${locale}/wallet`} className="banner-link">
-                بیشتر بدانید <i className="fas fa-arrow-left" />
-              </Link>
-            </div>
-            <div className="banner-card b3">
-              <div className="icon">📋</div>
-              <h3>پرونده الکترونیک</h3>
-              <p>دسترسی به سوابق پزشکی در هر زمان</p>
-              <Link href={`/${locale}/records`} className="banner-link">
-                بیشتر بدانید <i className="fas fa-arrow-left" />
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* بخش داروخانه */}
-        <section className="container section">
-          <div className="section-header">
-            <div className="section-header-left">
-              <h2>
-                <i className="fas fa-pills" style={{ color: 'var(--success)' }} /> داروخانه آنلاین
-              </h2>
-              <span className="tag">داروهای موجود</span>
-              <span className="tag hot">ارسال نسخه</span>
-            </div>
-            <Link href={`/${locale}/pharmacy`}>
-              مشاهده همه <i className="fas fa-chevron-left" />
-            </Link>
-          </div>
-
-          {drugs.length > 0 ? (
-            <Card>
-              <div className="pharmacy-grid">
-                {drugs.map((drug) => (
-                  <div key={drug.id} className="pharmacy-card">
-                    <div className="pharmacy-icon">💊</div>
-                    <div className="pharmacy-info">
-                      <h4>{drug.name}</h4>
-                      <Tag color="blue">{drug.category}</Tag>
-                      {drug.requires_prescription && (
-                        <Tag color="orange" className="prescription-tag">نیاز به نسخه</Tag>
-                      )}
-                      <div className="pharmacy-stock">
-                        موجودی: <span className={drug.stock < 30 ? 'low-stock' : ''}>{drug.stock}</span>
-                      </div>
-                      <div className="pharmacy-price">
-                        {drug.price?.toLocaleString() || 0} <small>تومان</small>
-                      </div>
-                    </div>
-                    <div className="pharmacy-actions">
-                      <Button
-                        type="primary"
-                        disabled={drug.stock === 0}
-                        onClick={() => handleAddToCart(drug.id)}
-                        block
-                      >
-                        سفارش
-                      </Button>
-                      {drug.requires_prescription && (
-                        <Button
-                          type="default"
-                          onClick={() => router.push(`/${locale}/pharmacy`)}
-                          block
-                        >
-                          ارسال نسخه
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+          {/* بنرها */}
+          <section className="container section" style={{ marginBottom: '48px' }}>
+            <div className="banners-grid">
+              <div className="banner-card b1">
+                <div className="icon">📱</div>
+                <h3>نوبت‌دهی آنلاین</h3>
+                <p>۲۴ ساعته، ۷ روز هفته</p>
+                <Link href={`/${locale}/appointments`} className="banner-link">
+                  بیشتر بدانید <i className="fas fa-arrow-left" />
+                </Link>
               </div>
-            </Card>
-          ) : (
-            <Empty description="هیچ دارویی یافت نشد" />
-          )}
-        </section>
+              <div className="banner-card b2">
+                <div className="icon">💳</div>
+                <h3>پرداخت امن</h3>
+                <p>زرین‌پال | آسان‌پرداخت | درگاه ملی</p>
+                <Link href={`/${locale}/wallet`} className="banner-link">
+                  بیشتر بدانید <i className="fas fa-arrow-left" />
+                </Link>
+              </div>
+              <div className="banner-card b3">
+                <div className="icon">📋</div>
+                <h3>پرونده الکترونیک</h3>
+                <p>دسترسی به سوابق پزشکی در هر زمان</p>
+                <Link href={`/${locale}/records`} className="banner-link">
+                  بیشتر بدانید <i className="fas fa-arrow-left" />
+                </Link>
+              </div>
+            </div>
+          </section>
 
-        {/* پیشنهادات ویژه */}
-        <section className="container section">
-          <div className="section-header">
-            <div className="section-header-left">
-              <h2>
-                <i className="fas fa-gift" style={{ color: 'var(--warning)' }} /> پیشنهادات ویژه
-              </h2>
-              <span className="tag hot">تخفیف</span>
+          {/* بخش داروخانه */}
+          <section className="container section" style={{ marginBottom: '48px' }}>
+            <div className="section-header">
+              <div className="section-header-left">
+                <h2>
+                  <i className="fas fa-pills" style={{ color: '#10b981' }} /> داروخانه آنلاین
+                </h2>
+                <span className="tag">داروهای موجود</span>
+                <span className="tag hot">ارسال نسخه</span>
+              </div>
+              <Link href={`/${locale}/pharmacy`}>
+                مشاهده همه <i className="fas fa-chevron-left" />
+              </Link>
             </div>
-            <Link href={`/${locale}/offers`}>
-              مشاهده همه <i className="fas fa-chevron-left" />
-            </Link>
-          </div>
-          <div className="offer-card">
-            <div className="offer-icon">🎁</div>
-            <div className="offer-content">
-              <h4>تخفیف ۲۰٪ برای ویزیت اول</h4>
-              <p>برای اولین نوبت خود از هر پزشک، ۲۰٪ تخفیف دریافت کنید. کد تخفیف را کپی کنید.</p>
-            </div>
-            <div className="offer-code" onClick={() => {
-              navigator.clipboard.writeText('WELCOME20').then(() => {
-                message.success('✅ کد تخفیف کپی شد!');
-              });
-            }}>
-              WELCOME20
-            </div>
-          </div>
-        </section>
 
-        {/* اعتماد */}
-        <section className="container section">
-          <div className="trust-grid">
-            <div className="trust-item">
-              <div className="icon"><SafetyOutlined /></div>
-              <h4>ضمانت اصالت</h4>
-              <p>پزشکان معتبر و متخصص</p>
-            </div>
-            <div className="trust-item">
-              <div className="icon"><CalendarOutlined /></div>
-              <h4>نوبت‌دهی سریع</h4>
-              <p>بدون معطلی و انتظار</p>
-            </div>
-            <div className="trust-item">
-              <div className="icon"><PhoneOutlined /></div>
-              <h4>پشتیبانی ۲۴/۷</h4>
-              <p>همیشه در دسترس</p>
-            </div>
-            <div className="trust-item">
-              <div className="icon"><ClockCircleOutlined /></div>
-              <h4>یادآوری هوشمند</h4>
-              <p>پیامک و ایمیل</p>
-            </div>
-            <div className="trust-item">
-              <div className="icon"><DollarOutlined /></div>
-              <h4>پرداخت امن</h4>
-              <p>درگاه معتبر بانکی</p>
-            </div>
-            <div className="trust-item">
-              <div className="icon"><MedicineBoxOutlined /></div>
-              <h4>لغو آسان</h4>
-              <p>تا ۲۴ ساعت قبل</p>
-            </div>
-          </div>
-        </section>
-      </main>
-      <Footer />
+            {drugs.length > 0 ? (
+                <Card>
+                  <div className="pharmacy-grid">
+                    {drugs.map((drug) => (
+                        <div key={drug.id} className="pharmacy-card">
+                          <div className="pharmacy-icon">💊</div>
+                          <div className="pharmacy-info">
+                            <h4>{drug.name}</h4>
+                            <Tag color="blue">{drug.category}</Tag>
+                            {drug.requires_prescription && (
+                                <Tag color="orange" className="prescription-tag">نیاز به نسخه</Tag>
+                            )}
+                            <div className="pharmacy-stock">
+                              موجودی: <span className={drug.stock < 30 ? 'low-stock' : ''}>{drug.stock}</span>
+                            </div>
+                            <div className="pharmacy-price">
+                              {drug.price?.toLocaleString() || 0} <small>تومان</small>
+                            </div>
+                          </div>
+                          <div className="pharmacy-actions">
+                            <Button
+                                type="primary"
+                                disabled={drug.stock === 0}
+                                onClick={() => handleAddToCart(drug.id)}
+                                block
+                            >
+                              سفارش
+                            </Button>
+                            {drug.requires_prescription && (
+                                <Button
+                                    type="default"
+                                    onClick={() => router.push(`/${locale}/pharmacy`)}
+                                    block
+                                >
+                                  ارسال نسخه
+                                </Button>
+                            )}
+                          </div>
+                        </div>
+                    ))}
+                  </div>
+                </Card>
+            ) : (
+                <Empty description="هیچ دارویی یافت نشد" />
+            )}
+          </section>
 
-      {/* دکمه شناور پشتیبانی */}
-      <button
-        className="floating-btn"
-        title="پشتیبانی آنلاین"
-        onClick={() => message.info('پشتیبانی آنلاین: در حال حاضر در دسترس است.')}
-      >
-        <i className="fas fa-comment-dots" />
-      </button>
-    </>
+          {/* پیشنهادات ویژه */}
+          <section className="container section" style={{ marginBottom: '48px' }}>
+            <div className="section-header">
+              <div className="section-header-left">
+                <h2>
+                  <i className="fas fa-gift" style={{ color: '#f59e0b' }} /> پیشنهادات ویژه
+                </h2>
+                <span className="tag hot">تخفیف</span>
+              </div>
+              <Link href={`/${locale}/offers`}>
+                مشاهده همه <i className="fas fa-chevron-left" />
+              </Link>
+            </div>
+            <div className="offer-card">
+              <div className="offer-icon">🎁</div>
+              <div className="offer-content">
+                <h4>تخفیف ۲۰٪ برای ویزیت اول</h4>
+                <p>برای اولین نوبت خود از هر پزشک، ۲۰٪ تخفیف دریافت کنید. کد تخفیف را کپی کنید.</p>
+              </div>
+              <div className="offer-code" onClick={() => {
+                navigator.clipboard.writeText('WELCOME20').then(() => {
+                  message.success('✅ کد تخفیف کپی شد!');
+                });
+              }}>
+                WELCOME20
+              </div>
+            </div>
+          </section>
+
+          {/* اعتماد */}
+          <section className="container section" style={{ marginBottom: '48px' }}>
+            <div className="trust-grid">
+              <div className="trust-item">
+                <div className="icon"><CalendarOutlined /></div>
+                <h4>نوبت‌دهی سریع</h4>
+                <p>بدون معطلی و انتظار</p>
+              </div>
+              <div className="trust-item">
+                <div className="icon"><PhoneOutlined /></div>
+                <h4>پشتیبانی ۲۴/۷</h4>
+                <p>همیشه در دسترس</p>
+              </div>
+              <div className="trust-item">
+                <div className="icon"><ClockCircleOutlined /></div>
+                <h4>یادآوری هوشمند</h4>
+                <p>پیامک و ایمیل</p>
+              </div>
+              <div className="trust-item">
+                <div className="icon"><DollarOutlined /></div>
+                <h4>پرداخت امن</h4>
+                <p>درگاه معتبر بانکی</p>
+              </div>
+              <div className="trust-item">
+                <div className="icon"><MedicineBoxOutlined /></div>
+                <h4>لغو آسان</h4>
+                <p>تا ۲۴ ساعت قبل</p>
+              </div>
+            </div>
+          </section>
+        </main>
+        <Footer />
+
+        {/* دکمه شناور پشتیبانی */}
+        <button
+            className="floating-btn"
+            title="پشتیبانی آنلاین"
+            onClick={() => message.info('پشتیبانی آنلاین: در حال حاضر در دسترس است.')}
+        >
+          <i className="fas fa-comment-dots" />
+        </button>
+      </>
   );
 }

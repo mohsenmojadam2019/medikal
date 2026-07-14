@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Patient extends Model
 {
-    use HasFactory, SoftDeletes;
+    use  SoftDeletes;
 
     protected $fillable = [
         'tenant_id',
@@ -30,7 +32,23 @@ class Patient extends Model
         'verified_at' => 'datetime',
         'metadata' => 'array',
     ];
+    /**
+     * دریافت آدرس اصلی بیمار
+     */
+    public function primaryAddress(): HasOne
+    {
+        return $this->hasOne(Address::class, 'patient_id', 'id')
+            ->where('is_primary', true)
+            ->where('is_active', true);
+    }
 
+    /**
+     * دریافت تمام آدرس‌های بیمار
+     */
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(Address::class, 'patient_id', 'id');
+    }
     // ========== Relationships ==========
     public function user()
     {

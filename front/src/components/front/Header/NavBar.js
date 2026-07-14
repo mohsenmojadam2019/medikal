@@ -96,42 +96,6 @@ const NavBar = () => {
       </Badge>,
       label: <Link href={`/${locale}/pharmacy/cart`}>{t('pharmacy.cart')}</Link>,
     },
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: user ? (
-          <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: 'profile',
-                    label: <Link href={`/${locale}/profile`}>{t('profile.title')}</Link>,
-                  },
-                  {
-                    key: 'appointments',
-                    label: <Link href={`/${locale}/profile/appointments`}>{t('profile.appointmentsList')}</Link>,
-                  },
-                  {
-                    key: 'pharmacy-orders',
-                    label: <Link href={`/${locale}/profile/pharmacy-orders`}>سفارشات داروخانه</Link>,
-                  },
-                  {
-                    key: 'logout',
-                    label: t('auth.logout') || 'خروج',
-                    onClick: handleLogout,
-                  },
-                ]
-              }}
-          >
-            <Space>
-              <Avatar size="small" icon={<UserOutlined />} />
-              <span>{user?.name || t('profile.title')}</span>
-            </Space>
-          </Dropdown>
-      ) : (
-          <Link href={`/${locale}/login`}>{t('auth.login')}</Link>
-      ),
-    },
   ];
 
   return (
