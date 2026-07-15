@@ -1,3 +1,4 @@
+// /src/app/fa/pharmacy/checkout/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import {
     Card, Row, Col, Button, Typography, Spin, Tag,
     Space, Divider, Alert, Input, Radio, Avatar,
     Modal, Empty, App, Steps, Form, Select,
-    InputNumber, Checkbox, Result, Skeleton
+    InputNumber, Checkbox, Result, Skeleton, message
 } from 'antd';
 import {
     ShoppingCartOutlined, WalletOutlined, CreditCardOutlined,
@@ -14,7 +15,8 @@ import {
     TruckOutlined, HomeOutlined, UserOutlined,
     DollarOutlined, CheckCircleOutlined,
     ReloadOutlined, MedicineBoxOutlined,
-    EditOutlined, UserAddOutlined, PlusOutlined
+    EditOutlined, UserAddOutlined, PlusOutlined,
+    PhoneOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
@@ -32,13 +34,13 @@ function toPersianNumber(num) {
 }
 
 function formatPrice(price) {
+    if (!price && price !== 0) return '۰ تومان';
     return toPersianNumber(price.toLocaleString()) + ' تومان';
 }
 
 export default function PharmacyCheckoutPage() {
     const router = useRouter();
-    const { t, locale } = useLanguage();
-    const { message: appMessage } = App.useApp();
+    const { locale } = useLanguage();
     const [loading, setLoading] = useState(true);
     const [userLoading, setUserLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -54,13 +56,26 @@ export default function PharmacyCheckoutPage() {
     const [selectedGateway, setSelectedGateway] = useState('local');
     const [userProfile, setUserProfile] = useState(null);
     const [useDifferentAddress, setUseDifferentAddress] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
-    const getToken = () => localStorage.getItem('token');
+    const getToken = () => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('token');
+        }
+        return null;
+    };
+
+    // حل مشکل Hydration
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const fetchUserProfile = async () => {
         try {
             const token = getToken();
+            if (!token) return;
+
             const res = await fetch(`${API_URL}/api/auth/me`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -94,6 +109,8 @@ export default function PharmacyCheckoutPage() {
     };
 
     useEffect(() => {
+        if (!isMounted) return;
+
         let cartData = [];
         const cartStorage = localStorage.getItem('pharmacyCart');
         const checkoutStorage = localStorage.getItem('pharmacyCheckoutData');
@@ -114,7 +131,7 @@ export default function PharmacyCheckoutPage() {
         }
 
         if (cartData.length === 0) {
-            appMessage.warning('سبد خرید شما خالی است');
+            message.warning('سبد خرید شما خالی است');
             setTimeout(() => router.push(`/${locale}/pharmacy`), 1500);
         }
 
@@ -124,11 +141,13 @@ export default function PharmacyCheckoutPage() {
         fetchUserProfile();
         fetchWalletBalance();
         fetchGateways();
-    }, []);
+    }, [isMounted]);
 
     const fetchWalletBalance = async () => {
         try {
             const token = getToken();
+            if (!token) return;
+
             const res = await fetch(`${API_URL}/api/wallet/balance`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -173,51 +192,72 @@ export default function PharmacyCheckoutPage() {
     const getTotal = () => getSubtotal() + getDeliveryFee() + getTax();
     const canUseWallet = walletBalance >= getTotal();
 
+    // استفاده از اطلاعات کاربر
+    const useUserInfo = () => {
+        if (userProfile) {
+            setRecipientName(userProfile.name || '');
+            setRecipientPhone(userProfile.mobile || '');
+            // اگر آدرس در پروفایل ذخیره شده
+            if (userProfile.address) {
+                setDeliveryAddress(userProfile.address);
+            }
+            message.success('اطلاعات شما وارد شد');
+        } else {
+            message.warning('اطلاعات کاربر یافت نشد');
+        }
+    };
+
+
     const handleSubmitOrder = async () => {
         if (cart.length === 0) {
-            appMessage.warning('سبد خرید شما خالی است');
+            message.warning('سبد خرید شما خالی است');
             return;
         }
 
         if (!recipientName.trim()) {
-            appMessage.warning('لطفاً نام گیرنده را وارد کنید');
+            message.warning('لطفاً نام گیرنده را وارد کنید');
             return;
         }
 
         if (!recipientPhone.trim()) {
-            appMessage.warning('لطفاً شماره تماس گیرنده را وارد کنید');
+            message.warning('لطفاً شماره تماس گیرنده را وارد کنید');
             return;
         }
 
         if (!deliveryAddress.trim()) {
-            appMessage.warning('لطفاً آدرس تحویل را وارد کنید');
+            message.warning('لطفاً آدرس تحویل را وارد کنید');
             return;
         }
 
-        if (paymentMethod === 'wallet' && !canUseWallet) {
-            appMessage.warning('موجودی کیف پول کافی نیست');
+        if (!canUseWallet) {
+            message.warning('موجودی کیف پول کافی نیست');
             return;
         }
 
         setSubmitting(true);
         try {
             const token = getToken();
+
             const orderData = {
                 items: cart.map(item => ({
                     drug_id: item.id,
                     quantity: item.quantity,
+                    price: item.price,
+                    name: item.name,
                 })),
                 delivery_address: deliveryAddress,
-                delivery_notes: deliveryNotes,
+                delivery_notes: deliveryNotes || '',
                 recipient_name: recipientName,
                 recipient_phone: recipientPhone,
-                payment_method: paymentMethod,
-                gateway: selectedGateway,
+                payment_method: 'wallet',
+                subtotal: getSubtotal(),
+                tax: getTax(),
+                total_price: getTotal(),
             };
 
-            console.log('📦 Order data:', orderData);
+            console.log('📦 Creating order with wallet...', orderData);
 
-            const res = await fetch(`${API_URL}/api/pharmacy/orders`, {
+            const orderRes = await fetch(`${API_URL}/api/pharmacy/orders`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -226,27 +266,154 @@ export default function PharmacyCheckoutPage() {
                 body: JSON.stringify(orderData),
             });
 
-            const data = await res.json();
-            console.log('📦 Order response:', data);
-
-            if (data.success) {
-                setCurrentStep(1);
-                localStorage.removeItem('pharmacyCart');
-                localStorage.removeItem('pharmacyCheckoutData');
-                appMessage.success('سفارش با موفقیت ثبت شد');
-                setTimeout(() => router.push(`/${locale}/profile/pharmacy-orders`), 2000);
-            } else {
-                appMessage.error(data.message || 'خطا در ثبت سفارش');
+            if (!orderRes.ok) {
+                const errorData = await orderRes.text();
+                console.error('❌ Order error:', errorData);
+                message.error(`خطا در ثبت سفارش: ${orderRes.status}`);
+                setSubmitting(false);
+                return;
             }
+
+            const orderDataResponse = await orderRes.json();
+            console.log('📦 Order response:', orderDataResponse);
+
+            if (!orderDataResponse.success) {
+                message.error(orderDataResponse.message || 'خطا در ثبت سفارش');
+                setSubmitting(false);
+                return;
+            }
+
+            message.success('سفارش با موفقیت ثبت شد و از کیف پول شما کسر گردید');
+            localStorage.removeItem('pharmacyCart');
+            localStorage.removeItem('pharmacyCheckoutData');
+
+            setTimeout(() => {
+                router.push(`/${locale}/profile/pharmacy-orders`);
+            }, 1500);
         } catch (error) {
-            console.error('Error creating order:', error);
-            appMessage.error('خطا در ایجاد سفارش');
-        } finally {
+            console.error('❌ Network error:', error);
+            message.error('خطا در ثبت سفارش');
             setSubmitting(false);
         }
     };
 
-    if (loading || userLoading) {
+    const handleGatewayPayment = async () => {
+        if (!recipientName.trim() || !recipientPhone.trim() || !deliveryAddress.trim()) {
+            message.warning('لطفاً ابتدا اطلاعات تحویل را کامل کنید');
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            const token = getToken();
+
+            const orderData = {
+                items: cart.map(item => ({
+                    drug_id: item.id,
+                    quantity: item.quantity,
+                    price: item.price,
+                    name: item.name,
+                })),
+                delivery_address: deliveryAddress,
+                delivery_notes: deliveryNotes || '',
+                recipient_name: recipientName,
+                recipient_phone: recipientPhone,
+                payment_method: 'gateway',
+                subtotal: getSubtotal(),
+                tax: getTax(),
+                total_price: getTotal(),
+            };
+
+            console.log('📦 Creating order...', orderData);
+
+            const orderRes = await fetch(`${API_URL}/api/pharmacy/orders`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderData),
+            });
+
+            if (!orderRes.ok) {
+                const errorData = await orderRes.text();
+                console.error('❌ Order error:', errorData);
+                message.error(`خطا در ثبت سفارش: ${orderRes.status}`);
+                setSubmitting(false);
+                return;
+            }
+
+            const orderDataResponse = await orderRes.json();
+            console.log('📦 Order response:', orderDataResponse);
+
+            if (!orderDataResponse.success) {
+                message.error(orderDataResponse.message || 'خطا در ثبت سفارش');
+                setSubmitting(false);
+                return;
+            }
+
+            const paymentLink = orderDataResponse.data?.payment_link;
+
+            if (paymentLink) {
+                console.log('🔗 Original payment link:', paymentLink);
+
+                localStorage.setItem('pendingOrder', JSON.stringify({
+                    orderNumber: orderDataResponse.data.order_number,
+                    returnUrl: `/${locale}/profile/pharmacy-orders`,
+                }));
+
+                message.success('در حال انتقال به درگاه پرداخت...');
+
+                // ============================================
+                // ✅ اصلاح کامل لینک - نسخه نهایی
+                // ============================================
+                let cleanPaymentLink = paymentLink
+                    .replace(/\\/g, '')    // حذف backslash
+                    .replace(/"/g, '');     // حذف quotation marks
+
+                // ✅ مرحله 1: پیدا کردن موقعیت اولین ?
+                const firstQIndex = cleanPaymentLink.indexOf('?');
+
+                if (firstQIndex !== -1) {
+                    // ✅ مرحله 2: جدا کردن بخش قبل و بعد از اولین ?
+                    const before = cleanPaymentLink.substring(0, firstQIndex + 1);
+                    let after = cleanPaymentLink.substring(firstQIndex + 1);
+
+                    // ✅ مرحله 3: تبدیل همه ? های بعدی به &
+                    after = after.replace(/\?/g, '&');
+
+                    // ✅ مرحله 4: ترکیب مجدد
+                    cleanPaymentLink = before + after;
+                }
+
+                // ✅ مرحله 5: اطمینان از وجود success=true
+                if (!cleanPaymentLink.includes('success=true')) {
+                    cleanPaymentLink = cleanPaymentLink.includes('?')
+                        ? `${cleanPaymentLink}&success=true`
+                        : `${cleanPaymentLink}?success=true`;
+                }
+
+                console.log('🔗 Final payment link:', cleanPaymentLink);
+
+                setTimeout(() => {
+                    window.location.href = cleanPaymentLink;
+                }, 500);
+            } else {
+                message.error('لینک پرداخت یافت نشد');
+                setSubmitting(false);
+            }
+        } catch (error) {
+            console.error('❌ Network error:', error);
+            message.error('خطا در ارتباط با سرور');
+            setSubmitting(false);
+        }
+    };
+
+
+
+
+
+    if (loading || userLoading || !isMounted) {
         return (
             <>
                 <Header />
@@ -326,21 +493,7 @@ export default function PharmacyCheckoutPage() {
 
                                 {/* اطلاعات گیرنده */}
                                 <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                        <Text strong>📦 اطلاعات تحویل</Text>
-                                        {userProfile && (
-                                            <Button
-                                                type="link"
-                                                size="small"
-                                                onClick={() => {
-                                                    setRecipientName(userProfile.name || '');
-                                                    setRecipientPhone(userProfile.mobile || '');
-                                                }}
-                                            >
-                                                استفاده از اطلاعات من
-                                            </Button>
-                                        )}
-                                    </div>
+
 
                                     <Row gutter={[16, 16]}>
                                         <Col xs={24} md={12}>
@@ -375,9 +528,11 @@ export default function PharmacyCheckoutPage() {
                                         rows={3}
                                         style={{ marginTop: '8px', borderRadius: '8px' }}
                                     />
-                                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                                        {userProfile?.address ? 'آدرس پیش‌فرض شما: ' + userProfile.address : ''}
-                                    </Text>
+                                    {userProfile?.address && (
+                                        <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                                            آدرس پیش‌فرض شما: {userProfile.address}
+                                        </Text>
+                                    )}
                                 </div>
 
                                 <div style={{ marginTop: '16px' }}>
@@ -486,17 +641,31 @@ export default function PharmacyCheckoutPage() {
                                     </Text>
                                 </div>
 
-                                <Button
-                                    type="primary"
-                                    size="large"
-                                    block
-                                    onClick={handleSubmitOrder}
-                                    loading={submitting}
-                                    disabled={!isFormValid}
-                                    style={{ marginTop: '16px', borderRadius: '12px', height: '48px' }}
-                                >
-                                    {paymentMethod === 'wallet' && canUseWallet ? 'پرداخت با کیف پول' : 'تایید و ثبت سفارش'}
-                                </Button>
+                                {paymentMethod === 'wallet' ? (
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        block
+                                        onClick={handleSubmitOrder}
+                                        loading={submitting}
+                                        disabled={!isFormValid}
+                                        style={{ marginTop: '16px', borderRadius: '12px', height: '48px' }}
+                                    >
+                                        {canUseWallet ? 'پرداخت با کیف پول' : 'موجودی کافی نیست'}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        block
+                                        onClick={handleGatewayPayment}
+                                        loading={submitting}
+                                        disabled={!isFormValid}
+                                        style={{ marginTop: '16px', borderRadius: '12px', height: '48px' }}
+                                    >
+                                        پرداخت با درگاه
+                                    </Button>
+                                )}
 
                                 {!recipientName.trim() && (
                                     <div style={{ marginTop: '8px' }}>

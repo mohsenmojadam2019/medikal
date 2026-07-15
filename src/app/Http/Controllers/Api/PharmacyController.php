@@ -23,36 +23,69 @@ class PharmacyController extends Controller
     }
 
     // ========== Public Methods (بدون احراز هویت) ==========
-    
-    /**
-     * تایید پرداخت (Callback از درگاه)
-     */
+
     public function paymentCallback(Request $request)
     {
-        $orderNumber = $request->order_number;
-        $refCode = $request->ref_code;
-        $gateway = $request->gateway ?? 'local';
-
-        $order = PharmacyOrder::where('order_number', $orderNumber)->first();
-
-        if (!$order) {
-            return $this->error('سفارش یافت نشد', 404);
-        }
-
-        if ($order->is_paid) {
-            return $this->error('این سفارش قبلاً پرداخت شده است', 400);
-        }
-
         try {
-            $result = $this->orderService->verifyPayment($gateway, $request->all());
-            
-            if ($result['success']) {
-                return $this->success($order, 'پرداخت با موفقیت انجام شد');
+            $orderNumber = $request->query('order_number');
+            $gateway = $request->query('gateway');
+            $transactionId = $request->query('transactionId');
+            $success = $request->query('success');
+            $amount = $request->query('amount');
+
+            \Log::info('📞 Pharmacy payment callback received', [
+                'order_number' => $orderNumber,
+                'gateway' => $gateway,
+                'transactionId' => $transactionId,
+                'success' => $success,
+                'amount' => $amount,
+                'all_params' => $request->all()
+            ]);
+
+            // پیدا کردن سفارش
+            $order = PharmacyOrder::where('order_number', $orderNumber)->first();
+
+            if (!$order) {
+                \Log::error('❌ Order not found in callback', ['order_number' => $orderNumber]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'سفارش یافت نشد',
+                    'errors' => null
+                ], 404);
             }
-            
-            return $this->error($result['message'], 400);
+
+            // اگر پرداخت موفق بود، وضعیت رو آپدیت کن
+            if ($success === 'true' || $success === '1') {
+                // ✅ فقط payment_status رو آپدیت کن، status رو تغییر نده
+                $order->update([
+                    'payment_status' => 'paid',
+                    'payment_gateway' => $gateway,
+                    'payment_authority' => $transactionId,
+                    'paid_at' => now(),
+                ]);
+
+                \Log::info('✅ Order payment updated to paid', ['order_id' => $order->id]);
+
+                // هدایت به صفحه موفقیت
+                return redirect()->away(env('FRONTEND_URL', 'http://localhost:3000') . '/fa/pharmacy/payment/callback?success=true&order_number=' . $orderNumber);
+            } else {
+                \Log::info('❌ Payment failed for order', ['order_id' => $order->id]);
+
+                // ✅ فقط payment_status رو آپدیت کن
+                $order->update([
+                    'payment_status' => 'failed',
+                ]);
+
+                return redirect()->away(env('FRONTEND_URL', 'http://localhost:3000') . '/fa/pharmacy/payment/callback?success=false&order_number=' . $orderNumber);
+            }
+
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 400);
+            \Log::error('❌ Payment callback error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'errors' => null
+            ], 500);
         }
     }
 
@@ -228,7 +261,7 @@ class PharmacyController extends Controller
             }
 
             $order->update([
-                'status' => \App\Enums\PharmacyOrderStatusEnum::CANCELLED,
+                'status' => 'cancelled',
                 'cancelled_at' => now(),
             ]);
 

@@ -113,6 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/delete/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'delete']);
         });
     });
+
     // ============================================================
     // 3.1 AUTH
     // ============================================================
@@ -298,11 +299,13 @@ Route::prefix('payment')->group(function () {
     Route::post('/callback/{gateway}', [PaymentController::class, 'callback']);
 });
 
+
 // ============================================================
 // 5. PHARMACY CALLBACK (عمومی)
 // ============================================================
 Route::prefix('pharmacy')->group(function () {
-    Route::get('/payment/callback', [PharmacyController::class, 'paymentCallback']);
+    Route::get('/payment/callback', [PharmacyController::class, 'paymentCallback'])->name('pharmacy.payment.callback');
+    Route::get('/payment/callback/{gateway}', [PharmacyController::class, 'paymentCallback']); // ✅ این رو اضافه کن
 });
 
 // ============================================================
