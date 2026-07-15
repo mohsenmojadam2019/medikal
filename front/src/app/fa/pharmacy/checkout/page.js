@@ -426,7 +426,6 @@ export default function PharmacyCheckoutPage() {
     if (!cart.length) {
         return (
             <>
-                <Header />
                 <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px', textAlign: 'center' }}>
                     <Empty description="سبد خرید شما خالی است" />
                     <Button type="primary" onClick={() => router.push(`/${locale}/pharmacy`)}>
@@ -704,7 +703,6 @@ export default function PharmacyCheckoutPage() {
                     </Row>
                 </div>
             </main>
-            <Footer />
         </>
     );
 }

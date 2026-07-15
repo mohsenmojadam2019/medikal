@@ -77,7 +77,6 @@ export default function PharmacyPaymentCallbackPage() {
     // نمایش نتیجه پرداخت
     return (
         <>
-            <Header />
             <div style={{
                 maxWidth: '600px',
                 margin: '0 auto',
@@ -137,7 +136,6 @@ export default function PharmacyPaymentCallbackPage() {
                     />
                 )}
             </div>
-            <Footer />
         </>
     );
 }
