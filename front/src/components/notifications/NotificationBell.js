@@ -1,189 +1,296 @@
+// src/components/notifications/NotificationBell.js
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Badge, Popover, List, Button, Empty, Spin, message } from 'antd';
-import { BellOutlined, CheckOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Badge, Button, Dropdown, List, Typography, Spin, Empty, Space } from 'antd';
+import { BellOutlined, CheckCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/context/LanguageContext';
-import dayjs from 'dayjs';
+
+const { Text } = Typography;
 
 export default function NotificationBell() {
   const router = useRouter();
   const { locale } = useLanguage();
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
+  const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const getToken = () => localStorage.getItem('token');
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   const fetchNotifications = async () => {
-    const token = getToken();
-    if (!token) return;
-
     setLoading(true);
     try {
+      const token = getToken();
+      if (!token) {
+        setNotifications([]);
+        setUnreadCount(0);
+        return;
+      }
+
       const res = await fetch(`${API_URL}/api/notifications`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      const data = await res.json();
-      if (data.success) {
-        setNotifications(data.data || []);
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
+
+      const data = await res.json();
+
+      // ✅ بررسی اینکه داده آرایه هست
+      let notificationList = [];
+      if (data.success && Array.isArray(data.data)) {
+        notificationList = data.data;
+      } else if (data.success && Array.isArray(data.data?.data)) {
+        notificationList = data.data.data;
+      } else if (Array.isArray(data)) {
+        notificationList = data;
+      } else {
+        notificationList = [];
+      }
+
+      setNotifications(notificationList);
+
+      // ✅ محاسبه تعداد خوانده نشده‌ها
+      const unread = notificationList.filter(n => !n.is_read).length;
+      setUnreadCount(unread);
+
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
   };
 
   const markAsRead = async (id) => {
-    const token = getToken();
     try {
-      await fetch(`${API_URL}/api/notifications/${id}/read`, {
+      const token = getToken();
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/notifications/${id}/read`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      setNotifications(notifications.map(n => 
-        n.id === id ? { ...n, is_read: true } : n
-      ));
+
+      if (res.ok) {
+        // ✅ بروزرسانی لیست
+        setNotifications(prev =>
+            prev.map(n =>
+                n.id === id ? { ...n, is_read: true } : n
+            )
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
   };
 
   const markAllAsRead = async () => {
-    const token = getToken();
     try {
-      await fetch(`${API_URL}/api/notifications/read-all`, {
+      const token = getToken();
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/notifications/read-all`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
-      message.success('همه اعلان‌ها خوانده شد');
+
+      if (res.ok) {
+        setNotifications(prev =>
+            prev.map(n => ({ ...n, is_read: true }))
+        );
+        setUnreadCount(0);
+      }
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
   };
 
   const deleteNotification = async (id) => {
-    const token = getToken();
     try {
-      await fetch(`${API_URL}/api/notifications/${id}`, {
+      const token = getToken();
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/notifications/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      setNotifications(notifications.filter(n => n.id !== id));
+
+      if (res.ok) {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        // بروزرسانی تعداد خوانده نشده
+        const unread = notifications.filter(n => n.id !== id && !n.is_read).length;
+        setUnreadCount(unread);
+      }
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
   };
 
-  useEffect(() => {
-    if (open) {
-      fetchNotifications();
-    }
-  }, [open]);
-
-  const unreadCount = notifications.filter(n => !n.is_read).length;
-
-  const content = (
-    <div style={{ width: '360px' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        padding: '12px 16px',
-        borderBottom: '1px solid #e2e8f0'
-      }}>
-        <span style={{ fontWeight: 'bold' }}>اعلان‌ها</span>
-        {unreadCount > 0 && (
-          <Button type="link" size="small" onClick={markAllAsRead}>
-            <CheckOutlined /> همه را خوانده شد
-          </Button>
-        )}
-      </div>
-      
-      {loading ? (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-          <Spin />
+  const getNotificationContent = (notification) => {
+    // ✅ بررسی وجود data
+    const data = notification.data || {};
+    return (
+        <div style={{ padding: '4px 0' }}>
+          <Text strong>{notification.title || 'اطلاعیه'}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            {notification.message || notification.content || 'بدون پیام'}
+          </Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: '11px' }}>
+            {notification.created_at ? new Date(notification.created_at).toLocaleDateString('fa-IR') : ''}
+          </Text>
         </div>
-      ) : notifications.length > 0 ? (
-        <List
-          style={{ maxHeight: '400px', overflowY: 'auto' }}
-          dataSource={notifications}
-          renderItem={(item) => (
-            <List.Item
-              style={{
-                background: item.is_read ? 'transparent' : '#f0f5ff',
-                cursor: 'pointer',
-                padding: '12px 16px',
-              }}
-              onClick={() => {
-                if (!item.is_read) markAsRead(item.id);
-                if (item.link) {
-                  router.push(`/${locale}${item.link}`);
-                  setOpen(false);
-                }
-              }}
-              actions={[
-                <Button
-                  key="delete"
-                  type="text"
-                  size="small"
-                  icon={<DeleteOutlined />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteNotification(item.id);
-                  }}
-                />
-              ]}
+    );
+  };
+
+  const notificationMenu = {
+    items: [
+      {
+        key: 'header',
+        label: (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '8px 0',
+              borderBottom: '1px solid #f0f0f0'
+            }}>
+              <Text strong>اعلان‌ها</Text>
+              {unreadCount > 0 && (
+                  <Button
+                      type="link"
+                      size="small"
+                      onClick={markAllAsRead}
+                  >
+                    همه را خوانده شده
+                  </Button>
+              )}
+            </div>
+        ),
+        disabled: true,
+      },
+      ...(loading ? [{
+        key: 'loading',
+        label: (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <Spin size="small" />
+            </div>
+        ),
+        disabled: true,
+      }] : []),
+      ...(!loading && notifications.length === 0 ? [{
+        key: 'empty',
+        label: (
+            <Empty
+                description="هیچ اعلانی وجود ندارد"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ padding: '20px 0' }}
+            />
+        ),
+        disabled: true,
+      }] : []),
+      ...(!loading && notifications.length > 0 ? notifications.map((notification, index) => ({
+        key: notification.id || `notif-${index}`,
+        label: (
+            <div
+                style={{
+                  padding: '8px 12px',
+                  background: notification.is_read ? 'transparent' : '#f0f7ff',
+                  borderRadius: '4px',
+                  margin: '2px 0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  borderRight: notification.is_read ? 'none' : '3px solid #1890ff'
+                }}
+                onClick={() => {
+                  if (!notification.is_read) {
+                    markAsRead(notification.id);
+                  }
+                  if (notification.data?.order_id || notification.data?.appointment_id) {
+                    const path = notification.data?.order_id
+                        ? `/${locale}/profile/pharmacy-orders`
+                        : `/${locale}/appointments`;
+                    router.push(path);
+                  }
+                }}
             >
-              <List.Item.Meta
-                title={item.title}
-                description={
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-                      {item.message}
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#cbd5e1' }}>
-                      {dayjs(item.created_at).fromNow()}
-                    </div>
-                  </div>
-                }
-              />
-            </List.Item>
-          )}
-        />
-      ) : (
-        <Empty description="هیچ اعلانی وجود ندارد" />
-      )}
-    </div>
-  );
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  {getNotificationContent(notification)}
+                </div>
+                <Button
+                    type="text"
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteNotification(notification.id);
+                    }}
+                />
+              </div>
+            </div>
+        ),
+      })) : []),
+      ...(!loading && notifications.length > 0 ? [{
+        key: 'footer',
+        label: (
+            <div style={{
+              textAlign: 'center',
+              padding: '8px 0',
+              borderTop: '1px solid #f0f0f0'
+            }}>
+              <Button
+                  type="link"
+                  size="small"
+                  onClick={() => router.push(`/${locale}/notifications`)}
+              >
+                مشاهده همه اعلان‌ها
+              </Button>
+            </div>
+        ),
+        disabled: true,
+      }] : []),
+    ],
+  };
 
   return (
-    <Popover
-      content={content}
-      trigger="click"
-      open={open}
-      onOpenChange={setOpen}
-      placement="bottomRight"
-    >
-      <Badge count={unreadCount} size="small">
-        <Button type="text" icon={<BellOutlined />} />
-      </Badge>
-    </Popover>
+      <Dropdown
+          menu={notificationMenu}
+          placement="bottomRight"
+          trigger={['click']}
+          overlayStyle={{ width: 400, maxHeight: 500 }}
+      >
+        <Badge count={unreadCount} size="small">
+          <Button type="text" icon={<BellOutlined />} />
+        </Badge>
+      </Dropdown>
   );
 }
