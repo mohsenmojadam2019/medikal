@@ -95,7 +95,8 @@ export default function AiChatPage() {
                 setSessionId(data.data.id);
                 setIsActive(true);
                 setMessages(data.data.messages || []);
-                appMessage.success('چت با موفقیت شروع شد');
+                // appMessage.success('چت با موفقیت شروع شد'
+                // );
             } else {
                 appMessage.error(data.message || 'خطا در شروع چت');
             }

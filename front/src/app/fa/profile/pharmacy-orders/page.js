@@ -125,7 +125,7 @@ export default function PharmacyOrdersPage() {
         }
 
         fetchOrders();
-    }, [locale, router, isMounted]); // ✅ این یکبار باشه کافی هست
+    }, [locale, router, isMounted]);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -454,7 +454,10 @@ export default function PharmacyOrdersPage() {
                                     pageSize: 10,
                                     showTotal: (total) => `تعداد ${toPersianNumber(total)} سفارش`,
                                     locale: { items_per_page: '/ صفحه' },
-                                    position: ['bottomCenter'],
+                                    placement: ['bottomCenter'],
+                                    showSizeChanger: true,
+                                    showQuickJumper: true,
+                                    pageSizeOptions: ['5', '10', '20', '50', '100'],
                                 }}
                                 scroll={{ x: '100%' }}
                                 locale={{

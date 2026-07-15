@@ -17,7 +17,9 @@ class ChatController extends Controller
             'model' => $request->input('model', 'qwen3:14b'),
             'messages' => [],
             'created_at' => now()->toISOString()
-        ], 'چت با موفقیت شروع شد');
+        ],
+//            'چت با موفقیت شروع شد'
+        );
     }
 
     public function active(Request $request)
@@ -32,7 +34,7 @@ class ChatController extends Controller
     public function send(Request $request)
     {
         $message = $request->input('message', '');
-        
+
         return $this->success([
             'id' => 'msg_' . time(),
             'response' => 'این یک پاسخ آزمایشی است. شما گفتید: ' . $message,
