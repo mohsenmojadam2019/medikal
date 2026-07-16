@@ -174,7 +174,7 @@ export default function NewAppointmentPage() {
         setAvailableSlots(slots);
 
         if (slots.length === 0) {
-          appMessage.info('هیچ زمانی برای این تاریخ موجود نیست');
+          // appMessage.info('هیچ زمانی برای این تاریخ موجود نیست');
         }
       } else {
         appMessage.error(data.message || 'خطا در دریافت زمان‌ها');

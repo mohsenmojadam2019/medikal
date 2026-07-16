@@ -2,39 +2,31 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Menu, Button, Drawer, Dropdown, Space, Badge, Avatar, Divider, Typography } from 'antd';
+import { Drawer, Button, Avatar, Divider, Modal, Space } from 'antd';
 import {
-  HomeOutlined, CalendarOutlined, MedicineBoxOutlined,
   UserOutlined, LogoutOutlined,
-  MenuOutlined, GlobalOutlined, ShoppingCartOutlined,
-  RobotOutlined
+  MenuOutlined,
+  PhoneOutlined,
+  WhatsAppOutlined, MailOutlined,
+  EnvironmentOutlined
 } from '@ant-design/icons';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useLanguage } from '@/lib/context/LanguageContext';
 
-const { Text } = Typography;
-
 const NavBar = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { t, locale, changeLanguage } = useLanguage();
+  const { locale } = useLanguage();
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
+  const [contactModalVisible, setContactModalVisible] = useState(false);
   const [user, setUser] = useState(null);
-  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       fetchUser();
     }
-    updateCartCount();
-
-    const handleCartUpdate = () => {
-      updateCartCount();
-    };
-    window.addEventListener('cartUpdated', handleCartUpdate);
-    return () => window.removeEventListener('cartUpdated', handleCartUpdate);
   }, []);
 
   const fetchUser = async () => {
@@ -52,11 +44,6 @@ const NavBar = () => {
     }
   };
 
-  const updateCartCount = () => {
-    const cart = JSON.parse(localStorage.getItem('pharmacyCart') || '[]');
-    setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-  };
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -64,201 +51,474 @@ const NavBar = () => {
     router.push(`/${locale}/login`);
   };
 
-  const menuItems = [
-    {
-      key: 'home',
-      icon: <HomeOutlined />,
-      label: <Link href={`/${locale}`}>{t('nav.home')}</Link>,
-    },
-    {
-      key: 'appointments',
-      icon: <CalendarOutlined />,
-      label: <Link href={`/${locale}/appointments/new`}>{t('nav.appointments')}</Link>,
-    },
-    {
-      key: 'pharmacy',
-      icon: <MedicineBoxOutlined />,
-      label: <Link href={`/${locale}/pharmacy`}>🏥 {t('nav.pharmacy')}</Link>,
-    },
-    {
-      key: 'ai-chat',
-      icon: <RobotOutlined style={{ color: '#1890ff' }} />,
-      label: (
-          <Link href={`/${locale}/ai-chat`} style={{ color: '#1890ff', fontWeight: '500' }}>
-            🧠 هوش مصنوعی
-          </Link>
-      ),
-    },
-    {
-      key: 'cart',
-      icon: <Badge count={cartCount} size="small">
-        <ShoppingCartOutlined style={{ fontSize: '20px' }} />
-      </Badge>,
-      label: <Link href={`/${locale}/pharmacy/cart`}>{t('pharmacy.cart')}</Link>,
-    },
+  const showContactModal = () => {
+    setContactModalVisible(true);
+  };
+
+  const navItems = [
+    { key: 'home', label: 'صفحه اصلی', href: `/${locale}` },
+    { key: 'appointments', label: 'نوبت‌دهی', href: `/${locale}/appointments/new` },
+    { key: 'pharmacy', label: 'داروخانه', href: `/${locale}/pharmacy` },
+    { key: 'ai-chat', label: 'هوش مصنوعی', href: `/${locale}/ai-chat` },
+    { key: 'about', label: 'درباره ما', href: `/${locale}/about` },
+    { key: 'contact', label: 'تماس با ما', isContact: true },
   ];
+
+  const isActive = (href) => {
+    if (href === `/${locale}`) {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
 
   return (
       <nav className="navbar-modern">
         <div className="navbar-container">
-          {/* منوی اصلی - وسط‌چین شده */}
-          <div className="navbar-menu-wrapper">
-            <Menu
-                mode="horizontal"
-                selectedKeys={[pathname.split('/')[2] || 'home']}
-                items={menuItems}
-                className="navbar-menu"
-            />
+          <div className="nav-desktop">
+            {navItems.map((item) => {
+              if (item.isContact) {
+                return (
+                    <button
+                        key={item.key}
+                        className={`nav-link ${pathname === `/${locale}/contact` ? 'active' : ''}`}
+                        onClick={showContactModal}
+                    >
+                      {item.label}
+                    </button>
+                );
+              }
+              return (
+                  <Link
+                      key={item.key}
+                      href={item.href}
+                      className={`nav-link ${isActive(item.href) ? 'active' : ''}`}
+                  >
+                    {item.label}
+                  </Link>
+              );
+            })}
           </div>
 
+          <button
+              className="mobile-menu-btn"
+              onClick={() => setMobileMenuVisible(true)}
+          >
+            <MenuOutlined style={{ fontSize: '24px' }} />
+          </button>
         </div>
 
-        <style jsx>{`
-        .navbar-modern {
-          background: white;
-          border-bottom: 1px solid #e2e8f0;
-          position: sticky;
-          top: 0;
-          z-index: 999;
-        }
+        <Drawer
+            title="منو"
+            placement="right"
+            onClose={() => setMobileMenuVisible(false)}
+            open={mobileMenuVisible}
+            width={280}
+            bodyStyle={{ padding: '16px 0' }}
+        >
+          {user ? (
+              <div style={{ textAlign: 'center', padding: '0 16px 16px' }}>
+                <Avatar size={64} icon={<UserOutlined />} />
+                <div style={{ fontWeight: 600, marginTop: 8, color: '#000000' }}>
+                  {user.name || user.full_name || 'کاربر'}
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: 14 }}>
+                  {user.role || 'کاربر'}
+                </div>
+              </div>
+          ) : (
+              <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Link href={`/${locale}/login`}>
+                  <Button type="primary" block>ورود</Button>
+                </Link>
+                <Link href={`/${locale}/register`}>
+                  <Button block>ثبت نام</Button>
+                </Link>
+              </div>
+          )}
 
-        .navbar-container {
-          max-width: 1440px;
-          margin: 0 auto;
-          padding: 0 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 60px;
-          position: relative;
-        }
+          <Divider style={{ margin: 0 }} />
 
-        .navbar-menu-wrapper {
-          flex: 1;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
+          <div style={{ display: 'flex', flexDirection: 'column', padding: '8px 0' }}>
+            {navItems.map((item) => {
+              if (item.isContact) {
+                return (
+                    <button
+                        key={item.key}
+                        className="mobile-nav-item"
+                        onClick={() => {
+                          setMobileMenuVisible(false);
+                          showContactModal();
+                        }}
+                    >
+                      {item.label}
+                    </button>
+                );
+              }
+              return (
+                  <Link
+                      key={item.key}
+                      href={item.href}
+                      className="mobile-nav-item"
+                      onClick={() => setMobileMenuVisible(false)}
+                  >
+                    {item.label}
+                  </Link>
+              );
+            })}
+          </div>
 
-        .navbar-menu {
-          border: none !important;
-          background: transparent !important;
-          min-width: auto;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: auto;
-        }
+          {user && (
+              <>
+                <Divider />
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '8px 0' }}>
+                  <Link href={`/${locale}/profile`} className="mobile-nav-item">
+                    پروفایل
+                  </Link>
+                  <button className="mobile-nav-item" onClick={handleLogout} style={{ color: '#ef4444' }}>
+                    خروج
+                  </button>
+                </div>
+              </>
+          )}
+        </Drawer>
 
-        .navbar-menu :global(.ant-menu-item) {
-          padding: 0 16px;
-          height: 44px;
-          line-height: 44px;
-          border-radius: 12px;
-          margin: 0 2px;
-          font-weight: 500;
-          color: #475569;
-          transition: all 0.25s ease;
-        }
+        <Modal
+            title={
+              <Space>
+                <PhoneOutlined style={{ color: '#2563eb' }} />
+                <span>راه‌های ارتباط با ما</span>
+              </Space>
+            }
+            open={contactModalVisible}
+            onCancel={() => setContactModalVisible(false)}
+            footer={null}
+            width={480}
+        >
+          <div className="contact-modal-content">
+            <div className="contact-item">
+              <div className="contact-icon" style={{ background: '#dbeafe' }}>
+                <PhoneOutlined style={{ color: '#2563eb', fontSize: 20 }} />
+              </div>
+              <div className="contact-info">
+                <div className="contact-label">تلفن پشتیبانی</div>
+                <a href="tel:02112345678" className="contact-value">۰۲۱-۱۲۳۴۵۶۷۸</a>
+              </div>
+            </div>
 
-        .navbar-menu :global(.ant-menu-item:hover) {
-          color: #2563eb !important;
-          background: rgba(37, 99, 235, 0.06) !important;
-        }
+            <div className="contact-item">
+              <div className="contact-icon" style={{ background: '#d1fae5' }}>
+                <WhatsAppOutlined style={{ color: '#10b981', fontSize: 20 }} />
+              </div>
+              <div className="contact-info">
+                <div className="contact-label">واتساپ</div>
+                <a href="https://wa.me/989123456789" target="_blank" className="contact-value">
+                  ۰۹۱۲-۳۴۵۶۷۸۹
+                </a>
+              </div>
+            </div>
 
-        .navbar-menu :global(.ant-menu-item-selected) {
-          color: #2563eb !important;
-          background: rgba(37, 99, 235, 0.08) !important;
-        }
+            <div className="contact-item">
+              <div className="contact-icon" style={{ background: '#fce7f3' }}>
+                <MailOutlined style={{ color: '#ec4899', fontSize: 20 }} />
+              </div>
+              <div className="contact-info">
+                <div className="contact-label">ایمیل</div>
+                <a href="mailto:info@clinic-yar.com" className="contact-value">
+                  info@clinic-yar.com
+                </a>
+              </div>
+            </div>
 
-        .navbar-menu :global(.ant-menu-item-selected)::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 60%;
-          height: 3px;
-          border-radius: 3px 3px 0 0;
-          background: #2563eb;
-        }
+            <div className="contact-item">
+              <div className="contact-icon" style={{ background: '#fef3c7' }}>
+                <EnvironmentOutlined style={{ color: '#f59e0b', fontSize: 20 }} />
+              </div>
+              <div className="contact-info">
+                <div className="contact-label">آدرس</div>
+                <div className="contact-value">تهران، خیابان ولیعصر، پلاک ۱۲۳</div>
+              </div>
+            </div>
 
-        .navbar-menu :global(.ant-menu-item) a {
-          color: inherit;
-          text-decoration: none;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
+            <Divider />
 
-        .navbar-menu :global(.ant-menu-item-selected) a {
-          color: #2563eb;
-        }
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: '#64748b', fontSize: 14, marginBottom: 12 }}>
+                ما را در شبکه‌های اجتماعی دنبال کنید
+              </div>
+              <Space size="large">
+                <a href="https://instagram.com" target="_blank" className="social-link" style={{ color: '#e4405f' }}>
+                  <span style={{ fontSize: 28 }}>📸</span>
+                </a>
+                <a href="https://t.me" target="_blank" className="social-link" style={{ color: '#0088cc' }}>
+                  <span style={{ fontSize: 28 }}>✈️</span>
+                </a>
+                <a href="https://wa.me/989123456789" target="_blank" className="social-link" style={{ color: '#25d366' }}>
+                  <span style={{ fontSize: 28 }}>💬</span>
+                </a>
+              </Space>
+            </div>
 
-        .navbar-right {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-shrink: 0;
-          position: absolute;
-          right: 24px;
-        }
+            <Divider />
 
-        .lang-btn {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          height: 40px;
-          border-radius: 12px;
-          font-weight: 600;
-          color: #475569;
-          border: 1px solid transparent;
-        }
+            <Space style={{ width: '100%' }} direction="vertical">
+              <Button
+                  type="primary"
+                  block
+                  icon={<WhatsAppOutlined />}
+                  onClick={() => window.open('https://wa.me/989123456789', '_blank')}
+              >
+                پیام در واتساپ
+              </Button>
+              <Button
+                  block
+                  icon={<PhoneOutlined />}
+                  onClick={() => window.location.href = 'tel:02112345678'}
+              >
+                تماس تلفنی
+              </Button>
+            </Space>
+          </div>
+        </Modal>
 
-        .lang-btn:hover {
-          border-color: #e2e8f0;
-          color: #2563eb;
-        }
+        <style jsx global>{`
+          /* زدن مستقیم به a های داخل منو */
+          .navbar-modern a,
+          .navbar-modern a:visited,
+          .navbar-modern a:hover,
+          .navbar-modern a:active,
+          .navbar-modern a:focus {
+            color: #000000 !important;
+            text-decoration: none !important;
+          }
 
-        @media (max-width: 768px) {
+          .navbar-modern .nav-link,
+          .navbar-modern .nav-link:visited,
+          .navbar-modern .nav-link:hover,
+          .navbar-modern .nav-link:active,
+          .navbar-modern .nav-link:focus {
+            color: #000000 !important;
+            text-decoration: none !important;
+          }
+
+          .navbar-modern .nav-link.active,
+          .navbar-modern .nav-link.active:visited,
+          .navbar-modern .nav-link.active:hover,
+          .navbar-modern .nav-link.active:active {
+            color: #000000 !important;
+          }
+
+          .navbar-modern .mobile-nav-item,
+          .navbar-modern .mobile-nav-item:visited,
+          .navbar-modern .mobile-nav-item:hover,
+          .navbar-modern .mobile-nav-item:active {
+            color: #000000 !important;
+            text-decoration: none !important;
+          }
+
+          /* استایل اصلی منو */
+          .navbar-modern {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          }
+
           .navbar-container {
-            padding: 0 12px;
-            height: 52px;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
           }
 
-          .navbar-menu :global(.ant-menu-item) {
-            padding: 0 10px;
-            font-size: 13px;
+          .nav-desktop {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex: 1;
           }
 
-          .navbar-menu :global(.ant-menu-item) span {
-            display: none;
-          }
-
-          .navbar-menu :global(.ant-menu-item) .anticon {
+          .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
             font-size: 18px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            position: relative;
+            color: #000000 !important;
           }
 
-          .lang-btn span {
+          .nav-link:hover {
+            background: rgba(37, 99, 235, 0.05);
+            color: #000000 !important;
+          }
+
+          .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            height: 3px;
+            background: #2563eb;
+            border-radius: 3px;
+          }
+
+          .nav-link:hover::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            height: 3px;
+            background: #2563eb;
+            border-radius: 3px;
+          }
+
+          .mobile-menu-btn {
             display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            color: #000000;
           }
 
-          .navbar-right {
-            right: 12px;
+          .mobile-menu-btn:hover {
+            background: #f1f5f9;
           }
-        }
 
-        @media (max-width: 480px) {
-          .navbar-container {
-            padding: 0 8px;
+          .mobile-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            font-size: 16px;
+            font-weight: 500;
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: right;
+            transition: background 0.2s ease;
+            border-radius: 0;
+            color: #000000 !important;
+          }
+
+          .mobile-nav-item:hover {
+            background: #f1f5f9;
+            color: #000000 !important;
+          }
+
+          .contact-modal-content {
+            padding: 8px 0;
+          }
+
+          .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+          }
+
+          .contact-item:last-of-type {
+            border-bottom: none;
+          }
+
+          .contact-icon {
+            width: 48px;
             height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
           }
 
-          .navbar-menu :global(.ant-menu-item) {
-            padding: 0 6px;
+          .contact-info {
+            flex: 1;
           }
-        }
-      `}</style>
+
+          .contact-label {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-bottom: 2px;
+          }
+
+          .contact-value {
+            color: #1e293b;
+            font-size: 15px;
+            font-weight: 500;
+            text-decoration: none;
+          }
+
+          .contact-value:hover {
+            color: #2563eb;
+          }
+
+          .social-link {
+            transition: transform 0.2s ease;
+            display: inline-block;
+          }
+
+          .social-link:hover {
+            transform: scale(1.1);
+          }
+
+          @media (max-width: 768px) {
+            .navbar-container {
+              padding: 0 12px;
+              height: 52px;
+            }
+
+            .nav-desktop {
+              display: none !important;
+            }
+
+            .mobile-menu-btn {
+              display: flex !important;
+              align-items: center;
+              justify-content: center;
+            }
+          }
+
+          @media (max-width: 1024px) and (min-width: 769px) {
+            .nav-link {
+              padding: 8px 14px;
+              font-size: 16px;
+            }
+
+            .nav-desktop {
+              gap: 4px;
+            }
+          }
+
+          @media (min-width: 1025px) {
+            .nav-link {
+              padding: 10px 24px;
+              font-size: 18px;
+            }
+
+            .nav-desktop {
+              gap: 12px;
+            }
+          }
+        `}</style>
       </nav>
   );
 };

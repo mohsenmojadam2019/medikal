@@ -249,11 +249,11 @@ export default function HomePage() {
                       <i className="fas fa-arrow-left" /> شروع کنید
                     </Button>
                   </Link>
-                  <Button size="large" className="hero-cta-outline" onClick={() => {
-                    document.getElementById('specialties-section').scrollIntoView({ behavior: 'smooth' });
-                  }}>
-                    <i className="fas fa-play" /> نحوه کار
-                  </Button>
+                  {/*<Button size="large" className="hero-cta-outline" onClick={() => {*/}
+                  {/*  document.getElementById('specialties-section').scrollIntoView({ behavior: 'smooth' });*/}
+                  {/*}}>*/}
+                  {/*  <i className="fas fa-play" /> نحوه کار*/}
+                  {/*</Button>*/}
                 </div>
               </div>
             </div>
@@ -301,7 +301,6 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* بخش تخصص‌ها */}
           {/* بخش تخصص‌ها */}
           <section className="container section" id="specialties-section" style={{ marginBottom: '48px' }}>
             <div className="section-header">

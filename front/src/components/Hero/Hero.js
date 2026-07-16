@@ -23,9 +23,9 @@ export default function Hero() {
               <i className="fas fa-arrow-left" /> شروع کنید
             </Button>
           </Link>
-          <Button size="large" className="hero-cta-outline">
-            <i className="fas fa-play" /> نحوه کار
-          </Button>
+          {/*<Button size="large" className="hero-cta-outline">*/}
+          {/*  <i className="fas fa-play" /> نحوه کار*/}
+          {/*</Button>*/}
         </div>
       </div>
     </div>
