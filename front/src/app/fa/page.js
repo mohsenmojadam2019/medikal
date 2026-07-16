@@ -1,4 +1,4 @@
-// /home/god/Videos/medikal/front/src/app/fa/page.js
+// /src/app/fa/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -39,6 +39,7 @@ export default function HomePage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
   // دریافت تخصص‌ها از API
+  // دریافت تخصص‌ها از API
   const fetchSpecialties = async () => {
     try {
       const res = await fetch(`${API_URL}/api/specialties`, {
@@ -47,13 +48,50 @@ export default function HomePage() {
         },
       });
       const data = await res.json();
+      console.log('📦 Specialties response:', data);
+
       if (data.success) {
-        // ✅ فقط تخصص‌هایی که حداقل ۱ پزشک دارند
-        const filtered = (data.data || []).filter(s => (s.doctors_count || 0) > 0);
-        setSpecialties(filtered);
+        let specialtiesData = [];
+        if (Array.isArray(data.data)) {
+          specialtiesData = data.data;
+        } else if (data.data && Array.isArray(data.data.data)) {
+          specialtiesData = data.data.data;
+        }
+
+        // ✅ فیلتر کردن تخصص‌های فعال
+        const filtered = specialtiesData.filter(s => s.is_active !== false);
+
+        // ✅ اگر تخصصی وجود نداره، از داده‌های پیش‌فرض استفاده کن
+        if (filtered.length === 0) {
+          setSpecialties([
+            { id: 1, name: 'داخلی', icon: 'fa-stethoscope' },
+            { id: 2, name: 'قلب و عروق', icon: 'fa-heart' },
+            { id: 3, name: 'کودکان', icon: 'fa-child' },
+            { id: 4, name: 'زنان و زایمان', icon: 'fa-female' },
+            { id: 5, name: 'ارتوپدی', icon: 'fa-bone' },
+            { id: 6, name: 'مغز و اعصاب', icon: 'fa-brain' },
+            { id: 7, name: 'پوست و مو', icon: 'fa-hand' },
+            { id: 8, name: 'چشم پزشکی', icon: 'fa-eye' },
+            { id: 9, name: 'گوش و حلق و بینی', icon: 'fa-ear' },
+            { id: 10, name: 'روانپزشکی', icon: 'fa-user-check' },
+          ]);
+        } else {
+          setSpecialties(filtered);
+        }
       }
     } catch (error) {
       console.error('Error fetching specialties:', error);
+      // داده‌های پیش‌فرض
+      setSpecialties([
+        { id: 1, name: 'داخلی', icon: 'fa-stethoscope' },
+        { id: 2, name: 'قلب و عروق', icon: 'fa-heart' },
+        { id: 3, name: 'کودکان', icon: 'fa-child' },
+        { id: 4, name: 'زنان و زایمان', icon: 'fa-female' },
+        { id: 5, name: 'ارتوپدی', icon: 'fa-bone' },
+        { id: 6, name: 'مغز و اعصاب', icon: 'fa-brain' },
+        { id: 7, name: 'پوست و مو', icon: 'fa-hand' },
+        { id: 8, name: 'چشم پزشکی', icon: 'fa-eye' },
+      ]);
     }
   };
 
@@ -67,7 +105,7 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (data.success) {
-        const doctorsData = data.data?.data || [];
+        const doctorsData = data.data?.data || data.data || [];
         const sorted = [...doctorsData].sort((a, b) => {
           const ratingA = parseFloat(a.rating) || 0;
           const ratingB = parseFloat(b.rating) || 0;
@@ -90,7 +128,7 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (data.success) {
-        const drugsData = Array.isArray(data.data) ? data.data : [];
+        const drugsData = data.data?.data || data.data || [];
         setDrugs(drugsData.slice(0, 6));
       }
     } catch (error) {
@@ -130,12 +168,32 @@ export default function HomePage() {
     router.push(`/${locale}/appointments/new?doctorId=${doctorId}`);
   };
 
-  const handleAddToCart = (drugId) => {
+  const handleAddToCart = (drug) => {
     const token = localStorage.getItem('token');
     if (!token) {
       router.push(`/${locale}/login`);
       return;
     }
+
+    // دریافت سبد خرید فعلی
+    let cart = JSON.parse(localStorage.getItem('pharmacyCart') || '[]');
+
+    // بررسی اینکه دارو قبلاً در سبد هست
+    const existing = cart.find(item => item.id === drug.id);
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      cart.push({
+        id: drug.id,
+        name: drug.generic_name || drug.name || 'دارو',
+        price: parseFloat(drug.price) || 0,
+        quantity: 1,
+        stock: drug.stock || 0,
+      });
+    }
+
+    localStorage.setItem('pharmacyCart', JSON.stringify(cart));
+    message.success(`${drug.generic_name || drug.name || 'دارو'} به سبد خرید اضافه شد`);
     router.push(`/${locale}/pharmacy`);
   };
 
@@ -244,6 +302,7 @@ export default function HomePage() {
           </section>
 
           {/* بخش تخصص‌ها */}
+          {/* بخش تخصص‌ها */}
           <section className="container section" id="specialties-section" style={{ marginBottom: '48px' }}>
             <div className="section-header">
               <div className="section-header-left">
@@ -268,7 +327,11 @@ export default function HomePage() {
                             className="specialty-item"
                         >
                           <div className="specialty-icon">
-                            {specialty.icon ? <i className={`fas fa-${specialty.icon}`} /> : '🔬'}
+                            {specialty.icon ? (
+                                <i className={`fas ${specialty.icon}`} style={{ fontSize: '28px', color: '#2563eb' }} />
+                            ) : (
+                                <i className="fas fa-stethoscope" style={{ fontSize: '28px', color: '#2563eb' }} />
+                            )}
                           </div>
                           <span>{specialty.name}</span>
                           <span className="count">{specialty.doctors_count || 0} پزشک</span>
@@ -280,7 +343,6 @@ export default function HomePage() {
                 <Empty description="هیچ تخصصی یافت نشد" />
             )}
           </section>
-
           {/* بخش پزشکان برتر */}
           <section className="container section" style={{ marginBottom: '48px' }}>
             <div className="section-header">
@@ -399,23 +461,23 @@ export default function HomePage() {
                         <div key={drug.id} className="pharmacy-card">
                           <div className="pharmacy-icon">💊</div>
                           <div className="pharmacy-info">
-                            <h4>{drug.name}</h4>
-                            <Tag color="blue">{drug.category}</Tag>
+                            <h4>{drug.generic_name || drug.name || 'بدون نام'}</h4>
+                            <Tag color="blue">{drug.category || 'عمومی'}</Tag>
                             {drug.requires_prescription && (
                                 <Tag color="orange" className="prescription-tag">نیاز به نسخه</Tag>
                             )}
                             <div className="pharmacy-stock">
-                              موجودی: <span className={drug.stock < 30 ? 'low-stock' : ''}>{drug.stock}</span>
+                              موجودی: <span className={drug.stock < 30 ? 'low-stock' : ''}>{drug.stock || 0}</span>
                             </div>
                             <div className="pharmacy-price">
-                              {drug.price?.toLocaleString() || 0} <small>تومان</small>
+                              {parseFloat(drug.price).toLocaleString() || 0} <small>تومان</small>
                             </div>
                           </div>
                           <div className="pharmacy-actions">
                             <Button
                                 type="primary"
                                 disabled={drug.stock === 0}
-                                onClick={() => handleAddToCart(drug.id)}
+                                onClick={() => handleAddToCart(drug)}
                                 block
                             >
                               سفارش

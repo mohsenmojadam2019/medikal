@@ -158,32 +158,30 @@ class PharmacyController extends Controller
     /**
      * جستجوی داروخانه‌ها
      */
+    /**
+     * جستجوی داروها
+     */
     public function search(Request $request)
     {
-        $request->validate([
-            'q' => 'required|string|min:2',
-            'lat' => 'nullable|numeric',
-            'lng' => 'nullable|numeric',
-            'radius' => 'nullable|numeric|min:1|max:50',
-        ]);
+        $query = $request->query('q');
 
-        $query = Pharmacy::active()->online();
-
-        $searchTerm = $request->q;
-        $query->where(function ($q) use ($searchTerm) {
-            $q->where('name', 'like', "%{$searchTerm}%")
-                ->orWhere('address', 'like', "%{$searchTerm}%")
-                ->orWhere('license_number', 'like', "%{$searchTerm}%");
-        });
-
-        if ($request->has('lat') && $request->has('lng')) {
-            $radius = $request->radius ?? 10;
-            $query->nearby($request->lat, $request->lng, $radius);
+        if (empty($query)) {
+            return $this->success([], 'عبارت جستجو را وارد کنید');
         }
 
-        $pharmacies = $query->paginate($request->per_page ?? 15);
+        // ✅ بدون persian_name
+        $drugs = Drug::where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('generic_name', 'like', "%{$query}%")
+                    ->orWhere('name', 'like', "%{$query}%")
+                    ->orWhere('code', 'like', "%{$query}%")
+                    ->orWhere('category', 'like', "%{$query}%")
+                    ->orWhere('manufacturer', 'like', "%{$query}%");
+            })
+            ->orderBy('generic_name')
+            ->paginate($request->per_page ?? 20);
 
-        return $this->success($pharmacies, 'نتایج جستجو');
+        return $this->success($drugs, 'نتایج جستجو');
     }
 
     /**
