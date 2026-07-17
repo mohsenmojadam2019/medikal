@@ -223,75 +223,120 @@ export default function HomePage() {
           <Hero />
 
           {/* Quick Access Cards - 4 باکس شیک متحرک */}
+          {/* Quick Access Cards - نسخه فوق‌العاده شیک و مدرن */}
           <section className="quick-access">
             <div className="container">
+              <div className="quick-section-header">
+                <div className="quick-section-title">
+                  <span className="quick-section-badge">🚀 دسترسی سریع</span>
+                  <h2>خدمات ما</h2>
+                  <p>با انتخاب هر یک از خدمات، به سرعت به بخش مورد نظر هدایت شوید</p>
+                </div>
+              </div>
+
               <div className="quick-grid">
                 {/* Card 1 - نوبت‌دهی مطب */}
                 <Link href={`/${locale}/appointments/new`} className="quick-card card-1">
+                  <div className="quick-card-glow"></div>
                   <div className="quick-card-inner">
                     <div className="quick-icon-wrapper">
                       <div className="quick-icon-bg"></div>
+                      <div className="quick-icon-pulse"></div>
                       <span className="quick-icon">🏥</span>
                     </div>
-                    <h3>نوبت‌دهی مطب</h3>
-                    <p>دریافت نوبت حضوری از پزشکان متخصص</p>
+                    <div className="quick-card-content">
+                      <h3>نوبت‌دهی مطب</h3>
+                      <p>دریافت نوبت حضوری از پزشکان متخصص</p>
+                      <div className="quick-features">
+                        <span>✓ رزرو آنلاین</span>
+                        <span>✓ انتخاب پزشک</span>
+                      </div>
+                    </div>
                     <div className="quick-footer">
                       <span className="quick-arrow">→</span>
                       <span className="quick-badge">همین حالا</span>
                     </div>
                   </div>
                   <div className="quick-shine"></div>
+                  <div className="quick-border-animation"></div>
                 </Link>
 
                 {/* Card 2 - داروخانه */}
                 <Link href={`/${locale}/pharmacy`} className="quick-card card-2">
+                  <div className="quick-card-glow"></div>
                   <div className="quick-card-inner">
                     <div className="quick-icon-wrapper">
                       <div className="quick-icon-bg"></div>
+                      <div className="quick-icon-pulse"></div>
                       <span className="quick-icon">💊</span>
                     </div>
-                    <h3>داروخانه</h3>
-                    <p>خرید آنلاین دارو با ارسال سریع</p>
+                    <div className="quick-card-content">
+                      <h3>داروخانه</h3>
+                      <p>خرید آنلاین دارو با ارسال سریع</p>
+                      <div className="quick-features">
+                        <span>✓ ارسال فوری</span>
+                        <span>✓ قیمت مناسب</span>
+                      </div>
+                    </div>
                     <div className="quick-footer">
                       <span className="quick-arrow">→</span>
                       <span className="quick-badge">۲۴ ساعته</span>
                     </div>
                   </div>
                   <div className="quick-shine"></div>
+                  <div className="quick-border-animation"></div>
                 </Link>
 
                 {/* Card 3 - آزمایشگاه */}
                 <Link href={`/${locale}/lab`} className="quick-card card-3">
+                  <div className="quick-card-glow"></div>
                   <div className="quick-card-inner">
                     <div className="quick-icon-wrapper">
                       <div className="quick-icon-bg"></div>
+                      <div className="quick-icon-pulse"></div>
                       <span className="quick-icon">🔬</span>
                     </div>
-                    <h3>آزمایشگاه</h3>
-                    <p>رزرو آزمایش و دریافت نتیجه آنلاین</p>
+                    <div className="quick-card-content">
+                      <h3>آزمایشگاه</h3>
+                      <p>رزرو آزمایش و دریافت نتیجه آنلاین</p>
+                      <div className="quick-features">
+                        <span>✓ نتایج دقیق</span>
+                        <span>✓ پاسخ سریع</span>
+                      </div>
+                    </div>
                     <div className="quick-footer">
                       <span className="quick-arrow">→</span>
                       <span className="quick-badge">دقیق</span>
                     </div>
                   </div>
                   <div className="quick-shine"></div>
+                  <div className="quick-border-animation"></div>
                 </Link>
 
                 {/* Card 4 - هوش مصنوعی */}
                 <Link href={`/${locale}/ai-chat`} className="quick-card card-4">
+                  <div className="quick-card-glow"></div>
                   <div className="quick-card-inner">
                     <div className="quick-icon-wrapper">
                       <div className="quick-icon-bg"></div>
+                      <div className="quick-icon-pulse"></div>
                       <span className="quick-icon">🤖</span>
                     </div>
-                    <h3>هوش مصنوعی</h3>
-                    <p>مشاوره هوشمند و پاسخ به سوالات پزشکی</p>
+                    <div className="quick-card-content">
+                      <h3>هوش مصنوعی</h3>
+                      <p>مشاوره هوشمند و پاسخ به سوالات پزشکی</p>
+                      <div className="quick-features">
+                        <span>✓ پاسخ‌دهی سریع</span>
+                        <span>✓ ۲۴/۷ در دسترس</span>
+                      </div>
+                    </div>
                     <div className="quick-footer">
                       <span className="quick-arrow">→</span>
                       <span className="quick-badge">جدید</span>
                     </div>
                   </div>
                   <div className="quick-shine"></div>
+                  <div className="quick-border-animation"></div>
                 </Link>
               </div>
             </div>
@@ -525,38 +570,76 @@ export default function HomePage() {
         >
           <i className="fas fa-comment-dots" />
         </button>
-
         <style jsx>{`
           /* ===== Quick Access Cards ===== */
           .quick-access {
-            padding: 40px 0 50px;
+            padding: 60px 0 70px;
             background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
             position: relative;
             overflow: hidden;
           }
 
+          /* پس‌زمینه دکوراتیو */
           .quick-access::before {
             content: '';
             position: absolute;
-            top: -50%;
-            right: -20%;
+            top: -30%;
+            right: -10%;
             width: 600px;
             height: 600px;
-            background: radial-gradient(circle, rgba(37, 99, 235, 0.03) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
             border-radius: 50%;
             pointer-events: none;
+            animation: floatBg 20s ease-in-out infinite;
           }
 
           .quick-access::after {
             content: '';
             position: absolute;
-            bottom: -30%;
-            left: -10%;
+            bottom: -20%;
+            left: -5%;
             width: 400px;
             height: 400px;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.03) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
             border-radius: 50%;
             pointer-events: none;
+            animation: floatBg 25s ease-in-out infinite reverse;
+          }
+
+          @keyframes floatBg {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, -30px) scale(1.1); }
+          }
+
+          /* هدر بخش */
+          .quick-section-header {
+            text-align: center;
+            margin-bottom: 40px;
+          }
+
+          .quick-section-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(139, 92, 246, 0.1));
+            color: #2563eb;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+          }
+
+          .quick-section-title h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+          }
+
+          .quick-section-title p {
+            color: #64748b;
+            font-size: 16px;
+            margin: 0;
           }
 
           .quick-grid {
@@ -571,12 +654,12 @@ export default function HomePage() {
             position: relative;
             display: block;
             background: #ffffff;
-            border-radius: 20px;
+            border-radius: 24px;
             padding: 0;
             text-decoration: none;
             overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             border: 2px solid transparent;
             cursor: pointer;
           }
@@ -588,6 +671,51 @@ export default function HomePage() {
             background: #ffffff;
           }
 
+          /* Glow Effect on Hover */
+          .quick-card-glow {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.03) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            pointer-events: none;
+            z-index: 0;
+          }
+
+          .quick-card:hover .quick-card-glow {
+            opacity: 1;
+          }
+
+          /* Border Animation */
+          .quick-border-animation {
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            padding: 2px;
+            background: linear-gradient(135deg, transparent 40%, rgba(37, 99, 235, 0.3) 50%, transparent 60%);
+            background-size: 200% 200%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+          }
+
+          .quick-card:hover .quick-border-animation {
+            opacity: 1;
+            animation: borderSpin 3s ease-in-out infinite;
+          }
+
+          @keyframes borderSpin {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+
           /* Shine Effect */
           .quick-shine {
             position: absolute;
@@ -595,10 +723,10 @@ export default function HomePage() {
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 60%);
+            background: radial-gradient(circle, rgba(255,255,255,0.6) 0%, transparent 60%);
             opacity: 0;
             transform: rotate(25deg) translateY(-100%);
-            transition: all 0.6s ease;
+            transition: all 0.8s ease;
             pointer-events: none;
             z-index: 1;
           }
@@ -611,28 +739,37 @@ export default function HomePage() {
           /* Card Colors */
           .card-1 { border-color: rgba(37, 99, 235, 0.15); }
           .card-1 .quick-icon-bg { background: linear-gradient(135deg, #2563eb, #3b82f6); }
-          .card-1:hover { border-color: #2563eb; box-shadow: 0 12px 40px rgba(37, 99, 235, 0.2); }
+          .card-1 .quick-card-glow { background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 60%); }
+          .card-1:hover { border-color: #2563eb; box-shadow: 0 16px 48px rgba(37, 99, 235, 0.2); }
+          .card-1 .quick-border-animation { background: linear-gradient(135deg, transparent 40%, #2563eb 50%, transparent 60%); }
 
           .card-2 { border-color: rgba(16, 185, 129, 0.15); }
           .card-2 .quick-icon-bg { background: linear-gradient(135deg, #10b981, #34d399); }
-          .card-2:hover { border-color: #10b981; box-shadow: 0 12px 40px rgba(16, 185, 129, 0.2); }
+          .card-2 .quick-card-glow { background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 60%); }
+          .card-2:hover { border-color: #10b981; box-shadow: 0 16px 48px rgba(16, 185, 129, 0.2); }
+          .card-2 .quick-border-animation { background: linear-gradient(135deg, transparent 40%, #10b981 50%, transparent 60%); }
 
           .card-3 { border-color: rgba(139, 92, 246, 0.15); }
           .card-3 .quick-icon-bg { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
-          .card-3:hover { border-color: #8b5cf6; box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2); }
+          .card-3 .quick-card-glow { background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 60%); }
+          .card-3:hover { border-color: #8b5cf6; box-shadow: 0 16px 48px rgba(139, 92, 246, 0.2); }
+          .card-3 .quick-border-animation { background: linear-gradient(135deg, transparent 40%, #8b5cf6 50%, transparent 60%); }
 
           .card-4 { border-color: rgba(245, 158, 11, 0.15); }
           .card-4 .quick-icon-bg { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
-          .card-4:hover { border-color: #f59e0b; box-shadow: 0 12px 40px rgba(245, 158, 11, 0.2); }
+          .card-4 .quick-card-glow { background: radial-gradient(circle, rgba(245, 158, 11, 0.08) 0%, transparent 60%); }
+          .card-4:hover { border-color: #f59e0b; box-shadow: 0 16px 48px rgba(245, 158, 11, 0.2); }
+          .card-4 .quick-border-animation { background: linear-gradient(135deg, transparent 40%, #f59e0b 50%, transparent 60%); }
 
           .quick-card:hover {
-            transform: translateY(-8px) scale(1.02);
+            transform: translateY(-12px) scale(1.01);
           }
 
+          /* Icon */
           .quick-icon-wrapper {
             position: relative;
-            width: 72px;
-            height: 72px;
+            width: 80px;
+            height: 80px;
             margin-bottom: 18px;
             display: flex;
             align-items: center;
@@ -643,53 +780,103 @@ export default function HomePage() {
             position: absolute;
             width: 100%;
             height: 100%;
-            border-radius: 18px;
-            opacity: 0.15;
-            transition: all 0.3s ease;
-            transform: rotate(0deg);
+            border-radius: 20px;
+            opacity: 0.12;
+            transition: all 0.4s ease;
+            transform: rotate(0deg) scale(1);
           }
 
           .quick-card:hover .quick-icon-bg {
             transform: rotate(10deg) scale(1.1);
-            opacity: 0.25;
+            opacity: 0.2;
+          }
+
+          .quick-icon-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            opacity: 0;
+            transition: all 0.5s ease;
+          }
+
+          .card-1 .quick-icon-pulse { border-color: rgba(37, 99, 235, 0.3); }
+          .card-2 .quick-icon-pulse { border-color: rgba(16, 185, 129, 0.3); }
+          .card-3 .quick-icon-pulse { border-color: rgba(139, 92, 246, 0.3); }
+          .card-4 .quick-icon-pulse { border-color: rgba(245, 158, 11, 0.3); }
+
+          .quick-card:hover .quick-icon-pulse {
+            opacity: 1;
+            animation: pulseRing 1.5s ease-out infinite;
+          }
+
+          @keyframes pulseRing {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.3); opacity: 0; }
           }
 
           .quick-icon {
             position: relative;
-            font-size: 36px;
+            font-size: 38px;
             z-index: 1;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
           }
 
           .quick-card:hover .quick-icon {
             transform: scale(1.15) rotate(-8deg);
           }
 
-          .quick-card h3 {
+          /* Content */
+          .quick-card-content {
+            margin-bottom: 16px;
+          }
+
+          .quick-card-content h3 {
             font-size: 20px;
             font-weight: 700;
             color: #0f172a;
-            margin: 0 0 8px 0;
+            margin: 0 0 6px 0;
             line-height: 1.3;
-            transition: color 0.3s ease;
           }
 
-          .quick-card:hover h3 {
-            color: #0f172a;
-          }
-
-          .quick-card p {
+          .quick-card-content p {
             font-size: 14px;
             color: #64748b;
-            margin: 0 0 16px 0;
+            margin: 0 0 10px 0;
             line-height: 1.6;
           }
 
+          .quick-features {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+          }
+
+          .quick-features span {
+            font-size: 12px;
+            color: #94a3b8;
+            background: #f1f5f9;
+            padding: 2px 10px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+          }
+
+          .quick-card:hover .quick-features span {
+            background: rgba(37, 99, 235, 0.08);
+            color: #2563eb;
+          }
+
+          .card-2:hover .quick-features span { background: rgba(16, 185, 129, 0.08); color: #10b981; }
+          .card-3:hover .quick-features span { background: rgba(139, 92, 246, 0.08); color: #8b5cf6; }
+          .card-4:hover .quick-features span { background: rgba(245, 158, 11, 0.08); color: #f59e0b; }
+
+          /* Footer */
           .quick-footer {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-top: 12px;
+            padding-top: 14px;
             border-top: 2px solid #f1f5f9;
             transition: border-color 0.3s ease;
           }
@@ -701,13 +888,13 @@ export default function HomePage() {
           .quick-arrow {
             font-size: 22px;
             color: #94a3b8;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             font-weight: 300;
           }
 
           .quick-card:hover .quick-arrow {
             color: #2563eb;
-            transform: translateX(-6px);
+            transform: translateX(-8px);
           }
 
           .card-2:hover .quick-arrow { color: #10b981; }
@@ -717,7 +904,7 @@ export default function HomePage() {
           .quick-badge {
             font-size: 12px;
             font-weight: 600;
-            padding: 4px 14px;
+            padding: 4px 16px;
             border-radius: 20px;
             background: #f1f5f9;
             color: #64748b;
@@ -748,11 +935,14 @@ export default function HomePage() {
               grid-template-columns: repeat(2, 1fr);
               gap: 20px;
             }
+            .quick-section-title h2 {
+              font-size: 28px;
+            }
           }
 
           @media (max-width: 768px) {
             .quick-access {
-              padding: 30px 0 40px;
+              padding: 40px 0 50px;
             }
             .quick-grid {
               grid-template-columns: repeat(2, 1fr);
@@ -762,17 +952,24 @@ export default function HomePage() {
               padding: 24px 18px 20px;
             }
             .quick-icon-wrapper {
-              width: 60px;
-              height: 60px;
+              width: 64px;
+              height: 64px;
             }
             .quick-icon {
               font-size: 30px;
             }
-            .quick-card h3 {
+            .quick-card-content h3 {
               font-size: 17px;
             }
-            .quick-card p {
+            .quick-card-content p {
               font-size: 13px;
+            }
+            .quick-features span {
+              font-size: 11px;
+              padding: 2px 8px;
+            }
+            .quick-section-title h2 {
+              font-size: 24px;
             }
           }
 
@@ -785,19 +982,26 @@ export default function HomePage() {
               padding: 18px 14px 16px;
             }
             .quick-icon-wrapper {
-              width: 50px;
-              height: 50px;
+              width: 52px;
+              height: 52px;
               margin-bottom: 12px;
             }
             .quick-icon {
-              font-size: 26px;
+              font-size: 24px;
             }
-            .quick-card h3 {
+            .quick-card-content h3 {
               font-size: 15px;
             }
-            .quick-card p {
+            .quick-card-content p {
               font-size: 12px;
-              margin-bottom: 12px;
+              margin-bottom: 8px;
+            }
+            .quick-features {
+              gap: 6px;
+            }
+            .quick-features span {
+              font-size: 10px;
+              padding: 1px 6px;
             }
             .quick-footer {
               padding-top: 10px;
@@ -808,6 +1012,12 @@ export default function HomePage() {
             .quick-badge {
               font-size: 10px;
               padding: 3px 10px;
+            }
+            .quick-section-title h2 {
+              font-size: 20px;
+            }
+            .quick-section-title p {
+              font-size: 14px;
             }
           }
         `}</style>
