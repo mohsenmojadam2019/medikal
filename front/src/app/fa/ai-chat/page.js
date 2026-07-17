@@ -43,7 +43,6 @@ export default function AiChatPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-    // ✅ فقط یک ref برای container
     const messagesContainerRef = useRef(null);
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
@@ -67,7 +66,6 @@ export default function AiChatPage() {
         }
     }, []);
 
-    // ✅ اسکرول به پایین با ref
     useEffect(() => {
         if (messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -294,15 +292,40 @@ export default function AiChatPage() {
     return (
         <>
             <Header />
-            <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)', paddingTop: '20px' }}>
-                <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 20px 20px' }}>
+            <main style={{
+                backgroundImage: "url('/image/rob-1.png')",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                backgroundAttachment: 'fixed',
+                minHeight: 'calc(100vh - 200px)',
+                position: 'relative'
+            }}>
+                {/* اوورلی شیشه‌ای */}
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(255,255,255,0.88)',
+                    backdropFilter: 'blur(6px)',
+                    WebkitBackdropFilter: 'blur(6px)',
+                    zIndex: 0
+                }} />
+
+                <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 20px', position: 'relative', zIndex: 1 }}>
                     <Breadcrumb />
 
                     <Title level={2} style={{ marginBottom: '4px' }}>🧠 هوش مصنوعی</Title>
                     <Text type="secondary">پرسش و پاسخ هوشمند پزشکی</Text>
 
                     <Card
-                        style={{ borderRadius: '16px', marginTop: '16px' }}
+                        style={{
+                            borderRadius: '16px',
+                            marginTop: '16px',
+                            background: 'rgba(255,255,255,0.92)',
+                            backdropFilter: 'blur(10px)',
+                            border: 'none',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.04)'
+                        }}
                         title={
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <RobotOutlined style={{ color: '#2563eb', fontSize: '24px' }} />

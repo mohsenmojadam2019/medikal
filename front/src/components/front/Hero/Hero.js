@@ -19,16 +19,6 @@ export default function Hero() {
                 overflow: 'hidden',
             }}
         >
-            {/* اوورلی تیره */}
-            <div
-                style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.45)',
-                    zIndex: 1,
-                }}
-            />
-
             {/* محتوای اصلی */}
             <div
                 className="hero-content"
@@ -49,58 +39,22 @@ export default function Hero() {
             >
                 {/* متن سمت چپ */}
                 <div style={{ flex: 1, minWidth: '280px' }}>
-          <span
-              className="hero-badge"
-              style={{
-                  display: 'inline-block',
-                  background: 'rgba(37,99,235,0.2)',
-                  padding: '6px 18px',
-                  borderRadius: '50px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  marginBottom: '20px',
-                  border: '1px solid rgba(37,99,235,0.3)',
-                  backdropFilter: 'blur(10px)',
-              }}
-          >
-            <i className="fas fa-bolt" /> نوبت‌دهی هوشمند
-          </span>
-
-                    <h1
-                        style={{
-                            fontSize: '48px',
-                            fontWeight: '800',
-                            marginBottom: '16px',
-                            lineHeight: '1.2',
-                            color: '#fff',
-                        }}
-                    >
-                        نوبت خود را{' '}
-                        <span
-                            style={{
-                                background: 'linear-gradient(135deg, #60a5fa, #a78bfa, #34d399)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                            }}
-                        >
-              سریع و آسان
-            </span>{' '}
-                        رزرو کنید
-                    </h1>
-
-                    <p
-                        style={{
-                            fontSize: '18px',
-                            color: 'rgba(255,255,255,0.8)',
-                            marginBottom: '28px',
-                            maxWidth: '500px',
-                            lineHeight: '1.8',
-                        }}
-                    >
-                        بیش از ۵۰۰ پزشک متخصص در ۳۰ تخصص مختلف، آماده ارائه خدمت به شما
-                        هستند.
-                    </p>
+    <span
+        className="hero-badge"
+        style={{
+            display: 'inline-block',
+            background: 'rgba(0,0,0,0.3)',
+            padding: '6px 18px',
+            borderRadius: '50px',
+            fontSize: '14px',
+            fontWeight: '600',
+            marginBottom: '20px',
+            border: '1px solid rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(10px)',
+        }}
+    >
+        <i className="fas fa-bolt" /> نوبت‌دهی هوشمند
+    </span>
 
                     <div className="hero-actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                         <Link href="/fa/doctors">
@@ -109,14 +63,16 @@ export default function Hero() {
                                 size="large"
                                 className="hero-cta"
                                 style={{
-                                    background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
-                                    border: 'none',
+                                    background: 'rgba(255,255,255,0.15)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
                                     borderRadius: '12px',
                                     height: '50px',
                                     padding: '0 32px',
                                     fontWeight: '600',
                                     fontSize: '16px',
-                                    boxShadow: '0 4px 16px rgba(37,99,235,0.3)',
+                                    color: '#fff',
+                                    backdropFilter: 'blur(10px)',
+                                    boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
                                 }}
                             >
                                 <i className="fas fa-arrow-left" style={{ marginRight: '8px' }} />
@@ -139,9 +95,9 @@ export default function Hero() {
                     <div
                         className="hero-float-card"
                         style={{
-                            background: 'rgba(255,255,255,0.08)',
+                            background: 'rgba(0,0,0,0.3)',
                             backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.15)',
                             borderRadius: '16px',
                             padding: '18px 14px',
                             display: 'flex',
@@ -160,7 +116,7 @@ export default function Hero() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: 'rgba(37,99,235,0.15)',
+                                background: 'rgba(37,99,235,0.3)',
                                 borderRadius: '12px',
                                 flexShrink: 0,
                             }}
@@ -168,10 +124,10 @@ export default function Hero() {
                             🏥
                         </div>
                         <div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#60a5fa' }}>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#93c5fd' }}>
                                 ۱۲,۴۰۰+
                             </div>
-                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>
+                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
                                 نوبت رزرو شده
                             </div>
                         </div>
@@ -181,9 +137,9 @@ export default function Hero() {
                     <div
                         className="hero-float-card"
                         style={{
-                            background: 'rgba(255,255,255,0.08)',
+                            background: 'rgba(0,0,0,0.3)',
                             backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.15)',
                             borderRadius: '16px',
                             padding: '18px 14px',
                             display: 'flex',
@@ -202,7 +158,7 @@ export default function Hero() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: 'rgba(16,185,129,0.15)',
+                                background: 'rgba(16,185,129,0.3)',
                                 borderRadius: '12px',
                                 flexShrink: 0,
                             }}
@@ -210,10 +166,10 @@ export default function Hero() {
                             👨‍⚕️
                         </div>
                         <div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#34d399' }}>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#6ee7b7' }}>
                                 ۵۰۰+
                             </div>
-                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>
+                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
                                 پزشک متخصص
                             </div>
                         </div>
@@ -223,9 +179,9 @@ export default function Hero() {
                     <div
                         className="hero-float-card"
                         style={{
-                            background: 'rgba(255,255,255,0.08)',
+                            background: 'rgba(0,0,0,0.3)',
                             backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.15)',
                             borderRadius: '16px',
                             padding: '18px 14px',
                             display: 'flex',
@@ -244,7 +200,7 @@ export default function Hero() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: 'rgba(139,92,246,0.15)',
+                                background: 'rgba(139,92,246,0.3)',
                                 borderRadius: '12px',
                                 flexShrink: 0,
                             }}
@@ -252,10 +208,10 @@ export default function Hero() {
                             🔬
                         </div>
                         <div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#a78bfa' }}>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#c4b5fd' }}>
                                 ۲۰۰+
                             </div>
-                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>
+                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
                                 آزمایش انجام شده
                             </div>
                         </div>
@@ -265,9 +221,9 @@ export default function Hero() {
                     <div
                         className="hero-float-card"
                         style={{
-                            background: 'rgba(255,255,255,0.08)',
+                            background: 'rgba(0,0,0,0.3)',
                             backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.15)',
                             borderRadius: '16px',
                             padding: '18px 14px',
                             display: 'flex',
@@ -286,7 +242,7 @@ export default function Hero() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: 'rgba(245,158,11,0.15)',
+                                background: 'rgba(245,158,11,0.3)',
                                 borderRadius: '12px',
                                 flexShrink: 0,
                             }}
@@ -294,10 +250,10 @@ export default function Hero() {
                             🤖
                         </div>
                         <div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#fbbf24' }}>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#fcd34d' }}>
                                 ۲۴/۷
                             </div>
-                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>
+                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
                                 پشتیبانی هوشمند
                             </div>
                         </div>
@@ -307,142 +263,122 @@ export default function Hero() {
 
             {/* انیمیشن‌های CSS */}
             <style jsx>{`
-        @keyframes floatCard1 {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-12px);
-          }
-        }
-        @keyframes floatCard2 {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-12px);
-          }
-        }
-        @keyframes floatCard3 {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-12px);
-          }
-        }
-        @keyframes floatCard4 {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-12px);
-          }
-        }
+                @keyframes floatCard1 {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-12px); }
+                }
+                @keyframes floatCard2 {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-12px); }
+                }
+                @keyframes floatCard3 {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-12px); }
+                }
+                @keyframes floatCard4 {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-12px); }
+                }
 
-        .hero-float-card:hover {
-          background: rgba(255, 255, 255, 0.15) !important;
-          border-color: rgba(37, 99, 235, 0.3) !important;
-          transform: scale(1.03) !important;
-        }
+                .hero-float-card:hover {
+                    background: rgba(0, 0, 0, 0.4) !important;
+                    border-color: rgba(255, 255, 255, 0.3) !important;
+                    transform: scale(1.03) !important;
+                }
 
-        @media (max-width: 1024px) {
-          .hero-content {
-            flex-direction: column;
-            text-align: center;
-            gap: 30px;
-          }
-          .hero-content h1 {
-            font-size: 36px !important;
-          }
-          .hero-content p {
-            margin: 0 auto 24px !important;
-          }
-          .hero-actions {
-            justify-content: center !important;
-          }
-          .hero-float-card {
-            padding: 14px 12px !important;
-          }
-          .hero-float-card > div:first-child {
-            font-size: 26px !important;
-            width: 40px !important;
-            height: 40px !important;
-          }
-          .hero-float-card > div:last-child > div:first-child {
-            font-size: 16px !important;
-          }
-          .hero-float-card > div:last-child > div:last-child {
-            font-size: 11px !important;
-          }
-        }
+                @media (max-width: 1024px) {
+                    .hero-content {
+                        flex-direction: column;
+                        text-align: center;
+                        gap: 30px;
+                    }
+                    .hero-content h1 {
+                        font-size: 36px !important;
+                    }
+                    .hero-content p {
+                        margin: 0 auto 24px !important;
+                    }
+                    .hero-actions {
+                        justify-content: center !important;
+                    }
+                    .hero-float-card {
+                        padding: 14px 12px !important;
+                    }
+                    .hero-float-card > div:first-child {
+                        font-size: 26px !important;
+                        width: 40px !important;
+                        height: 40px !important;
+                    }
+                    .hero-float-card > div:last-child > div:first-child {
+                        font-size: 16px !important;
+                    }
+                    .hero-float-card > div:last-child > div:last-child {
+                        font-size: 11px !important;
+                    }
+                }
 
-        @media (max-width: 768px) {
-          .hero {
-            min-height: 80vh !important;
-          }
-          .hero-content h1 {
-            font-size: 28px !important;
-          }
-          .hero-content p {
-            font-size: 15px !important;
-          }
-          .hero-cta {
-            height: 44px !important;
-            font-size: 14px !important;
-            padding: 0 24px !important;
-          }
-          .hero-float-card {
-            padding: 12px 10px !important;
-          }
-          .hero-float-card > div:first-child {
-            font-size: 22px !important;
-            width: 34px !important;
-            height: 34px !important;
-          }
-          .hero-float-card > div:last-child > div:first-child {
-            font-size: 14px !important;
-          }
-          .hero-float-card > div:last-child > div:last-child {
-            font-size: 10px !important;
-          }
-        }
+                @media (max-width: 768px) {
+                    .hero {
+                        min-height: 80vh !important;
+                    }
+                    .hero-content h1 {
+                        font-size: 28px !important;
+                    }
+                    .hero-content p {
+                        font-size: 15px !important;
+                    }
+                    .hero-cta {
+                        height: 44px !important;
+                        font-size: 14px !important;
+                        padding: 0 24px !important;
+                    }
+                    .hero-float-card {
+                        padding: 12px 10px !important;
+                    }
+                    .hero-float-card > div:first-child {
+                        font-size: 22px !important;
+                        width: 34px !important;
+                        height: 34px !important;
+                    }
+                    .hero-float-card > div:last-child > div:first-child {
+                        font-size: 14px !important;
+                    }
+                    .hero-float-card > div:last-child > div:last-child {
+                        font-size: 10px !important;
+                    }
+                }
 
-        @media (max-width: 480px) {
-          .hero {
-            min-height: 70vh !important;
-          }
-          .hero-content h1 {
-            font-size: 22px !important;
-          }
-          .hero-content p {
-            font-size: 13px !important;
-          }
-          .hero-cta {
-            height: 38px !important;
-            font-size: 13px !important;
-            padding: 0 18px !important;
-          }
-          .hero-float-card {
-            padding: 10px 8px !important;
-          }
-          .hero-float-card > div:first-child {
-            font-size: 18px !important;
-            width: 28px !important;
-            height: 28px !important;
-          }
-          .hero-float-card > div:last-child > div:first-child {
-            font-size: 12px !important;
-          }
-          .hero-float-card > div:last-child > div:last-child {
-            font-size: 9px !important;
-          }
-        }
-      `}</style>
+                @media (max-width: 480px) {
+                    .hero {
+                        min-height: 70vh !important;
+                    }
+                    .hero-content h1 {
+                        font-size: 22px !important;
+                    }
+                    .hero-content p {
+                        font-size: 13px !important;
+                    }
+                    .hero-cta {
+                        height: 38px !important;
+                        font-size: 13px !important;
+                        padding: 0 18px !important;
+                    }
+                    .hero-float-card {
+                        padding: 10px 8px !important;
+                    }
+                    .hero-float-card > div:first-child {
+                        font-size: 18px !important;
+                        width: 28px !important;
+                        height: 28px !important;
+                    }
+                    .hero-float-card > div:last-child > div:first-child {
+                        font-size: 12px !important;
+                    }
+                    .hero-float-card > div:last-child > div:last-child {
+                        font-size: 9px !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 }
