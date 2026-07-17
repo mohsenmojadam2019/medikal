@@ -223,125 +223,236 @@ export default function HomePage() {
           <Hero />
 
           {/* Quick Access Cards - 4 باکس شیک متحرک */}
-          {/* Quick Access Cards - نسخه فوق‌العاده شیک و مدرن */}
           <section className="quick-access">
             <div className="container">
-              <div className="quick-section-header">
+              {/* هدر بخش با انیمیشن */}
+              <div className="quick-section-header" data-aos="fade-up">
                 <div className="quick-section-title">
-                  <span className="quick-section-badge">🚀 دسترسی سریع</span>
-                  <h2>خدمات ما</h2>
+        <span className="quick-section-badge">
+          <span className="badge-icon">🚀</span>
+          دسترسی سریع
+        </span>
+                  <h2>
+                    خدمات <span className="highlight">ما</span>
+                  </h2>
                   <p>با انتخاب هر یک از خدمات، به سرعت به بخش مورد نظر هدایت شوید</p>
                 </div>
               </div>
 
               <div className="quick-grid">
                 {/* Card 1 - نوبت‌دهی مطب */}
-                <Link href={`/${locale}/appointments/new`} className="quick-card card-1">
+                <Link href={`/${locale}/appointments/new`} className="quick-card card-1" data-aos="fade-up" data-aos-delay="100">
                   <div className="quick-card-glow"></div>
+                  <div className="quick-card-particles">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
                   <div className="quick-card-inner">
                     <div className="quick-icon-wrapper">
                       <div className="quick-icon-bg"></div>
                       <div className="quick-icon-pulse"></div>
+                      <div className="quick-icon-ripple"></div>
                       <span className="quick-icon">🏥</span>
                     </div>
                     <div className="quick-card-content">
+                      <div className="card-number">01</div>
                       <h3>نوبت‌دهی مطب</h3>
                       <p>دریافت نوبت حضوری از پزشکان متخصص</p>
                       <div className="quick-features">
-                        <span>✓ رزرو آنلاین</span>
-                        <span>✓ انتخاب پزشک</span>
+              <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                رزرو آنلاین
+              </span>
+                        <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                انتخاب پزشک
+              </span>
                       </div>
                     </div>
                     <div className="quick-footer">
-                      <span className="quick-arrow">→</span>
-                      <span className="quick-badge">همین حالا</span>
+            <span className="quick-arrow">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </span>
+                      <span className="quick-badge">
+              <span className="badge-dot"></span>
+              همین حالا
+            </span>
                     </div>
                   </div>
                   <div className="quick-shine"></div>
                   <div className="quick-border-animation"></div>
+                  <div className="quick-hover-line"></div>
                 </Link>
 
                 {/* Card 2 - داروخانه */}
-                <Link href={`/${locale}/pharmacy`} className="quick-card card-2">
+                <Link href={`/${locale}/pharmacy`} className="quick-card card-2" data-aos="fade-up" data-aos-delay="200">
                   <div className="quick-card-glow"></div>
+                  <div className="quick-card-particles">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
                   <div className="quick-card-inner">
                     <div className="quick-icon-wrapper">
                       <div className="quick-icon-bg"></div>
                       <div className="quick-icon-pulse"></div>
+                      <div className="quick-icon-ripple"></div>
                       <span className="quick-icon">💊</span>
                     </div>
                     <div className="quick-card-content">
+                      <div className="card-number">02</div>
                       <h3>داروخانه</h3>
                       <p>خرید آنلاین دارو با ارسال سریع</p>
                       <div className="quick-features">
-                        <span>✓ ارسال فوری</span>
-                        <span>✓ قیمت مناسب</span>
+              <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                ارسال فوری
+              </span>
+                        <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                قیمت مناسب
+              </span>
                       </div>
                     </div>
                     <div className="quick-footer">
-                      <span className="quick-arrow">→</span>
-                      <span className="quick-badge">۲۴ ساعته</span>
+            <span className="quick-arrow">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </span>
+                      <span className="quick-badge">
+              <span className="badge-dot"></span>
+              ۲۴ ساعته
+            </span>
                     </div>
                   </div>
                   <div className="quick-shine"></div>
                   <div className="quick-border-animation"></div>
+                  <div className="quick-hover-line"></div>
                 </Link>
 
                 {/* Card 3 - آزمایشگاه */}
-                <Link href={`/${locale}/lab`} className="quick-card card-3">
+                <Link href={`/${locale}/lab`} className="quick-card card-3" data-aos="fade-up" data-aos-delay="300">
                   <div className="quick-card-glow"></div>
+                  <div className="quick-card-particles">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
                   <div className="quick-card-inner">
                     <div className="quick-icon-wrapper">
                       <div className="quick-icon-bg"></div>
                       <div className="quick-icon-pulse"></div>
+                      <div className="quick-icon-ripple"></div>
                       <span className="quick-icon">🔬</span>
                     </div>
                     <div className="quick-card-content">
+                      <div className="card-number">03</div>
                       <h3>آزمایشگاه</h3>
                       <p>رزرو آزمایش و دریافت نتیجه آنلاین</p>
                       <div className="quick-features">
-                        <span>✓ نتایج دقیق</span>
-                        <span>✓ پاسخ سریع</span>
+              <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                نتایج دقیق
+              </span>
+                        <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                پاسخ سریع
+              </span>
                       </div>
                     </div>
                     <div className="quick-footer">
-                      <span className="quick-arrow">→</span>
-                      <span className="quick-badge">دقیق</span>
+            <span className="quick-arrow">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </span>
+                      <span className="quick-badge">
+              <span className="badge-dot"></span>
+              دقیق
+            </span>
                     </div>
                   </div>
                   <div className="quick-shine"></div>
                   <div className="quick-border-animation"></div>
+                  <div className="quick-hover-line"></div>
                 </Link>
 
                 {/* Card 4 - هوش مصنوعی */}
-                <Link href={`/${locale}/ai-chat`} className="quick-card card-4">
+                <Link href={`/${locale}/ai-chat`} className="quick-card card-4" data-aos="fade-up" data-aos-delay="400">
                   <div className="quick-card-glow"></div>
+                  <div className="quick-card-particles">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
                   <div className="quick-card-inner">
                     <div className="quick-icon-wrapper">
                       <div className="quick-icon-bg"></div>
                       <div className="quick-icon-pulse"></div>
+                      <div className="quick-icon-ripple"></div>
                       <span className="quick-icon">🤖</span>
                     </div>
                     <div className="quick-card-content">
+                      <div className="card-number">04</div>
                       <h3>هوش مصنوعی</h3>
                       <p>مشاوره هوشمند و پاسخ به سوالات پزشکی</p>
                       <div className="quick-features">
-                        <span>✓ پاسخ‌دهی سریع</span>
-                        <span>✓ ۲۴/۷ در دسترس</span>
+              <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                پاسخ‌دهی سریع
+              </span>
+                        <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                ۲۴/۷ در دسترس
+              </span>
                       </div>
                     </div>
                     <div className="quick-footer">
-                      <span className="quick-arrow">→</span>
-                      <span className="quick-badge">جدید</span>
+            <span className="quick-arrow">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </span>
+                      <span className="quick-badge">
+              <span className="badge-dot"></span>
+              جدید
+            </span>
                     </div>
                   </div>
                   <div className="quick-shine"></div>
                   <div className="quick-border-animation"></div>
+                  <div className="quick-hover-line"></div>
+                </Link>
+              </div>
+
+              {/* دکمه مشاهده همه خدمات */}
+              <div className="quick-view-all" data-aos="fade-up" data-aos-delay="500">
+                <Link href={`/${locale}/services`} className="view-all-services">
+                  مشاهده همه خدمات
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
                 </Link>
               </div>
             </div>
           </section>
-
           {/* بخش پزشکان برتر */}
           {/* بخش پزشکان برتر - نسخه حرفه‌ای با عکس و آواتار */}
           <section className="container section" style={{ marginBottom: '48px' }}>
@@ -495,6 +606,7 @@ export default function HomePage() {
           </section>
 
           {/* بخش داروخانه */}
+          {/* بخش داروخانه */}
           <section className="container section" style={{ marginBottom: '48px' }}>
             <div className="section-header">
               <div className="section-header-left">
@@ -504,58 +616,61 @@ export default function HomePage() {
                 <span className="tag">داروهای موجود</span>
                 <span className="tag hot">ارسال نسخه</span>
               </div>
-              <Link href={`/${locale}/pharmacy`}>
+              <Link href={`/${locale}/pharmacy`} className="view-all-link">
                 مشاهده همه <i className="fas fa-chevron-left" />
               </Link>
             </div>
 
             {drugs.length > 0 ? (
-                <Card>
-                  <div className="pharmacy-grid">
+                <div className="pharmacy-scroll-wrapper">
+                  <div className="pharmacy-scroll-container">
                     {drugs.map((drug) => (
                         <div key={drug.id} className="pharmacy-card">
-                          <div className="pharmacy-icon">💊</div>
-                          <div className="pharmacy-info">
-                            <h4>{drug.generic_name || drug.name || 'بدون نام'}</h4>
-                            <Tag color="blue">{drug.category || 'عمومی'}</Tag>
-                            {drug.requires_prescription && (
-                                <Tag color="orange" className="prescription-tag">نیاز به نسخه</Tag>
-                            )}
-                            <div className="pharmacy-stock">
-                              موجودی: <span className={drug.stock < 30 ? 'low-stock' : ''}>{drug.stock || 0}</span>
+                          <div className="pharmacy-card-inner">
+                            <div className="pharmacy-card-icon">💊</div>
+                            <div className="pharmacy-card-info">
+                              <h4>{drug.generic_name || drug.name || 'بدون نام'}</h4>
+                              <Tag color="blue">{drug.category || 'عمومی'}</Tag>
+                              {drug.requires_prescription && (
+                                  <Tag color="orange" className="prescription-tag">نیاز به نسخه</Tag>
+                              )}
+                              <div className="pharmacy-stock">
+                                موجودی: <span className={drug.stock < 30 ? 'low-stock' : ''}>{drug.stock || 0}</span>
+                              </div>
+                              <div className="pharmacy-price">
+                                {parseFloat(drug.price).toLocaleString() || 0} <small>تومان</small>
+                              </div>
                             </div>
-                            <div className="pharmacy-price">
-                              {parseFloat(drug.price).toLocaleString() || 0} <small>تومان</small>
+                            <div className="pharmacy-card-actions">
+                              <Button
+                                  type="primary"
+                                  disabled={drug.stock === 0}
+                                  onClick={() => handleAddToCart(drug)}
+                                  block
+                                  size="small"
+                              >
+                                سفارش
+                              </Button>
+                              {drug.requires_prescription && (
+                                  <Button
+                                      type="default"
+                                      onClick={() => router.push(`/${locale}/pharmacy`)}
+                                      block
+                                      size="small"
+                                  >
+                                    ارسال نسخه
+                                  </Button>
+                              )}
                             </div>
-                          </div>
-                          <div className="pharmacy-actions">
-                            <Button
-                                type="primary"
-                                disabled={drug.stock === 0}
-                                onClick={() => handleAddToCart(drug)}
-                                block
-                            >
-                              سفارش
-                            </Button>
-                            {drug.requires_prescription && (
-                                <Button
-                                    type="default"
-                                    onClick={() => router.push(`/${locale}/pharmacy`)}
-                                    block
-                                >
-                                  ارسال نسخه
-                                </Button>
-                            )}
                           </div>
                         </div>
                     ))}
                   </div>
-                </Card>
+                </div>
             ) : (
                 <Empty description="هیچ دارویی یافت نشد" />
             )}
           </section>
-
           {/* پیشنهادات ویژه */}
           <section className="container section" style={{ marginBottom: '48px' }}>
             <div className="section-header">
@@ -627,944 +742,1357 @@ export default function HomePage() {
           <i className="fas fa-comment-dots" />
         </button>
         <style jsx>{`
-          /* ===== Quick Access Cards ===== */
-          .quick-access {
-            padding: 60px 0 70px;
-            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-            position: relative;
-            overflow: hidden;
-          }
-
-          /* پس‌زمینه دکوراتیو */
-          .quick-access::before {
-            content: '';
-            position: absolute;
-            top: -30%;
-            right: -10%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: floatBg 20s ease-in-out infinite;
-          }
-
-          .quick-access::after {
-            content: '';
-            position: absolute;
-            bottom: -20%;
-            left: -5%;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: floatBg 25s ease-in-out infinite reverse;
-          }
-
-          @keyframes floatBg {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            50% { transform: translate(30px, -30px) scale(1.1); }
-          }
-
-          /* هدر بخش */
-          .quick-section-header {
-            text-align: center;
-            margin-bottom: 40px;
-          }
-
-          .quick-section-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(139, 92, 246, 0.1));
-            color: #2563eb;
-            padding: 4px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            letter-spacing: 0.5px;
-          }
-
-          .quick-section-title h2 {
-            font-size: 32px;
-            font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 8px;
-          }
-
-          .quick-section-title p {
-            color: #64748b;
-            font-size: 16px;
-            margin: 0;
-          }
-
-          .quick-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
-            position: relative;
-            z-index: 1;
-          }
-
-          .quick-card {
-            position: relative;
-            display: block;
-            background: #ffffff;
-            border-radius: 24px;
-            padding: 0;
-            text-decoration: none;
-            overflow: hidden;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid transparent;
-            cursor: pointer;
-          }
-
-          .quick-card-inner {
-            padding: 32px 24px 28px;
-            position: relative;
-            z-index: 2;
-            background: #ffffff;
-          }
-
-          /* Glow Effect on Hover */
-          .quick-card-glow {
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(37, 99, 235, 0.03) 0%, transparent 60%);
-            opacity: 0;
-            transition: opacity 0.6s ease;
-            pointer-events: none;
-            z-index: 0;
-          }
-
-          .quick-card:hover .quick-card-glow {
-            opacity: 1;
-          }
-
-          /* Border Animation */
-          .quick-border-animation {
-            position: absolute;
-            inset: 0;
-            border-radius: 24px;
-            padding: 2px;
-            background: linear-gradient(135deg, transparent 40%, rgba(37, 99, 235, 0.3) 50%, transparent 60%);
-            background-size: 200% 200%;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-          }
-
-          .quick-card:hover .quick-border-animation {
-            opacity: 1;
-            animation: borderSpin 3s ease-in-out infinite;
-          }
-
-          @keyframes borderSpin {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-
-          /* Shine Effect */
-          .quick-shine {
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.6) 0%, transparent 60%);
-            opacity: 0;
-            transform: rotate(25deg) translateY(-100%);
-            transition: all 0.8s ease;
-            pointer-events: none;
-            z-index: 1;
-          }
-
-          .quick-card:hover .quick-shine {
-            opacity: 0.6;
-            transform: rotate(25deg) translateY(100%);
-          }
-
-          /* Card Colors */
-          .card-1 { border-color: rgba(37, 99, 235, 0.15); }
-          .card-1 .quick-icon-bg { background: linear-gradient(135deg, #2563eb, #3b82f6); }
-          .card-1 .quick-card-glow { background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 60%); }
-          .card-1:hover { border-color: #2563eb; box-shadow: 0 16px 48px rgba(37, 99, 235, 0.2); }
-          .card-1 .quick-border-animation { background: linear-gradient(135deg, transparent 40%, #2563eb 50%, transparent 60%); }
-
-          .card-2 { border-color: rgba(16, 185, 129, 0.15); }
-          .card-2 .quick-icon-bg { background: linear-gradient(135deg, #10b981, #34d399); }
-          .card-2 .quick-card-glow { background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 60%); }
-          .card-2:hover { border-color: #10b981; box-shadow: 0 16px 48px rgba(16, 185, 129, 0.2); }
-          .card-2 .quick-border-animation { background: linear-gradient(135deg, transparent 40%, #10b981 50%, transparent 60%); }
-
-          .card-3 { border-color: rgba(139, 92, 246, 0.15); }
-          .card-3 .quick-icon-bg { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
-          .card-3 .quick-card-glow { background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 60%); }
-          .card-3:hover { border-color: #8b5cf6; box-shadow: 0 16px 48px rgba(139, 92, 246, 0.2); }
-          .card-3 .quick-border-animation { background: linear-gradient(135deg, transparent 40%, #8b5cf6 50%, transparent 60%); }
-
-          .card-4 { border-color: rgba(245, 158, 11, 0.15); }
-          .card-4 .quick-icon-bg { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
-          .card-4 .quick-card-glow { background: radial-gradient(circle, rgba(245, 158, 11, 0.08) 0%, transparent 60%); }
-          .card-4:hover { border-color: #f59e0b; box-shadow: 0 16px 48px rgba(245, 158, 11, 0.2); }
-          .card-4 .quick-border-animation { background: linear-gradient(135deg, transparent 40%, #f59e0b 50%, transparent 60%); }
-
-          .quick-card:hover {
-            transform: translateY(-12px) scale(1.01);
-          }
-
-          /* Icon */
-          .quick-icon-wrapper {
-            position: relative;
-            width: 80px;
-            height: 80px;
-            margin-bottom: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .quick-icon-bg {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 20px;
-            opacity: 0.12;
-            transition: all 0.4s ease;
-            transform: rotate(0deg) scale(1);
-          }
-
-          .quick-card:hover .quick-icon-bg {
-            transform: rotate(10deg) scale(1.1);
-            opacity: 0.2;
-          }
-
-          .quick-icon-pulse {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 20px;
-            border: 2px solid transparent;
-            opacity: 0;
-            transition: all 0.5s ease;
-          }
-
-          .card-1 .quick-icon-pulse { border-color: rgba(37, 99, 235, 0.3); }
-          .card-2 .quick-icon-pulse { border-color: rgba(16, 185, 129, 0.3); }
-          .card-3 .quick-icon-pulse { border-color: rgba(139, 92, 246, 0.3); }
-          .card-4 .quick-icon-pulse { border-color: rgba(245, 158, 11, 0.3); }
-
-          .quick-card:hover .quick-icon-pulse {
-            opacity: 1;
-            animation: pulseRing 1.5s ease-out infinite;
-          }
-
-          @keyframes pulseRing {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.3); opacity: 0; }
-          }
-
-          .quick-icon {
-            position: relative;
-            font-size: 38px;
-            z-index: 1;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-          }
-
-          .quick-card:hover .quick-icon {
-            transform: scale(1.15) rotate(-8deg);
-          }
-
-          /* Content */
-          .quick-card-content {
-            margin-bottom: 16px;
-          }
-
-          .quick-card-content h3 {
-            font-size: 20px;
-            font-weight: 700;
-            color: #0f172a;
-            margin: 0 0 6px 0;
-            line-height: 1.3;
-          }
-
-          .quick-card-content p {
-            font-size: 14px;
-            color: #64748b;
-            margin: 0 0 10px 0;
-            line-height: 1.6;
-          }
-
-          .quick-features {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-          }
-
-          .quick-features span {
-            font-size: 12px;
-            color: #94a3b8;
-            background: #f1f5f9;
-            padding: 2px 10px;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-          }
-
-          .quick-card:hover .quick-features span {
-            background: rgba(37, 99, 235, 0.08);
-            color: #2563eb;
-          }
-
-          .card-2:hover .quick-features span { background: rgba(16, 185, 129, 0.08); color: #10b981; }
-          .card-3:hover .quick-features span { background: rgba(139, 92, 246, 0.08); color: #8b5cf6; }
-          .card-4:hover .quick-features span { background: rgba(245, 158, 11, 0.08); color: #f59e0b; }
-
-          /* Footer */
-          .quick-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-top: 14px;
-            border-top: 2px solid #f1f5f9;
-            transition: border-color 0.3s ease;
-          }
-
-          .quick-card:hover .quick-footer {
-            border-color: #e2e8f0;
-          }
-
-          .quick-arrow {
-            font-size: 22px;
-            color: #94a3b8;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            font-weight: 300;
-          }
-
-          .quick-card:hover .quick-arrow {
-            color: #2563eb;
-            transform: translateX(-8px);
-          }
-
-          .card-2:hover .quick-arrow { color: #10b981; }
-          .card-3:hover .quick-arrow { color: #8b5cf6; }
-          .card-4:hover .quick-arrow { color: #f59e0b; }
-
-          .quick-badge {
-            font-size: 12px;
-            font-weight: 600;
-            padding: 4px 16px;
-            border-radius: 20px;
-            background: #f1f5f9;
-            color: #64748b;
-            transition: all 0.3s ease;
-            letter-spacing: 0.3px;
-          }
-
-          .card-1:hover .quick-badge {
-            background: rgba(37, 99, 235, 0.1);
-            color: #2563eb;
-          }
-          .card-2:hover .quick-badge {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-          }
-          .card-3:hover .quick-badge {
-            background: rgba(139, 92, 246, 0.1);
-            color: #8b5cf6;
-          }
-          .card-4:hover .quick-badge {
-            background: rgba(245, 158, 11, 0.1);
-            color: #f59e0b;
-          }
-
-          /* Responsive */
-          @media (max-width: 1024px) {
-            .quick-grid {
-              grid-template-columns: repeat(2, 1fr);
-              gap: 20px;
-            }
-            .quick-section-title h2 {
-              font-size: 28px;
-            }
-          }
-
-          @media (max-width: 768px) {
-            .quick-access {
-              padding: 40px 0 50px;
-            }
-            .quick-grid {
-              grid-template-columns: repeat(2, 1fr);
-              gap: 16px;
-            }
-            .quick-card-inner {
-              padding: 24px 18px 20px;
-            }
-            .quick-icon-wrapper {
-              width: 64px;
-              height: 64px;
-            }
-            .quick-icon {
-              font-size: 30px;
-            }
-            .quick-card-content h3 {
-              font-size: 17px;
-            }
-            .quick-card-content p {
-              font-size: 13px;
-            }
-            .quick-features span {
-              font-size: 11px;
-              padding: 2px 8px;
-            }
-            .quick-section-title h2 {
-              font-size: 24px;
-            }
-          }
-
-          @media (max-width: 480px) {
-            .quick-grid {
-              grid-template-columns: repeat(2, 1fr);
-              gap: 12px;
-            }
-            .quick-card-inner {
-              padding: 18px 14px 16px;
-            }
-            .quick-icon-wrapper {
-              width: 52px;
-              height: 52px;
-              margin-bottom: 12px;
-            }
-            .quick-icon {
-              font-size: 24px;
-            }
-            .quick-card-content h3 {
-              font-size: 15px;
-            }
-            .quick-card-content p {
-              font-size: 12px;
-              margin-bottom: 8px;
-            }
-            .quick-features {
-              gap: 6px;
-            }
-            .quick-features span {
-              font-size: 10px;
-              padding: 1px 6px;
-            }
-            .quick-footer {
-              padding-top: 10px;
-            }
-            .quick-arrow {
-              font-size: 18px;
-            }
-            .quick-badge {
-              font-size: 10px;
-              padding: 3px 10px;
-            }
-            .quick-section-title h2 {
-              font-size: 20px;
-            }
-            .quick-section-title p {
-              font-size: 14px;
-            }
-          }
-
-          /* ===== پزشکان برتر - نسخه حرفه‌ای ===== */
-          .container.section {
-            max-width: 1440px;
-            margin: 0 auto;
-            padding: 0 24px;
-          }
-
-          /* هدر بخش */
-          .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-            flex-wrap: wrap;
-            gap: 12px;
-          }
-
-          .section-header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-          }
-
-          .section-header-left h2 {
-            font-size: 28px;
-            font-weight: 700;
-            color: #0f172a;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-
-          .section-header-left h2 i {
-            font-size: 24px;
-          }
-
-          .tag {
-            display: inline-block;
-            background: #f1f5f9;
-            color: #475569;
-            padding: 4px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-          }
-
-          .tag.hot {
-            background: linear-gradient(135deg, #fef3c7, #fde68a);
-            color: #d97706;
-          }
-
-          .view-all-link {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #2563eb;
-            font-weight: 600;
-            font-size: 15px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-          }
-
-          .view-all-link:hover {
-            color: #1d4ed8;
-            transform: translateX(-4px);
-          }
-
-          .view-all-link i {
-            font-size: 14px;
-            transition: transform 0.3s ease;
-          }
-
-          .view-all-link:hover i {
-            transform: translateX(-4px);
-          }
-
-          /* گرید پزشکان */
-          .doctors-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 24px;
-          }
-
-          /* کارت پزشک */
-          .doctor-card {
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 24px 20px 20px;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid transparent;
-            position: relative;
-            overflow: hidden;
-          }
-
-          .doctor-card:hover {
-            transform: translateY(-8px);
-            border-color: #2563eb;
-            box-shadow: 0 16px 48px rgba(37, 99, 235, 0.12);
-          }
-
-          .doctor-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #2563eb, #7c3aed);
-            opacity: 0;
-            transition: opacity 0.4s ease;
-          }
-
-          .doctor-card:hover::before {
-            opacity: 1;
-          }
-
-          /* نشان ویژه */
-          .doctor-featured-badge {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            z-index: 10;
-            background: linear-gradient(135deg, #f59e0b, #fbbf24);
-            color: #78350f;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 700;
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-            animation: featuredPulse 2s ease-in-out infinite;
-          }
-
-          .doctor-featured-badge.new {
-            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-            animation: featuredPulse 2s ease-in-out infinite 0.5s;
-          }
-
-          @keyframes featuredPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-          }
-
-          /* تصویر پزشک */
-          .doctor-image-wrapper {
-            position: relative;
-            width: 100px;
-            height: 100px;
-            margin: 0 auto 16px;
-          }
-
-          .doctor-image-ring {
-            position: absolute;
-            inset: -4px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #2563eb, #7c3aed);
-            opacity: 0.15;
-            transition: all 0.4s ease;
-          }
-
-          .doctor-card:hover .doctor-image-ring {
-            opacity: 0.3;
-            transform: scale(1.05);
-          }
-
-          .doctor-image {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #fff;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-            transition: all 0.4s ease;
-            position: relative;
-            z-index: 1;
-          }
-
-          .doctor-card:hover .doctor-image {
-            transform: scale(1.05);
-            border-color: #2563eb;
-          }
-
-          .doctor-avatar-fallback {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #2563eb, #7c3aed);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            color: #fff;
-            font-weight: 700;
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
-            position: relative;
-            z-index: 1;
-            transition: all 0.4s ease;
-          }
-
-          .doctor-card:hover .doctor-avatar-fallback {
-            transform: scale(1.05);
-          }
-
-          /* وضعیت آنلاین */
-          .doctor-status-dot {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            border: 3px solid #fff;
-            z-index: 5;
-            transition: all 0.3s ease;
-          }
-
-          .doctor-status-dot.online {
-            background: #10b981;
-            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
-          }
-
-          .doctor-status-dot.offline {
-            background: #ef4444;
-            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
-          }
-
-          .doctor-status-dot .status-tooltip {
-            position: absolute;
-            bottom: calc(100% + 8px);
-            right: 50%;
-            transform: translateX(50%) scale(0.8);
-            background: #0f172a;
-            color: #fff;
-            padding: 2px 10px;
-            border-radius: 6px;
-            font-size: 10px;
-            white-space: nowrap;
-            opacity: 0;
-            transition: all 0.3s ease;
-            pointer-events: none;
-          }
-
-          .doctor-status-dot:hover .status-tooltip {
-            opacity: 1;
-            transform: translateX(50%) scale(1);
-          }
-
-          /* اطلاعات پزشک */
-          .doctor-info-content {
-            margin-top: 4px;
-          }
-
-          .doctor-name {
-            font-size: 17px;
-            font-weight: 700;
-            color: #0f172a;
-            margin: 0 0 4px 0;
-          }
-
-          .doctor-specialty {
-            font-size: 14px;
-            color: #2563eb;
-            font-weight: 500;
-            margin-bottom: 4px;
-          }
-
-          .doctor-specialty i {
-            margin-left: 6px;
-            font-size: 12px;
-          }
-
-          .doctor-clinic {
-            font-size: 13px;
-            color: #64748b;
-            margin-bottom: 12px;
-          }
-
-          .doctor-clinic i {
-            margin-left: 6px;
-            font-size: 12px;
-          }
-
-          /* امتیاز */
-          .doctor-rating-section {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 12px;
-          }
-
-          .doctor-stars {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
-
-          .rating-number {
-            font-weight: 700;
-            color: #0f172a;
-            font-size: 15px;
-          }
-
-          .reviews-count {
-            font-size: 13px;
-            color: #94a3b8;
-          }
-
-          .reviews-count i {
-            margin-left: 4px;
-          }
-
-          /* هزینه */
-          .doctor-fee-section {
-            background: #f8fafc;
-            padding: 8px 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            display: inline-block;
-          }
-
-          .fee-amount {
-            font-size: 18px;
-            font-weight: 700;
-            color: #2563eb;
-          }
-
-          .fee-label {
-            font-size: 13px;
-            color: #64748b;
-            margin-right: 4px;
-          }
-
-          /* دکمه‌ها */
-          .doctor-actions {
-            display: flex;
-            gap: 8px;
-            flex-direction: column;
-          }
-
-          .btn-book {
-            width: 100%;
-            border-radius: 12px;
-            height: 40px;
-            font-weight: 600;
-            font-size: 14px;
-            background: linear-gradient(135deg, #2563eb, #3b82f6);
-            border: none;
-            transition: all 0.3s ease;
-          }
-
-          .btn-book:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
-          }
-
-          .btn-book i {
-            margin-left: 6px;
-          }
-
-          .btn-profile {
-            width: 100%;
-            border-radius: 12px;
-            height: 40px;
-            font-weight: 600;
-            font-size: 14px;
-            border: 2px solid #e2e8f0;
-            color: #475569;
-            background: transparent;
-            transition: all 0.3s ease;
-          }
-
-          .btn-profile:hover {
-            border-color: #2563eb;
-            color: #2563eb;
-            background: rgba(37, 99, 235, 0.04);
-          }
-
-          .btn-profile i {
-            margin-left: 6px;
-          }
-
-          /* Responsive */
-          @media (max-width: 1200px) {
-            .doctors-grid {
-              grid-template-columns: repeat(4, 1fr);
-              gap: 20px;
-            }
-          }
-
-          @media (max-width: 992px) {
-            .doctors-grid {
-              grid-template-columns: repeat(3, 1fr);
-              gap: 20px;
-            }
-            .section-header-left h2 {
-              font-size: 24px;
-            }
-          }
-
-          @media (max-width: 768px) {
-            .doctors-grid {
-              grid-template-columns: repeat(2, 1fr);
-              gap: 16px;
-            }
-            .doctor-card {
-              padding: 18px 14px 16px;
-            }
-            .doctor-image-wrapper {
-              width: 80px;
-              height: 80px;
-            }
-            .doctor-avatar-fallback {
-              font-size: 32px;
-            }
-            .doctor-name {
-              font-size: 15px;
-            }
-            .doctor-specialty {
-              font-size: 13px;
-            }
-            .doctor-clinic {
-              font-size: 12px;
-            }
-            .fee-amount {
-              font-size: 16px;
-            }
-            .section-header {
-              flex-direction: column;
-              align-items: flex-start;
-            }
-            .section-header-left h2 {
-              font-size: 20px;
-            }
-          }
-
-          @media (max-width: 480px) {
-            .doctors-grid {
-              grid-template-columns: 1fr 1fr;
-              gap: 12px;
-            }
-            .doctor-image-wrapper {
-              width: 64px;
-              height: 64px;
-            }
-            .doctor-avatar-fallback {
-              font-size: 28px;
-            }
-            .doctor-name {
-              font-size: 13px;
-            }
-            .doctor-specialty {
-              font-size: 11px;
-            }
-            .doctor-clinic {
-              font-size: 11px;
-            }
-            .doctor-rating-section {
-              flex-direction: column;
-              gap: 4px;
-            }
-            .doctor-stars {
-              font-size: 12px;
-            }
-            .fee-amount {
-              font-size: 14px;
-            }
-            .btn-book, .btn-profile {
-              font-size: 12px;
-              height: 34px;
-            }
-            .doctor-featured-badge {
-              font-size: 9px;
-              padding: 2px 8px;
-            }
-            .doctor-status-dot {
-              width: 14px;
-              height: 14px;
-              bottom: 0;
-              right: 0;
-            }
-          }
-        `}</style>
+  /* ===== Quick Access Cards ===== */
+  .quick-access {
+    padding: 70px 0 80px;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .quick-access::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    right: -10%;
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.04) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: floatBg1 25s ease-in-out infinite;
+  }
+
+  .quick-access::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    left: -5%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.04) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: floatBg2 30s ease-in-out infinite reverse;
+  }
+
+  @keyframes floatBg1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -20px) scale(1.1); }
+    66% { transform: translate(-20px, 30px) scale(0.9); }
+  }
+
+  @keyframes floatBg2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(-30px, 40px) scale(1.15); }
+    66% { transform: translate(30px, -20px) scale(0.85); }
+  }
+
+  .quick-section-header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+
+  .quick-section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(139, 92, 246, 0.08));
+    color: #2563eb;
+    padding: 6px 20px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(37, 99, 235, 0.1);
+    animation: badgePulse 3s ease-in-out infinite;
+  }
+
+  @keyframes badgePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+    50% { box-shadow: 0 0 20px rgba(37, 99, 235, 0.08); }
+  }
+
+  .badge-icon {
+    display: inline-block;
+    animation: iconBounce 2s ease-in-out infinite;
+  }
+
+  @keyframes iconBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2) rotate(-5deg); }
+  }
+
+  .quick-section-title h2 {
+    font-size: 38px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+
+  .quick-section-title h2 .highlight {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .quick-section-title p {
+    color: #64748b;
+    font-size: 17px;
+    margin: 0;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .quick-card {
+    position: relative;
+    display: block;
+    background: #ffffff;
+    border-radius: 28px;
+    padding: 0;
+    text-decoration: none;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    border: 2px solid transparent;
+    cursor: pointer;
+  }
+
+  .quick-card-inner {
+    padding: 36px 28px 30px;
+    position: relative;
+    z-index: 2;
+    background: #ffffff;
+  }
+
+  /* Particle Effects */
+  .quick-card-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .quick-card-particles span {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: rgba(37, 99, 235, 0.15);
+    border-radius: 50%;
+    animation: particleFloat 8s ease-in-out infinite;
+  }
+
+  .quick-card-particles span:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
+  .quick-card-particles span:nth-child(2) { top: 20%; right: 15%; animation-delay: 1.5s; }
+  .quick-card-particles span:nth-child(3) { bottom: 30%; left: 5%; animation-delay: 3s; }
+  .quick-card-particles span:nth-child(4) { bottom: 20%; right: 10%; animation-delay: 4.5s; }
+  .quick-card-particles span:nth-child(5) { top: 50%; left: 50%; animation-delay: 6s; }
+
+  @keyframes particleFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0; }
+    50% { transform: translate(30px, -30px) scale(2); opacity: 1; }
+  }
+
+  .quick-card-glow {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.03) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .quick-card:hover .quick-card-glow {
+    opacity: 1;
+  }
+
+  .quick-hover-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #2563eb, #7c3aed);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    z-index: 3;
+  }
+
+  .quick-card:hover .quick-hover-line {
+    transform: scaleX(1);
+  }
+
+  .quick-border-animation {
+    position: absolute;
+    inset: 0;
+    border-radius: 28px;
+    padding: 2px;
+    background: linear-gradient(135deg, transparent 30%, rgba(37, 99, 235, 0.2) 50%, transparent 70%);
+    background-size: 300% 300%;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  .quick-card:hover .quick-border-animation {
+    opacity: 1;
+    animation: borderSpin 4s ease-in-out infinite;
+  }
+
+  @keyframes borderSpin {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .quick-shine {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.7) 0%, transparent 50%);
+    opacity: 0;
+    transform: rotate(35deg) translateY(-100%);
+    transition: all 0.9s ease;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  .quick-card:hover .quick-shine {
+    opacity: 0.5;
+    transform: rotate(35deg) translateY(100%);
+  }
+
+  /* Card Colors */
+  .card-1 { border-color: rgba(37, 99, 235, 0.12); }
+  .card-1 .quick-icon-bg { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+  .card-1 .quick-card-glow { background: radial-gradient(circle, rgba(37, 99, 235, 0.06) 0%, transparent 60%); }
+  .card-1:hover { border-color: #2563eb; box-shadow: 0 20px 60px rgba(37, 99, 235, 0.15); }
+  .card-1 .quick-border-animation { background: linear-gradient(135deg, transparent 30%, #2563eb 50%, transparent 70%); }
+  .card-1 .quick-hover-line { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+
+  .card-2 { border-color: rgba(16, 185, 129, 0.12); }
+  .card-2 .quick-icon-bg { background: linear-gradient(135deg, #10b981, #34d399); }
+  .card-2 .quick-card-glow { background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 60%); }
+  .card-2:hover { border-color: #10b981; box-shadow: 0 20px 60px rgba(16, 185, 129, 0.15); }
+  .card-2 .quick-border-animation { background: linear-gradient(135deg, transparent 30%, #10b981 50%, transparent 70%); }
+  .card-2 .quick-hover-line { background: linear-gradient(90deg, #10b981, #34d399); }
+
+  .card-3 { border-color: rgba(139, 92, 246, 0.12); }
+  .card-3 .quick-icon-bg { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+  .card-3 .quick-card-glow { background: radial-gradient(circle, rgba(139, 92, 246, 0.06) 0%, transparent 60%); }
+  .card-3:hover { border-color: #8b5cf6; box-shadow: 0 20px 60px rgba(139, 92, 246, 0.15); }
+  .card-3 .quick-border-animation { background: linear-gradient(135deg, transparent 30%, #8b5cf6 50%, transparent 70%); }
+  .card-3 .quick-hover-line { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+
+  .card-4 { border-color: rgba(245, 158, 11, 0.12); }
+  .card-4 .quick-icon-bg { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+  .card-4 .quick-card-glow { background: radial-gradient(circle, rgba(245, 158, 11, 0.06) 0%, transparent 60%); }
+  .card-4:hover { border-color: #f59e0b; box-shadow: 0 20px 60px rgba(245, 158, 11, 0.15); }
+  .card-4 .quick-border-animation { background: linear-gradient(135deg, transparent 30%, #f59e0b 50%, transparent 70%); }
+  .card-4 .quick-hover-line { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+  .quick-card:hover {
+    transform: translateY(-16px) scale(1.01);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Icon */
+  .quick-icon-wrapper {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .quick-icon-bg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 24px;
+    opacity: 0.1;
+    transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    transform: rotate(0deg) scale(1);
+  }
+
+  .quick-card:hover .quick-icon-bg {
+    transform: rotate(12deg) scale(1.12);
+    opacity: 0.2;
+  }
+
+  .quick-icon-ripple {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 24px;
+    border: 2px solid transparent;
+    opacity: 0;
+    transition: all 0.6s ease;
+  }
+
+  .card-1 .quick-icon-ripple { border-color: rgba(37, 99, 235, 0.2); }
+  .card-2 .quick-icon-ripple { border-color: rgba(16, 185, 129, 0.2); }
+  .card-3 .quick-icon-ripple { border-color: rgba(139, 92, 246, 0.2); }
+  .card-4 .quick-icon-ripple { border-color: rgba(245, 158, 11, 0.2); }
+
+  .quick-card:hover .quick-icon-ripple {
+    opacity: 1;
+    animation: rippleExpand 1.8s ease-out infinite;
+  }
+
+  @keyframes rippleExpand {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+
+  .quick-icon-pulse {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 24px;
+    border: 2px solid transparent;
+    opacity: 0;
+    transition: all 0.5s ease;
+  }
+
+  .card-1 .quick-icon-pulse { border-color: rgba(37, 99, 235, 0.15); }
+  .card-2 .quick-icon-pulse { border-color: rgba(16, 185, 129, 0.15); }
+  .card-3 .quick-icon-pulse { border-color: rgba(139, 92, 246, 0.15); }
+  .card-4 .quick-icon-pulse { border-color: rgba(245, 158, 11, 0.15); }
+
+  .quick-card:hover .quick-icon-pulse {
+    opacity: 1;
+    animation: pulseRing 2s ease-out infinite;
+  }
+
+  @keyframes pulseRing {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+
+  .quick-icon {
+    position: relative;
+    font-size: 42px;
+    z-index: 1;
+    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .quick-card:hover .quick-icon {
+    transform: scale(1.2) rotate(-10deg);
+  }
+
+  /* Content */
+  .quick-card-content {
+    margin-bottom: 18px;
+  }
+
+  .card-number {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    font-family: 'Monaco', 'Menlo', monospace;
+  }
+
+  .quick-card-content h3 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+  }
+
+  .quick-card-content p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0 0 14px 0;
+    line-height: 1.7;
+  }
+
+  .quick-features {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .quick-features span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 4px 12px;
+    border-radius: 50px;
+    transition: all 0.4s ease;
+  }
+
+  .quick-features span svg {
+    stroke: #94a3b8;
+    transition: stroke 0.4s ease;
+  }
+
+  .quick-card:hover .quick-features span {
+    background: rgba(37, 99, 235, 0.06);
+    color: #2563eb;
+  }
+
+  .quick-card:hover .quick-features span svg {
+    stroke: #2563eb;
+  }
+
+  .card-2:hover .quick-features span {
+    background: rgba(16, 185, 129, 0.06);
+    color: #10b981;
+  }
+  .card-2:hover .quick-features span svg { stroke: #10b981; }
+
+  .card-3:hover .quick-features span {
+    background: rgba(139, 92, 246, 0.06);
+    color: #8b5cf6;
+  }
+  .card-3:hover .quick-features span svg { stroke: #8b5cf6; }
+
+  .card-4:hover .quick-features span {
+    background: rgba(245, 158, 11, 0.06);
+    color: #f59e0b;
+  }
+  .card-4:hover .quick-features span svg { stroke: #f59e0b; }
+
+  /* Footer */
+  .quick-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    border-top: 2px solid #f1f5f9;
+    transition: border-color 0.4s ease;
+  }
+
+  .quick-card:hover .quick-footer {
+    border-color: #e2e8f0;
+  }
+
+  .quick-arrow svg {
+    stroke: #94a3b8;
+    transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .quick-card:hover .quick-arrow svg {
+    stroke: #2563eb;
+    transform: translateX(-6px);
+  }
+
+  .card-2:hover .quick-arrow svg { stroke: #10b981; }
+  .card-3:hover .quick-arrow svg { stroke: #8b5cf6; }
+  .card-4:hover .quick-arrow svg { stroke: #f59e0b; }
+
+  .quick-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 16px;
+    border-radius: 50px;
+    background: #f1f5f9;
+    color: #64748b;
+    transition: all 0.4s ease;
+    letter-spacing: 0.3px;
+  }
+
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #94a3b8;
+    transition: all 0.4s ease;
+  }
+
+  .card-1:hover .quick-badge {
+    background: rgba(37, 99, 235, 0.08);
+    color: #2563eb;
+  }
+  .card-1:hover .badge-dot { background: #2563eb; }
+
+  .card-2:hover .quick-badge {
+    background: rgba(16, 185, 129, 0.08);
+    color: #10b981;
+  }
+  .card-2:hover .badge-dot { background: #10b981; }
+
+  .card-3:hover .quick-badge {
+    background: rgba(139, 92, 246, 0.08);
+    color: #8b5cf6;
+  }
+  .card-3:hover .badge-dot { background: #8b5cf6; }
+
+  .card-4:hover .quick-badge {
+    background: rgba(245, 158, 11, 0.08);
+    color: #f59e0b;
+  }
+  .card-4:hover .badge-dot { background: #f59e0b; }
+
+  .quick-view-all {
+    text-align: center;
+    margin-top: 48px;
+  }
+
+  .view-all-services {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 16px;
+    text-decoration: none;
+    padding: 10px 28px;
+    border-radius: 50px;
+    border: 2px solid rgba(37, 99, 235, 0.15);
+    transition: all 0.4s ease;
+    background: rgba(37, 99, 235, 0.02);
+  }
+
+  .view-all-services:hover {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+    transform: translateX(-4px);
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.2);
+  }
+
+  .view-all-services svg {
+    transition: transform 0.4s ease;
+  }
+
+  .view-all-services:hover svg {
+    transform: translateX(-4px);
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .quick-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+    .quick-section-title h2 {
+      font-size: 32px;
+    }
+    .quick-card-inner {
+      padding: 30px 24px 26px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .quick-access {
+      padding: 50px 0 60px;
+    }
+    .quick-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .quick-card-inner {
+      padding: 24px 18px 20px;
+    }
+    .quick-icon-wrapper {
+      width: 72px;
+      height: 72px;
+    }
+    .quick-icon {
+      font-size: 34px;
+    }
+    .quick-card-content h3 {
+      font-size: 18px;
+    }
+    .quick-card-content p {
+      font-size: 13px;
+    }
+    .quick-features span {
+      font-size: 11px;
+      padding: 3px 10px;
+    }
+    .quick-section-title h2 {
+      font-size: 28px;
+    }
+    .quick-section-title p {
+      font-size: 15px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .quick-access {
+      padding: 40px 0 50px;
+    }
+    .quick-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .quick-card-inner {
+      padding: 18px 14px 16px;
+    }
+    .quick-icon-wrapper {
+      width: 56px;
+      height: 56px;
+    }
+    .quick-icon {
+      font-size: 28px;
+    }
+    .quick-card-content h3 {
+      font-size: 15px;
+    }
+    .quick-card-content p {
+      font-size: 12px;
+    }
+    .quick-features span {
+      font-size: 10px;
+      padding: 2px 8px;
+    }
+    .quick-section-title h2 {
+      font-size: 22px;
+    }
+    .quick-section-title p {
+      font-size: 13px;
+    }
+  }
+
+  /* ===== پزشکان برتر ===== */
+  .container.section {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .section-header-left h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-header-left h2 i {
+    font-size: 24px;
+  }
+
+  .tag {
+    display: inline-block;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .tag.hot {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #d97706;
+  }
+
+  .view-all-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+
+  .view-all-link:hover {
+    color: #1d4ed8;
+    transform: translateX(-4px);
+  }
+
+  .view-all-link i {
+    font-size: 14px;
+    transition: transform 0.3s ease;
+  }
+
+  .view-all-link:hover i {
+    transform: translateX(-4px);
+  }
+
+  .doctors-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 24px;
+  }
+
+  .doctor-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 24px 20px 20px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .doctor-card:hover {
+    transform: translateY(-8px);
+    border-color: #2563eb;
+    box-shadow: 0 16px 48px rgba(37, 99, 235, 0.12);
+  }
+
+  .doctor-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #2563eb, #7c3aed);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .doctor-card:hover::before {
+    opacity: 1;
+  }
+
+  .doctor-featured-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    color: #78350f;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    animation: featuredPulse 2s ease-in-out infinite;
+  }
+
+  .doctor-featured-badge.new {
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    animation: featuredPulse 2s ease-in-out infinite 0.5s;
+  }
+
+  @keyframes featuredPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  .doctor-image-wrapper {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 16px;
+  }
+
+  .doctor-image-ring {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    opacity: 0.15;
+    transition: all 0.4s ease;
+  }
+
+  .doctor-card:hover .doctor-image-ring {
+    opacity: 0.3;
+    transform: scale(1.05);
+  }
+
+  .doctor-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.4s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  .doctor-card:hover .doctor-image {
+    transform: scale(1.05);
+    border-color: #2563eb;
+  }
+
+  .doctor-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
+    position: relative;
+    z-index: 1;
+    transition: all 0.4s ease;
+  }
+
+  .doctor-card:hover .doctor-avatar-fallback {
+    transform: scale(1.05);
+  }
+
+  .doctor-status-dot {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    z-index: 5;
+    transition: all 0.3s ease;
+  }
+
+  .doctor-status-dot.online {
+    background: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+  }
+
+  .doctor-status-dot.offline {
+    background: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+  }
+
+  .doctor-status-dot .status-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 50%;
+    transform: translateX(50%) scale(0.8);
+    background: #0f172a;
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+
+  .doctor-status-dot:hover .status-tooltip {
+    opacity: 1;
+    transform: translateX(50%) scale(1);
+  }
+
+  .doctor-info-content {
+    margin-top: 4px;
+  }
+
+  .doctor-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+  }
+
+  .doctor-specialty {
+    font-size: 14px;
+    color: #2563eb;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .doctor-specialty i {
+    margin-left: 6px;
+    font-size: 12px;
+  }
+
+  .doctor-clinic {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 12px;
+  }
+
+  .doctor-clinic i {
+    margin-left: 6px;
+    font-size: 12px;
+  }
+
+  .doctor-rating-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .doctor-stars {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .rating-number {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 15px;
+  }
+
+  .reviews-count {
+    font-size: 13px;
+    color: #94a3b8;
+  }
+
+  .reviews-count i {
+    margin-left: 4px;
+  }
+
+  .doctor-fee-section {
+    background: #f8fafc;
+    padding: 8px 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    display: inline-block;
+  }
+
+  .fee-amount {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2563eb;
+  }
+
+  .fee-label {
+    font-size: 13px;
+    color: #64748b;
+    margin-right: 4px;
+  }
+
+  .doctor-actions {
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+  }
+
+  .btn-book {
+    width: 100%;
+    border-radius: 12px;
+    height: 40px;
+    font-weight: 600;
+    font-size: 14px;
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    border: none;
+    transition: all 0.3s ease;
+  }
+
+  .btn-book:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+  }
+
+  .btn-book i {
+    margin-left: 6px;
+  }
+
+  .btn-profile {
+    width: 100%;
+    border-radius: 12px;
+    height: 40px;
+    font-weight: 600;
+    font-size: 14px;
+    border: 2px solid #e2e8f0;
+    color: #475569;
+    background: transparent;
+    transition: all 0.3s ease;
+  }
+
+  .btn-profile:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.04);
+  }
+
+  .btn-profile i {
+    margin-left: 6px;
+  }
+
+  @media (max-width: 1200px) {
+    .doctors-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+  }
+
+  @media (max-width: 992px) {
+    .doctors-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .section-header-left h2 {
+      font-size: 24px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .doctors-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .doctor-card {
+      padding: 18px 14px 16px;
+    }
+    .doctor-image-wrapper {
+      width: 80px;
+      height: 80px;
+    }
+    .doctor-avatar-fallback {
+      font-size: 32px;
+    }
+    .doctor-name {
+      font-size: 15px;
+    }
+    .doctor-specialty {
+      font-size: 13px;
+    }
+    .doctor-clinic {
+      font-size: 12px;
+    }
+    .fee-amount {
+      font-size: 16px;
+    }
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .section-header-left h2 {
+      font-size: 20px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .doctors-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .doctor-image-wrapper {
+      width: 64px;
+      height: 64px;
+    }
+    .doctor-avatar-fallback {
+      font-size: 28px;
+    }
+    .doctor-name {
+      font-size: 13px;
+    }
+    .doctor-specialty {
+      font-size: 11px;
+    }
+    .doctor-clinic {
+      font-size: 11px;
+    }
+    .doctor-rating-section {
+      flex-direction: column;
+      gap: 4px;
+    }
+    .doctor-stars {
+      font-size: 12px;
+    }
+    .fee-amount {
+      font-size: 14px;
+    }
+    .btn-book, .btn-profile {
+      font-size: 12px;
+      height: 34px;
+    }
+    .doctor-featured-badge {
+      font-size: 9px;
+      padding: 2px 8px;
+    }
+    .doctor-status-dot {
+      width: 14px;
+      height: 14px;
+      bottom: 0;
+      right: 0;
+    }
+  }
+
+  /* ===== داروخانه آنلاین - اسکرول افقی ===== */
+  .pharmacy-scroll-wrapper {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    padding: 8px 0;
+  }
+
+  .pharmacy-scroll-container {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding: 8px 4px 16px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #2563eb #e2e8f0;
+  }
+
+  /* استایل اسکرول بار */
+  .pharmacy-scroll-container::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .pharmacy-scroll-container::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+
+  .pharmacy-scroll-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #2563eb, #7c3aed);
+    border-radius: 10px;
+  }
+
+  .pharmacy-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
+  }
+
+  /* کارت داروخانه */
+  .pharmacy-card {
+    flex: 0 0 220px;
+    min-width: 200px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pharmacy-card:hover {
+    transform: translateY(-4px);
+    border-color: #10b981;
+    box-shadow: 0 12px 40px rgba(16, 185, 129, 0.12);
+  }
+
+  .pharmacy-card-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .pharmacy-card-icon {
+    font-size: 40px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .pharmacy-card-info {
+    flex: 1;
+  }
+
+  .pharmacy-card-info h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  .pharmacy-card-info .ant-tag {
+    margin: 2px 4px 2px 0;
+    font-size: 11px;
+  }
+
+  .prescription-tag {
+    font-size: 10px !important;
+  }
+
+  .pharmacy-stock {
+    font-size: 13px;
+    color: #64748b;
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  .pharmacy-stock .low-stock {
+    color: #ef4444;
+    font-weight: 600;
+  }
+
+  .pharmacy-price {
+    text-align: center;
+    margin-top: 8px;
+    padding: 6px 0;
+    background: #f8fafc;
+    border-radius: 8px;
+  }
+
+  .pharmacy-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2563eb;
+  }
+
+  .pharmacy-price small {
+    font-size: 12px;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  .pharmacy-card-actions {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pharmacy-card-actions .ant-btn {
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    height: 36px;
+  }
+
+  .pharmacy-card-actions .ant-btn-primary {
+    background: linear-gradient(135deg, #10b981, #34d399);
+    border: none;
+  }
+
+  .pharmacy-card-actions .ant-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+  }
+
+  .pharmacy-card-actions .ant-btn-primary:disabled {
+    background: #d1d5db;
+  }
+
+  /* فلش‌های ناوبری اسکرول */
+  .pharmacy-scroll-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: #475569;
+  }
+
+  .pharmacy-scroll-nav:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
+  }
+
+  .pharmacy-scroll-nav.prev {
+    left: -12px;
+  }
+
+  .pharmacy-scroll-nav.next {
+    right: -12px;
+  }
+
+  @media (max-width: 768px) {
+    .pharmacy-scroll-nav {
+      display: none;
+    }
+
+    .pharmacy-card {
+      flex: 0 0 170px;
+      min-width: 160px;
+      padding: 16px 12px;
+    }
+
+    .pharmacy-card-icon {
+      font-size: 32px;
+    }
+
+    .pharmacy-card-info h4 {
+      font-size: 13px;
+    }
+
+    .pharmacy-price {
+      font-size: 15px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .pharmacy-card {
+      flex: 0 0 150px;
+      min-width: 140px;
+      padding: 14px 10px;
+    }
+
+    .pharmacy-card-icon {
+      font-size: 28px;
+    }
+
+    .pharmacy-card-info h4 {
+      font-size: 12px;
+    }
+
+    .pharmacy-price {
+      font-size: 13px;
+    }
+
+    .pharmacy-stock {
+      font-size: 11px;
+    }
+  }
+`}</style>
       </>
   );
 }
