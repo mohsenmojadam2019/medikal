@@ -103,7 +103,7 @@ export default function Hero() {
                     </p>
 
                     <div className="hero-actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        <Link href="/doctors">
+                        <Link href="/fa/doctors">
                             <Button
                                 type="primary"
                                 size="large"
