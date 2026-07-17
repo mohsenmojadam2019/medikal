@@ -42,16 +42,16 @@ export default function AboutPage() {
             <div style={{ textAlign: 'center', marginBottom: 48 }}>
               <Title level={1}>درباره ما</Title>
               <Text type="secondary" style={{ fontSize: 18 }}>
-                کلینیک‌یار، پلتفرم جامع مدیریت سلامت
+                دکتر وب، پلتفرم جامع مدیریت سلامت
               </Text>
             </div>
 
             <Card bordered={false} style={{ borderRadius: 16, marginBottom: 32 }}>
               <Row gutter={[24, 24]}>
                 <Col xs={24} md={12}>
-                  <Title level={3}>چرا کلینیک‌یار؟</Title>
+                  <Title level={3}>چرا دکتر وب؟</Title>
                   <Paragraph style={{ fontSize: 16, lineHeight: 1.8 }}>
-                    کلینیک‌یار با هدف تحول در صنعت سلامت و ارائه خدمات نوین
+                    دکتر وب با هدف تحول در صنعت سلامت و ارائه خدمات نوین
                     پزشکی ایجاد شده است. ما با بهره‌گیری از تکنولوژی‌های روز،
                     امکان نوبت‌دهی آسان، مشاوره آنلاین، و مدیریت پرونده
                     الکترونیک را برای بیماران و پزشکان فراهم کرده‌ایم.

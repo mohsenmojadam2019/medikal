@@ -16,7 +16,7 @@ export default function SEO({
   const router = useRouter();
   const currentUrl = url || `http://localhost:3000${router.pathname}`;
   
-  const siteTitle = title ? `${title} | کلینیک‌یار` : 'کلینیک‌یار | سیستم مدیریت جامع سلامت';
+  const siteTitle = title ? `${title} | دکتر وب` : 'دکتر وب | سیستم مدیریت جامع سلامت';
   const siteDescription = description || 'سیستم جامع نوبت‌دهی و مدیریت سلامت';
   const siteKeywords = keywords || 'پزشک, نوبت, سلامت, درمان, کلینیک';
 

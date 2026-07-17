@@ -38,14 +38,14 @@ class AuthService
 
         // ایجاد OTP در دیتابیس
         $otp = OtpCode::createForMobile($mobile);
-        
+
         Log::info('📱 OTP Code created for mobile: ' . $mobile . ' => ' . $otp->code);
 
         // ارسال SMS (با درگاه fake فعلاً)
         try {
             $this->smsManager->send(
                 $mobile,
-                "کد تایید شما: {$otp->code}\nکلینیک‌یار"
+                "کد تایید شما: {$otp->code}\nدکتر وب"
             );
             Log::info('✅ SMS sent to: ' . $mobile);
         } catch (\Exception $e) {

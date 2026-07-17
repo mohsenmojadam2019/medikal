@@ -93,7 +93,7 @@ export default function ConfirmationPage() {
   };
 
   const handleShareWhatsApp = () => {
-    const text = `نوبت من در کلینیک‌یار\nپزشک: ${appointment?.doctorName}\nتاریخ: ${dayjs(appointment?.date).format('YYYY/MM/DD')}\nساعت: ${appointment?.time}`;
+    const text = `نوبت من در دکتر وب\nپزشک: ${appointment?.doctorName}\nتاریخ: ${dayjs(appointment?.date).format('YYYY/MM/DD')}\nساعت: ${appointment?.time}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 

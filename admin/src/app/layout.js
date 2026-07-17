@@ -2,7 +2,7 @@ import '../styles/globals.css';
 import ClientLayout from './ClientLayout';
 
 export const metadata = {
-  title: 'کلینیک‌یار - پنل مدیریت',
+  title: 'دکتر وب - پنل مدیریت',
   description: 'سیستم مدیریت کلینیک',
   icons: {
     icon: '/favicon.ico',

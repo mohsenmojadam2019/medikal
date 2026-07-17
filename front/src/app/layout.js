@@ -6,7 +6,7 @@ import { ThemeProvider } from '@/lib/context/ThemeContext';
 import './globals.css';
 
 export const metadata = {
-  title: 'کلینیک‌یار | سیستم مدیریت جامع سلامت',
+  title: 'دکتر وب | سیستم مدیریت جامع سلامت',
   description: 'سیستم جامع نوبت‌دهی و مدیریت سلامت',
 };
 

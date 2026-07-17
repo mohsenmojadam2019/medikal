@@ -298,7 +298,7 @@ export default function Sidebar({ collapsed, onCollapse }) {
           {!collapsed && (
               <div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
-                  کلینیک<span style={{ color: '#2563eb' }}>یار</span>
+                  دکتر<span style={{ color: '#2563eb' }}>وب</span>
                 </div>
                 <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 400, marginTop: -2 }}>
                   {t('system_management', 'سیستم مدیریت سلامت')}

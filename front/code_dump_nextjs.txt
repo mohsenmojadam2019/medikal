@@ -7210,7 +7210,7 @@ import { ThemeProvider } from '@/lib/context/ThemeContext';
 import './globals.css';
 
 export const metadata = {
-  title: 'کلینیک‌یار | سیستم مدیریت جامع سلامت',
+  title: 'دکتر وب | سیستم مدیریت جامع سلامت',
   description: 'سیستم جامع نوبت‌دهی و مدیریت سلامت',
 };
 
@@ -7343,7 +7343,7 @@ import { ThemeProvider } from '@/lib/context/ThemeContext';
 import './globals.css';
 
 export const metadata = {
-  title: 'کلینیک‌یار | سیستم مدیریت جامع سلامت',
+  title: 'دکتر وب | سیستم مدیریت جامع سلامت',
   description: 'سیستم جامع نوبت‌دهی و مدیریت سلامت',
 };
 
@@ -7476,7 +7476,7 @@ import { ThemeProvider } from '@/lib/context/ThemeContext';
 import '@/app/globals.css';
 
 export const metadata = {
-  title: 'کلینیک‌یار | سیستم مدیریت جامع سلامت',
+  title: 'دکتر وب | سیستم مدیریت جامع سلامت',
   description: 'سیستم جامع نوبت‌دهی و مدیریت سلامت',
 };
 
@@ -7596,7 +7596,7 @@ import { ThemeProvider } from '@/lib/context/ThemeContext';
 import './globals.css';
 
 export const metadata = {
-  title: 'کلینیک‌یار | سیستم مدیریت جامع سلامت',
+  title: 'دکتر وب | سیستم مدیریت جامع سلامت',
   description: 'سیستم جامع نوبت‌دهی و مدیریت سلامت',
 };
 
@@ -10090,7 +10090,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-bottom">
-          <span>© ۱۴۰۴ کلینیک‌یار. تمامی حقوق محفوظ است.</span>
+          <span>© ۱۴۰۴ دکتر وب. تمامی حقوق محفوظ است.</span>
           <div className="payments">
             <span>زرین‌پال</span>
             <span>آسان‌پرداخت</span>
@@ -11359,7 +11359,7 @@ export default function Footer() {
 
         {/* بخش پایین فوتر */}
         <div className="footer-bottom">
-          <span>© ۱۴۰۴ کلینیک‌یار. تمامی حقوق محفوظ است.</span>
+          <span>© ۱۴۰۴ دکتر وب. تمامی حقوق محفوظ است.</span>
           <div className="payments">
             <span>زرین‌پال</span>
             <span>آسان‌پرداخت</span>
@@ -12357,7 +12357,7 @@ export const pharmacyData = [
 --- src/lib/i18n/fa.json ---
 {
   "common": {
-    "appName": "کلینیک‌یار",
+    "appName": "دکتر وب",
     "appSub": "سیستم مدیریت جامع سلامت",
     "search": "جستجوی پزشک، تخصص، مطب یا خدمات...",
     "searchShortcut": "Ctrl + K",

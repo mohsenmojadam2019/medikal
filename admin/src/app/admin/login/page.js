@@ -132,7 +132,7 @@ export default function AdminLoginPage() {
                             </div>
                             <div>
                                 <div style={{ fontSize: 24, fontWeight: 800, color: '#0f172a' }}>
-                                    کلینیک<span style={{ color: '#2563eb' }}>یار</span>
+                                    دکتر<span style={{ color: '#2563eb' }}>وب</span>
                                 </div>
                                 <div style={{ fontSize: 13, color: '#64748b', marginTop: -2 }}>
                                     {t('admin_panel', 'پنل مدیریت کلینیک')}

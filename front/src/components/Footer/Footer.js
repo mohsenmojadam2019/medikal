@@ -70,7 +70,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-bottom">
-          <span>© ۱۴۰۴ کلینیک‌یار. تمامی حقوق محفوظ است.</span>
+          <span>© ۱۴۰۴ دکتر وب. تمامی حقوق محفوظ است.</span>
           <div className="payments">
             <span>زرین‌پال</span>
             <span>آسان‌پرداخت</span>
