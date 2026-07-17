@@ -343,6 +343,7 @@ export default function HomePage() {
           </section>
 
           {/* بخش پزشکان برتر */}
+          {/* بخش پزشکان برتر - نسخه حرفه‌ای با عکس و آواتار */}
           <section className="container section" style={{ marginBottom: '48px' }}>
             <div className="section-header">
               <div className="section-header-left">
@@ -350,55 +351,111 @@ export default function HomePage() {
                   <i className="fas fa-star" style={{ color: '#f59e0b' }} /> پزشکان برتر
                 </h2>
                 <span className="tag">پرامتیاز</span>
+                <span className="tag hot">{doctors.length} پزشک</span>
               </div>
-              <Link href={`/${locale}/doctors`}>
+              <Link href={`/${locale}/doctors`} className="view-all-link">
                 مشاهده همه <i className="fas fa-chevron-left" />
               </Link>
             </div>
 
             {doctors.length > 0 ? (
                 <div className="doctors-grid">
-                  {doctors.map((doctor, index) => (
+                  {doctors.slice(0, 5).map((doctor, index) => (
                       <div key={doctor.id} className="doctor-card">
-                        {index === 0 && <span className="featured">ویژه</span>}
-                        <div className="doctor-top">
-                          <div className="doctor-avatar">
+                        {/* نشان ویژه برای دکتر اول */}
+                        {index === 0 && (
+                            <div className="doctor-featured-badge">
+                              <span>⭐ ویژه</span>
+                            </div>
+                        )}
+
+                        {/* نشان جدید برای دکتر دوم */}
+                        {index === 1 && (
+                            <div className="doctor-featured-badge new">
+                              <span>🆕 جدید</span>
+                            </div>
+                        )}
+
+                        {/* تصویر/آواتار دکتر با افکت حباب */}
+                        <div className="doctor-image-wrapper">
+                          <div className="doctor-image-ring"></div>
+                          {doctor.profile_image ? (
+                              <img
+                                  src={doctor.profile_image}
+                                  alt={doctor.user?.name || doctor.full_name || 'پزشک'}
+                                  className="doctor-image"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.parentElement.querySelector('.doctor-avatar-fallback').style.display = 'flex';
+                                  }}
+                              />
+                          ) : null}
+                          <div className="doctor-avatar-fallback" style={{ display: doctor.profile_image ? 'none' : 'flex' }}>
                             {doctor.user?.name?.charAt(0) || doctor.full_name?.charAt(0) || '👨‍⚕️'}
                           </div>
-                          <div className="doctor-info">
-                            <h3>{doctor.user?.name || doctor.full_name || 'پزشک'}</h3>
-                            <div className="specialty">{doctor.specialty?.name || 'تخصص'}</div>
-                            <div className="clinic">
-                              <HomeOutlined /> {doctor.clinic_name || 'آدرس مطب'}
+                          {/* وضعیت آنلاین/آفلاین */}
+                          <div className={`doctor-status-dot ${doctor.is_available ? 'online' : 'offline'}`}>
+                            <span className="status-tooltip">{doctor.is_available ? 'آنلاین' : 'آفلاین'}</span>
+                          </div>
+                        </div>
+
+                        {/* اطلاعات پزشک */}
+                        <div className="doctor-info-content">
+                          <h3 className="doctor-name">
+                            {doctor.user?.name || doctor.full_name || 'پزشک'}
+                          </h3>
+                          <div className="doctor-specialty">
+                            <i className="fas fa-stethoscope"></i>
+                            {doctor.specialty?.name || 'تخصص'}
+                          </div>
+                          <div className="doctor-clinic">
+                            <i className="fas fa-map-marker-alt"></i>
+                            {doctor.clinic_name || 'آدرس مطب'}
+                          </div>
+
+                          {/* امتیاز و نظرات */}
+                          <div className="doctor-rating-section">
+                            <div className="doctor-stars">
+                              <Rate
+                                  disabled
+                                  defaultValue={parseFloat(doctor.rating) || 0}
+                                  allowHalf
+                                  style={{ fontSize: '14px', color: '#f59e0b' }}
+                              />
+                              <span className="rating-number">{parseFloat(doctor.rating).toFixed(1) || '۰'}</span>
                             </div>
+                            <span className="reviews-count">
+                <i className="fas fa-comment"></i>
+                              {doctor.total_reviews || 0} نظر
+              </span>
                           </div>
-                        </div>
-                        <div className="doctor-meta">
-                          <div className="doctor-rating">
-                            <Rate disabled defaultValue={parseFloat(doctor.rating) || 0} allowHalf style={{ fontSize: '14px' }} />
-                            <span className="count">({doctor.total_reviews || 0} نظر)</span>
+
+                          {/* هزینه */}
+                          <div className="doctor-fee-section">
+              <span className="fee-amount">
+                {parseInt(doctor.consultation_fee || 0).toLocaleString()}
+              </span>
+                            <span className="fee-label">تومان</span>
                           </div>
-                          <span className={`doctor-availability ${!doctor.is_available ? 'busy' : ''}`}>
-                      <i className="fas fa-circle" /> {doctor.is_available ? 'نوبت دارد' : 'نوبت محدود'}
-                    </span>
-                        </div>
-                        <div className="doctor-price">
-                          {parseInt(doctor.consultation_fee || 0).toLocaleString()} <small>تومان</small>
-                        </div>
-                        <div className="doctor-actions">
-                          <Button
-                              type="primary"
-                              className="btn-book"
-                              onClick={() => handleBookAppointment(doctor.id)}
-                          >
-                            رزرو نوبت
-                          </Button>
-                          <Button
-                              className="btn-book outline"
-                              onClick={() => router.push(`/${locale}/doctors/${doctor.id}`)}
-                          >
-                            پروفایل
-                          </Button>
+
+                          {/* دکمه‌های اقدام */}
+                          <div className="doctor-actions">
+                            <Button
+                                type="primary"
+                                className="btn-book"
+                                onClick={() => handleBookAppointment(doctor.id)}
+                                icon={<i className="fas fa-calendar-check"></i>}
+                            >
+                              رزرو نوبت
+                            </Button>
+                            <Button
+                                className="btn-profile"
+                                onClick={() => router.push(`/${locale}/doctors/${doctor.id}`)}
+                                icon={<i className="fas fa-user"></i>}
+                            >
+                              پروفایل
+                            </Button>
+                          </div>
                         </div>
                       </div>
                   ))}
@@ -407,7 +464,6 @@ export default function HomePage() {
                 <Empty description="هیچ پزشکی یافت نشد" />
             )}
           </section>
-
           {/* بنرها */}
           <section className="container section" style={{ marginBottom: '48px' }}>
             <div className="banners-grid">
@@ -1018,6 +1074,494 @@ export default function HomePage() {
             }
             .quick-section-title p {
               font-size: 14px;
+            }
+          }
+
+          /* ===== پزشکان برتر - نسخه حرفه‌ای ===== */
+          .container.section {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 24px;
+          }
+
+          /* هدر بخش */
+          .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 12px;
+          }
+
+          .section-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+          }
+
+          .section-header-left h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .section-header-left h2 i {
+            font-size: 24px;
+          }
+
+          .tag {
+            display: inline-block;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+          }
+
+          .tag.hot {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #d97706;
+          }
+
+          .view-all-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #2563eb;
+            font-weight: 600;
+            font-size: 15px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+          }
+
+          .view-all-link:hover {
+            color: #1d4ed8;
+            transform: translateX(-4px);
+          }
+
+          .view-all-link i {
+            font-size: 14px;
+            transition: transform 0.3s ease;
+          }
+
+          .view-all-link:hover i {
+            transform: translateX(-4px);
+          }
+
+          /* گرید پزشکان */
+          .doctors-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 24px;
+          }
+
+          /* کارت پزشک */
+          .doctor-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 24px 20px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+          }
+
+          .doctor-card:hover {
+            transform: translateY(-8px);
+            border-color: #2563eb;
+            box-shadow: 0 16px 48px rgba(37, 99, 235, 0.12);
+          }
+
+          .doctor-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #2563eb, #7c3aed);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+          }
+
+          .doctor-card:hover::before {
+            opacity: 1;
+          }
+
+          /* نشان ویژه */
+          .doctor-featured-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 10;
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            color: #78350f;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+            animation: featuredPulse 2s ease-in-out infinite;
+          }
+
+          .doctor-featured-badge.new {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+            animation: featuredPulse 2s ease-in-out infinite 0.5s;
+          }
+
+          @keyframes featuredPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+          }
+
+          /* تصویر پزشک */
+          .doctor-image-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 16px;
+          }
+
+          .doctor-image-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            opacity: 0.15;
+            transition: all 0.4s ease;
+          }
+
+          .doctor-card:hover .doctor-image-ring {
+            opacity: 0.3;
+            transform: scale(1.05);
+          }
+
+          .doctor-image {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            transition: all 0.4s ease;
+            position: relative;
+            z-index: 1;
+          }
+
+          .doctor-card:hover .doctor-image {
+            transform: scale(1.05);
+            border-color: #2563eb;
+          }
+
+          .doctor-avatar-fallback {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
+            position: relative;
+            z-index: 1;
+            transition: all 0.4s ease;
+          }
+
+          .doctor-card:hover .doctor-avatar-fallback {
+            transform: scale(1.05);
+          }
+
+          /* وضعیت آنلاین */
+          .doctor-status-dot {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            z-index: 5;
+            transition: all 0.3s ease;
+          }
+
+          .doctor-status-dot.online {
+            background: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+          }
+
+          .doctor-status-dot.offline {
+            background: #ef4444;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+          }
+
+          .doctor-status-dot .status-tooltip {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            right: 50%;
+            transform: translateX(50%) scale(0.8);
+            background: #0f172a;
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-size: 10px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+          }
+
+          .doctor-status-dot:hover .status-tooltip {
+            opacity: 1;
+            transform: translateX(50%) scale(1);
+          }
+
+          /* اطلاعات پزشک */
+          .doctor-info-content {
+            margin-top: 4px;
+          }
+
+          .doctor-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 4px 0;
+          }
+
+          .doctor-specialty {
+            font-size: 14px;
+            color: #2563eb;
+            font-weight: 500;
+            margin-bottom: 4px;
+          }
+
+          .doctor-specialty i {
+            margin-left: 6px;
+            font-size: 12px;
+          }
+
+          .doctor-clinic {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 12px;
+          }
+
+          .doctor-clinic i {
+            margin-left: 6px;
+            font-size: 12px;
+          }
+
+          /* امتیاز */
+          .doctor-rating-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 12px;
+          }
+
+          .doctor-stars {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          }
+
+          .rating-number {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 15px;
+          }
+
+          .reviews-count {
+            font-size: 13px;
+            color: #94a3b8;
+          }
+
+          .reviews-count i {
+            margin-left: 4px;
+          }
+
+          /* هزینه */
+          .doctor-fee-section {
+            background: #f8fafc;
+            padding: 8px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            display: inline-block;
+          }
+
+          .fee-amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2563eb;
+          }
+
+          .fee-label {
+            font-size: 13px;
+            color: #64748b;
+            margin-right: 4px;
+          }
+
+          /* دکمه‌ها */
+          .doctor-actions {
+            display: flex;
+            gap: 8px;
+            flex-direction: column;
+          }
+
+          .btn-book {
+            width: 100%;
+            border-radius: 12px;
+            height: 40px;
+            font-weight: 600;
+            font-size: 14px;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            border: none;
+            transition: all 0.3s ease;
+          }
+
+          .btn-book:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+          }
+
+          .btn-book i {
+            margin-left: 6px;
+          }
+
+          .btn-profile {
+            width: 100%;
+            border-radius: 12px;
+            height: 40px;
+            font-weight: 600;
+            font-size: 14px;
+            border: 2px solid #e2e8f0;
+            color: #475569;
+            background: transparent;
+            transition: all 0.3s ease;
+          }
+
+          .btn-profile:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+            background: rgba(37, 99, 235, 0.04);
+          }
+
+          .btn-profile i {
+            margin-left: 6px;
+          }
+
+          /* Responsive */
+          @media (max-width: 1200px) {
+            .doctors-grid {
+              grid-template-columns: repeat(4, 1fr);
+              gap: 20px;
+            }
+          }
+
+          @media (max-width: 992px) {
+            .doctors-grid {
+              grid-template-columns: repeat(3, 1fr);
+              gap: 20px;
+            }
+            .section-header-left h2 {
+              font-size: 24px;
+            }
+          }
+
+          @media (max-width: 768px) {
+            .doctors-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: 16px;
+            }
+            .doctor-card {
+              padding: 18px 14px 16px;
+            }
+            .doctor-image-wrapper {
+              width: 80px;
+              height: 80px;
+            }
+            .doctor-avatar-fallback {
+              font-size: 32px;
+            }
+            .doctor-name {
+              font-size: 15px;
+            }
+            .doctor-specialty {
+              font-size: 13px;
+            }
+            .doctor-clinic {
+              font-size: 12px;
+            }
+            .fee-amount {
+              font-size: 16px;
+            }
+            .section-header {
+              flex-direction: column;
+              align-items: flex-start;
+            }
+            .section-header-left h2 {
+              font-size: 20px;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .doctors-grid {
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+            }
+            .doctor-image-wrapper {
+              width: 64px;
+              height: 64px;
+            }
+            .doctor-avatar-fallback {
+              font-size: 28px;
+            }
+            .doctor-name {
+              font-size: 13px;
+            }
+            .doctor-specialty {
+              font-size: 11px;
+            }
+            .doctor-clinic {
+              font-size: 11px;
+            }
+            .doctor-rating-section {
+              flex-direction: column;
+              gap: 4px;
+            }
+            .doctor-stars {
+              font-size: 12px;
+            }
+            .fee-amount {
+              font-size: 14px;
+            }
+            .btn-book, .btn-profile {
+              font-size: 12px;
+              height: 34px;
+            }
+            .doctor-featured-badge {
+              font-size: 9px;
+              padding: 2px 8px;
+            }
+            .doctor-status-dot {
+              width: 14px;
+              height: 14px;
+              bottom: 0;
+              right: 0;
             }
           }
         `}</style>
