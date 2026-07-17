@@ -9,17 +9,33 @@ const publicPaths = [
   '/verify',
   '/doctors',
   '/about',
-  '/contact'
+  '/contact',
+  '/pharmacy',
+  '/lab',
+  '/ai-chat',        // ✅ هوش مصنوعی عمومی - اضافه شد
+  '/specialties',
+  '/blog',
+  '/faq',
+  '/support',
+  '/search',
+  '/appointments',
 ];
 
 // ✅ مسیرهای محافظت‌شده (نیاز به لاگین)
 const protectedPaths = [
-  '/appointments/checkout', // ✅ تسویه حساب نیاز به لاگین دارد
-  '/appointments/my', // ✅ لیست نوبت‌های من
   '/profile',
   '/dashboard',
+  '/wallet',
+  '/records',
+  '/appointments/checkout',
+  '/appointments/my',
+  '/appointments/confirmation',
+  '/appointments/new',
   '/appointments/history',
-  '/appointments/confirmation' // ✅ صفحه تأیید نهایی
+  '/pharmacy/checkout',
+  '/pharmacy/cart',
+  '/pharmacy/orders',
+  '/lab/orders',
 ];
 
 export function middleware(request) {
@@ -41,18 +57,23 @@ export function middleware(request) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // ✅ بررسی مسیرهای محافظت‌شده
+  // ✅ بررسی دقیق مسیرهای محافظت‌شده
   const isProtected = protectedPaths.some(path => pathname.startsWith(path));
 
   // ✅ اگر کاربر لاگین نیست و به مسیر محافظت‌شده رفته
   if (!token && isProtected) {
+    // اگر مسیر /appointments/new است، اجازه دسترسی بده (چون داخل خود صفحه چک می‌شه)
+    if (pathname === '/appointments/new') {
+      return NextResponse.next();
+    }
+
     const url = new URL('/login', request.url);
-    // ✅ ذخیره مسیر فعلی برای بازگشت بعد از لاگین
-    url.searchParams.set('redirect', pathname);
+    // ✅ ذخیره مسیر قبلی برای بازگشت
+    const referer = request.headers.get('referer') || '/';
+    url.searchParams.set('redirect', referer);
     return NextResponse.redirect(url);
   }
 
-  // ✅ مسیر /appointments/new آزاد است (بدون لاگین)
   return NextResponse.next();
 }
 

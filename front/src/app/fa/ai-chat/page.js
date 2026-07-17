@@ -1,26 +1,26 @@
-// /home/god/Videos/medikal/front/src/app/fa/ai-chat/page.js
+// /src/app/fa/ai-chat/page.js
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Card, Input, Button, Typography, Spin, Avatar, Space,
-    Empty, App, Alert, Tag, Tooltip, Upload, Modal, Form,
-    Select, Rate, message
+    Empty, App, Alert, Tag, Tooltip, Upload, Modal,
+    Rate
 } from 'antd';
 import {
     SendOutlined, UserOutlined, RobotOutlined,
-    UploadOutlined, FileOutlined, DeleteOutlined,
-    LikeOutlined, DislikeOutlined, ExclamationCircleOutlined,
-    ClockCircleOutlined, PlusOutlined, MenuOutlined,
+    UploadOutlined, FileOutlined,
+    LikeOutlined, DislikeOutlined,
     CloseOutlined, ReloadOutlined, PaperClipOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import Breadcrumb from '@/components/shared/Breadcrumb';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 export default function AiChatPage() {
@@ -40,10 +40,12 @@ export default function AiChatPage() {
     const [feedbackComment, setFeedbackComment] = useState('');
     const [uploading, setUploading] = useState(false);
     const [fileList, setFileList] = useState([]);
-    const [sessions, setSessions] = useState([]);
-    const [showSessionsModal, setShowSessionsModal] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-    const messagesEndRef = useRef(null);
+    // ✅ فقط یک ref برای container
+    const messagesContainerRef = useRef(null);
+
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
     const getToken = () => {
@@ -53,32 +55,34 @@ export default function AiChatPage() {
         return null;
     };
 
-    // بررسی لاگین
     useEffect(() => {
         const token = getToken();
-        if (!token) {
-            appMessage.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
-            router.push(`/${locale}/login?redirect=/${locale}/ai-chat`);
-            return;
+        setIsLoggedIn(!!token);
+
+        if (token) {
+            startChat();
+        } else {
+            setShowLoginPrompt(true);
+            setLoading(false);
         }
-        startChat();
     }, []);
 
-    // اسکرول به انتهای پیام‌ها
+    // ✅ اسکرول به پایین با ref
     useEffect(() => {
-        scrollToBottom();
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
     }, [messages]);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    // شروع چت
     const startChat = async () => {
+        const token = getToken();
+        if (!token) {
+            setShowLoginPrompt(true);
+            return;
+        }
+
         setLoading(true);
         try {
-            const token = getToken();
-
             const res = await fetch(`${API_URL}/api/v1/chat/start`, {
                 method: 'POST',
                 headers: {
@@ -89,14 +93,12 @@ export default function AiChatPage() {
             });
 
             const data = await res.json();
-            console.log('📦 Chat start response:', data);
 
             if (data.success) {
                 setSessionId(data.data.id);
                 setIsActive(true);
                 setMessages(data.data.messages || []);
-                // appMessage.success('چت با موفقیت شروع شد'
-                // );
+                setShowLoginPrompt(false);
             } else {
                 appMessage.error(data.message || 'خطا در شروع چت');
             }
@@ -108,10 +110,16 @@ export default function AiChatPage() {
         }
     };
 
-    // ارسال پیام
     const sendMessage = async () => {
         if (!inputMessage.trim()) return;
         if (sending) return;
+
+        const token = getToken();
+        if (!token) {
+            setShowLoginPrompt(true);
+            return;
+        }
+
         if (!sessionId) {
             appMessage.warning('لطفاً ابتدا چت را شروع کنید');
             return;
@@ -129,7 +137,6 @@ export default function AiChatPage() {
         setSending(true);
 
         try {
-            const token = getToken();
             const res = await fetch(`${API_URL}/api/v1/chat/send`, {
                 method: 'POST',
                 headers: {
@@ -143,7 +150,6 @@ export default function AiChatPage() {
             });
 
             const data = await res.json();
-            console.log('📦 Send response:', data);
 
             if (data.success) {
                 const aiMessage = {
@@ -164,7 +170,11 @@ export default function AiChatPage() {
         }
     };
 
-    // بستن چت
+    const goToLogin = () => {
+        const currentPath = window.location.pathname;
+        router.push(`/${locale}/login?redirect=${encodeURIComponent(currentPath)}`);
+    };
+
     const closeChat = async () => {
         if (!sessionId) return;
 
@@ -194,7 +204,6 @@ export default function AiChatPage() {
         }
     };
 
-    // ارسال بازخورد
     const submitFeedback = async () => {
         if (!selectedMessageId) return;
         if (feedbackRating === 0) {
@@ -233,14 +242,18 @@ export default function AiChatPage() {
         }
     };
 
-    // آپلود فایل
     const handleUpload = async (file) => {
+        const token = getToken();
+        if (!token) {
+            setShowLoginPrompt(true);
+            return false;
+        }
+
         setUploading(true);
         const formData = new FormData();
         formData.append('file', file);
 
         try {
-            const token = getToken();
             const res = await fetch(`${API_URL}/api/v1/chat/files/upload`, {
                 method: 'POST',
                 headers: {
@@ -268,7 +281,6 @@ export default function AiChatPage() {
         }
     };
 
-    // نمایش لودینگ
     if (loading) {
         return (
             <>
@@ -282,14 +294,21 @@ export default function AiChatPage() {
     return (
         <>
             <Header />
-            <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)' }}>
-                <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 20px' }}>
+            <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)', paddingTop: '20px' }}>
+                <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 20px 20px' }}>
+                    <Breadcrumb />
+
+                    <Title level={2} style={{ marginBottom: '4px' }}>🧠 هوش مصنوعی</Title>
+                    <Text type="secondary">پرسش و پاسخ هوشمند پزشکی</Text>
+
                     <Card
+                        style={{ borderRadius: '16px', marginTop: '16px' }}
                         title={
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <RobotOutlined style={{ color: '#2563eb', fontSize: '24px' }} />
                                 <div>
-                                    <Title level={4} style={{ margin: 0 }}>دکتر آنلاین</Title>
+                                    <Text strong style={{ fontSize: '16px' }}>دکتر آنلاین</Text>
+                                    <br />
                                     <Text type="secondary" style={{ fontSize: '12px' }}>
                                         {isActive ? (
                                             <Tag color="green" style={{ margin: 0 }}>🟢 آنلاین</Tag>
@@ -302,186 +321,214 @@ export default function AiChatPage() {
                         }
                         extra={
                             <Space>
-                                <Tooltip title="شروع مجدد">
-                                    <Button icon={<ReloadOutlined />} onClick={startChat} />
-                                </Tooltip>
-                                <Tooltip title="بستن چت">
-                                    <Button danger icon={<CloseOutlined />} onClick={closeChat} />
-                                </Tooltip>
+                                {isLoggedIn && (
+                                    <>
+                                        <Tooltip title="شروع مجدد">
+                                            <Button icon={<ReloadOutlined />} onClick={startChat} />
+                                        </Tooltip>
+                                        <Tooltip title="بستن چت">
+                                            <Button danger icon={<CloseOutlined />} onClick={closeChat} />
+                                        </Tooltip>
+                                    </>
+                                )}
                             </Space>
                         }
-                        style={{ borderRadius: '16px' }}
                     >
-                        {/* بخش پیام‌ها */}
-                        <div style={{
-                            height: '500px',
-                            overflowY: 'auto',
-                            padding: '16px',
-                            background: '#f8fafc',
-                            borderRadius: '12px',
-                            marginBottom: '16px'
-                        }}>
-                            {messages.length === 0 ? (
-                                <Empty
-                                    image={<RobotOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />}
-                                    description="چت را شروع کنید"
-                                >
-                                    <Text type="secondary">
-                                        سلام! من دکتر آنلاین هستم. هر سوال پزشکی دارید، بپرسید.
-                                    </Text>
-                                </Empty>
-                            ) : (
-                                messages.map((msg) => (
-                                    <div
-                                        key={msg.id}
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                                            marginBottom: '16px'
-                                        }}
+                        {showLoginPrompt ? (
+                            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                                <RobotOutlined style={{ fontSize: '64px', color: '#d9d9d9', marginBottom: '16px' }} />
+                                <Title level={3}>برای استفاده از هوش مصنوعی نیاز به ورود دارید</Title>
+                                <Text type="secondary" style={{ display: 'block', marginBottom: '24px' }}>
+                                    لطفاً وارد حساب کاربری خود شوید تا بتوانید از دکتر آنلاین استفاده کنید.
+                                </Text>
+                                <Space>
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        onClick={goToLogin}
                                     >
-                                        <div
-                                            style={{
-                                                maxWidth: '80%',
-                                                display: 'flex',
-                                                alignItems: 'flex-start',
-                                                gap: '8px',
-                                                flexDirection: msg.role === 'user' ? 'row-reverse' : 'row'
-                                            }}
+                                        ورود به حساب
+                                    </Button>
+                                    <Button
+                                        size="large"
+                                        onClick={() => router.push(`/${locale}`)}
+                                    >
+                                        بازگشت به صفحه اصلی
+                                    </Button>
+                                </Space>
+                            </div>
+                        ) : (
+                            <>
+                                <div
+                                    ref={messagesContainerRef}
+                                    style={{
+                                        height: '500px',
+                                        overflowY: 'auto',
+                                        padding: '16px',
+                                        background: '#f8fafc',
+                                        borderRadius: '12px',
+                                        marginBottom: '16px'
+                                    }}
+                                >
+                                    {messages.length === 0 ? (
+                                        <Empty
+                                            image={<RobotOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />}
+                                            description="چت را شروع کنید"
                                         >
-                                            <Avatar
-                                                style={{
-                                                    background: msg.role === 'user' ? '#2563eb' : '#7c3aed',
-                                                    flexShrink: 0
-                                                }}
-                                                icon={msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                                            />
+                                            <Text type="secondary">
+                                                سلام! من دکتر آنلاین هستم. هر سوال پزشکی دارید، بپرسید.
+                                            </Text>
+                                        </Empty>
+                                    ) : (
+                                        messages.map((msg) => (
                                             <div
+                                                key={msg.id}
                                                 style={{
-                                                    background: msg.role === 'user' ? '#2563eb' : 'white',
-                                                    color: msg.role === 'user' ? 'white' : '#1e293b',
-                                                    padding: '12px 16px',
-                                                    borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                                                    wordBreak: 'break-word'
+                                                    display: 'flex',
+                                                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                                    marginBottom: '16px'
                                                 }}
                                             >
-                                                <Text style={{ color: 'inherit', whiteSpace: 'pre-wrap' }}>
-                                                    {msg.content}
-                                                </Text>
-                                                <div style={{ marginTop: '4px' }}>
-                                                    <Text type="secondary" style={{ fontSize: '10px', color: msg.role === 'user' ? 'rgba(255,255,255,0.7)' : '#94a3b8' }}>
-                                                        {new Date(msg.created_at).toLocaleTimeString('fa-IR')}
-                                                    </Text>
-                                                    {msg.role === 'assistant' && (
-                                                        <Space style={{ marginLeft: '8px' }} size="small">
-                                                            <Tooltip title="پاسخ مفید بود">
-                                                                <Button
-                                                                    type="text"
-                                                                    size="small"
-                                                                    icon={<LikeOutlined />}
-                                                                    onClick={() => {
-                                                                        setSelectedMessageId(msg.id);
-                                                                        setShowFeedbackModal(true);
-                                                                    }}
-                                                                />
-                                                            </Tooltip>
-                                                            <Tooltip title="پاسخ مفید نبود">
-                                                                <Button
-                                                                    type="text"
-                                                                    size="small"
-                                                                    icon={<DislikeOutlined />}
-                                                                    onClick={() => {
-                                                                        setSelectedMessageId(msg.id);
-                                                                        setShowFeedbackModal(true);
-                                                                    }}
-                                                                />
-                                                            </Tooltip>
-                                                        </Space>
-                                                    )}
+                                                <div
+                                                    style={{
+                                                        maxWidth: '80%',
+                                                        display: 'flex',
+                                                        alignItems: 'flex-start',
+                                                        gap: '8px',
+                                                        flexDirection: msg.role === 'user' ? 'row-reverse' : 'row'
+                                                    }}
+                                                >
+                                                    <Avatar
+                                                        style={{
+                                                            background: msg.role === 'user' ? '#2563eb' : '#7c3aed',
+                                                            flexShrink: 0
+                                                        }}
+                                                        icon={msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
+                                                    />
+                                                    <div
+                                                        style={{
+                                                            background: msg.role === 'user' ? '#2563eb' : 'white',
+                                                            color: msg.role === 'user' ? 'white' : '#1e293b',
+                                                            padding: '12px 16px',
+                                                            borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                                                            wordBreak: 'break-word'
+                                                        }}
+                                                    >
+                                                        <Text style={{ color: 'inherit', whiteSpace: 'pre-wrap' }}>
+                                                            {msg.content}
+                                                        </Text>
+                                                        <div style={{ marginTop: '4px' }}>
+                                                            <Text type="secondary" style={{ fontSize: '10px', color: msg.role === 'user' ? 'rgba(255,255,255,0.7)' : '#94a3b8' }}>
+                                                                {new Date(msg.created_at).toLocaleTimeString('fa-IR')}
+                                                            </Text>
+                                                            {msg.role === 'assistant' && isLoggedIn && (
+                                                                <Space style={{ marginLeft: '8px' }} size="small">
+                                                                    <Tooltip title="پاسخ مفید بود">
+                                                                        <Button
+                                                                            type="text"
+                                                                            size="small"
+                                                                            icon={<LikeOutlined />}
+                                                                            onClick={() => {
+                                                                                setSelectedMessageId(msg.id);
+                                                                                setShowFeedbackModal(true);
+                                                                            }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                    <Tooltip title="پاسخ مفید نبود">
+                                                                        <Button
+                                                                            type="text"
+                                                                            size="small"
+                                                                            icon={<DislikeOutlined />}
+                                                                            onClick={() => {
+                                                                                setSelectedMessageId(msg.id);
+                                                                                setShowFeedbackModal(true);
+                                                                            }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                </Space>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
+                                        ))
+                                    )}
+                                </div>
 
-                        {/* بخش ورودی */}
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                            <div style={{ flex: 1 }}>
-                                <TextArea
-                                    value={inputMessage}
-                                    onChange={(e) => setInputMessage(e.target.value)}
-                                    onPressEnter={(e) => {
-                                        if (!e.shiftKey) {
-                                            e.preventDefault();
-                                            sendMessage();
-                                        }
-                                    }}
-                                    placeholder="پیام خود را بنویسید..."
-                                    autoSize={{ minRows: 1, maxRows: 4 }}
-                                    disabled={!isActive || sending}
-                                    style={{ borderRadius: '12px' }}
-                                />
-                            </div>
-                            <Space>
-                                <Upload
-                                    customRequest={({ file, onSuccess, onError }) => {
-                                        handleUpload(file).then((success) => {
-                                            if (success) {
-                                                onSuccess();
-                                            } else {
-                                                onError();
-                                            }
-                                        });
-                                    }}
-                                    showUploadList={false}
-                                    disabled={!isActive || sending || uploading}
-                                >
-                                    <Tooltip title="آپلود فایل">
-                                        <Button
-                                            icon={uploading ? <Spin size="small" /> : <PaperClipOutlined />}
-                                            disabled={!isActive || sending || uploading}
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <TextArea
+                                            value={inputMessage}
+                                            onChange={(e) => setInputMessage(e.target.value)}
+                                            onPressEnter={(e) => {
+                                                if (!e.shiftKey) {
+                                                    e.preventDefault();
+                                                    sendMessage();
+                                                }
+                                            }}
+                                            placeholder="پیام خود را بنویسید..."
+                                            autoSize={{ minRows: 1, maxRows: 4 }}
+                                            disabled={!isActive || sending || !isLoggedIn}
+                                            style={{ borderRadius: '12px' }}
                                         />
-                                    </Tooltip>
-                                </Upload>
-                                <Button
-                                    type="primary"
-                                    icon={<SendOutlined />}
-                                    onClick={sendMessage}
-                                    loading={sending}
-                                    disabled={!inputMessage.trim() || !isActive}
-                                    style={{ borderRadius: '12px' }}
+                                    </div>
+                                    <Space>
+                                        <Upload
+                                            customRequest={({ file, onSuccess, onError }) => {
+                                                handleUpload(file).then((success) => {
+                                                    if (success) {
+                                                        onSuccess();
+                                                    } else {
+                                                        onError();
+                                                    }
+                                                });
+                                            }}
+                                            showUploadList={false}
+                                            disabled={!isActive || sending || uploading || !isLoggedIn}
+                                        >
+                                            <Tooltip title="آپلود فایل">
+                                                <Button
+                                                    icon={uploading ? <Spin size="small" /> : <PaperClipOutlined />}
+                                                    disabled={!isActive || sending || uploading || !isLoggedIn}
+                                                />
+                                            </Tooltip>
+                                        </Upload>
+                                        <Button
+                                            type="primary"
+                                            icon={<SendOutlined />}
+                                            onClick={sendMessage}
+                                            loading={sending}
+                                            disabled={!inputMessage.trim() || !isActive || !isLoggedIn}
+                                            style={{ borderRadius: '12px' }}
+                                        />
+                                    </Space>
+                                </div>
+
+                                {fileList.length > 0 && (
+                                    <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {fileList.map((file) => (
+                                            <Tag key={file.id} icon={<FileOutlined />}>
+                                                {file.filename || file.name}
+                                            </Tag>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <Alert
+                                    message="توجه پزشکی"
+                                    description="پاسخ‌های ارائه شده توسط هوش مصنوعی صرفاً جنبه اطلاع‌رسانی دارند و جایگزین تشخیص پزشک نمی‌شوند. در صورت اورژانس با ۱۱۵ تماس بگیرید."
+                                    type="warning"
+                                    showIcon
+                                    style={{ marginTop: '12px', borderRadius: '12px' }}
                                 />
-                            </Space>
-                        </div>
-
-                        {/* فایل‌های آپلود شده */}
-                        {fileList.length > 0 && (
-                            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                {fileList.map((file) => (
-                                    <Tag key={file.id} icon={<FileOutlined />}>
-                                        {file.filename || file.name}
-                                    </Tag>
-                                ))}
-                            </div>
+                            </>
                         )}
-
-                        {/* هشدار پزشکی */}
-                        <Alert
-                            message="توجه پزشکی"
-                            description="پاسخ‌های ارائه شده توسط هوش مصنوعی صرفاً جنبه اطلاع‌رسانی دارند و جایگزین تشخیص پزشک نمی‌شوند. در صورت اورژانس با ۱۱۵ تماس بگیرید."
-                            type="warning"
-                            showIcon
-                            style={{ marginTop: '12px', borderRadius: '12px' }}
-                        />
                     </Card>
                 </div>
             </main>
+            <Footer />
 
-            {/* مودال بازخورد */}
             <Modal
                 title="بازخورد شما"
                 open={showFeedbackModal}
@@ -511,8 +558,6 @@ export default function AiChatPage() {
                     </div>
                 </div>
             </Modal>
-
-            <Footer />
         </>
     );
 }

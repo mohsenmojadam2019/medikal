@@ -286,7 +286,7 @@ export default function NotificationBell() {
           menu={notificationMenu}
           placement="bottomRight"
           trigger={['click']}
-          overlayStyle={{ width: 400, maxHeight: 500 }}
+          styles={{ root: { width: 400, maxHeight: 500 } }}  // ✅ این درست است
       >
         <Badge count={unreadCount} size="small">
           <Button type="text" icon={<BellOutlined />} />

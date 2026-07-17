@@ -29,9 +29,14 @@ export default function LabPage() {
   const [selectedTests, setSelectedTests] = useState([]);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
-  const getToken = () => localStorage.getItem('token');
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
+    }
+    return null;
+  };
 
-  // دریافت لیست آزمایش‌ها از API
+  // دریافت لیست آزمایش‌ها از API (عمومی - بدون لاگین)
   const fetchTests = async () => {
     try {
       const res = await fetch(`${API_URL}/api/lab/tests/active`, {
@@ -48,7 +53,7 @@ export default function LabPage() {
     }
   };
 
-  // دریافت سفارشات کاربر از API
+  // دریافت سفارشات کاربر از API (نیاز به لاگین)
   const fetchOrders = async () => {
     try {
       const token = getToken();
@@ -69,23 +74,20 @@ export default function LabPage() {
     }
   };
 
+  // ✅ بارگذاری اولیه - بدون نیاز به لاگین
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      router.push(`/${locale}/login`);
-      return;
-    }
     setLoading(true);
     Promise.all([
       fetchTests(),
-      fetchOrders(),
+      // فقط اگر لاگین هست، سفارشات رو بگیر
+      getToken() ? fetchOrders() : Promise.resolve(),
     ]).finally(() => setLoading(false));
   }, []);
 
   // فیلتر آزمایش‌ها
   const filteredTests = tests.filter(test => {
     const matchSearch = test.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-                        test.category?.toLowerCase().includes(searchText.toLowerCase());
+        test.category?.toLowerCase().includes(searchText.toLowerCase());
     const matchCategory = selectedCategory === 'all' || test.category === selectedCategory;
     return matchSearch && matchCategory;
   });
@@ -112,20 +114,27 @@ export default function LabPage() {
 
   const handleSelectTest = (testId) => {
     setSelectedTests(prev =>
-      prev.includes(testId)
-        ? prev.filter(id => id !== testId)
-        : [...prev, testId]
+        prev.includes(testId)
+            ? prev.filter(id => id !== testId)
+            : [...prev, testId]
     );
   };
 
+  // ✅ ثبت سفارش آزمایش - نیاز به لاگین
   const handleSubmitOrder = async (values) => {
     if (selectedTests.length === 0) {
       message.warning('لطفاً حداقل یک آزمایش را انتخاب کنید');
       return;
     }
 
-    setSubmitting(true);
     const token = getToken();
+    if (!token) {
+      message.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
+      router.push(`/${locale}/login?redirect=/${locale}/lab`);
+      return;
+    }
+
+    setSubmitting(true);
 
     try {
       const res = await fetch(`${API_URL}/api/lab/orders`, {
@@ -160,14 +169,14 @@ export default function LabPage() {
 
   if (loading) {
     return (
-      <>
-        <Header />
-        <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px', textAlign: 'center' }}>
-          <Spin size="large" />
-          <p style={{ marginTop: '16px' }}>{t('common.loading')}</p>
-        </div>
-        <Footer />
-      </>
+        <>
+          <Header />
+          <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px', textAlign: 'center' }}>
+            <Spin size="large" />
+            <p style={{ marginTop: '16px' }}>{t('common.loading')}</p>
+          </div>
+          <Footer />
+        </>
     );
   }
 
@@ -201,189 +210,205 @@ export default function LabPage() {
       title: 'عملیات',
       key: 'action',
       render: (_, record) => (
-        <Button
-          type="link"
-          size="small"
-          onClick={() => message.info(`جزئیات سفارش ${record.order_number}`)}
-        >
-          مشاهده
-        </Button>
+          <Button
+              type="link"
+              size="small"
+              onClick={() => message.info(`جزئیات سفارش ${record.order_number}`)}
+          >
+            مشاهده
+          </Button>
       ),
     },
   ];
 
   return (
-    <>
-      <Header />
-      <main style={{ minHeight: 'calc(100vh - 200px)' }}>
-        <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px' }}>
-          {/* هدر صفحه */}
-          <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <Title level={2}>🧪 {t('nav.lab')}</Title>
-              <Text type="secondary">انجام و پیگیری آزمایش‌های پزشکی</Text>
+      <>
+        <Header />
+        <main style={{ minHeight: 'calc(100vh - 200px)' }}>
+          <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px' }}>
+            {/* هدر صفحه */}
+            <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <Title level={2}>🧪 {t('nav.lab')}</Title>
+                <Text type="secondary">انجام و پیگیری آزمایش‌های پزشکی</Text>
+              </div>
+              <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    const token = getToken();
+                    if (!token) {
+                      message.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
+                      router.push(`/${locale}/login?redirect=/${locale}/lab`);
+                      return;
+                    }
+                    setModalVisible(true);
+                  }}
+                  size="large"
+              >
+                سفارش آزمایش جدید
+              </Button>
             </div>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setModalVisible(true)}
-              size="large"
-            >
-              سفارش آزمایش جدید
-            </Button>
+
+            {/* تب‌ها */}
+            <Card style={{ borderRadius: '16px' }}>
+              <Tabs activeKey={activeTab} onChange={setActiveTab}>
+                <TabPane tab="📋 آزمایش‌ها" key="tests">
+                  <div style={{ marginBottom: '16px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    <Search
+                        placeholder="جستجوی آزمایش..."
+                        prefix={<SearchOutlined />}
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        style={{ maxWidth: '400px' }}
+                        enterButton
+                    />
+                    <Select
+                        placeholder="دسته‌بندی"
+                        style={{ width: '200px' }}
+                        value={selectedCategory}
+                        onChange={setSelectedCategory}
+                    >
+                      <Option value="all">همه دسته‌ها</Option>
+                    </Select>
+                  </div>
+
+                  {filteredTests.length > 0 ? (
+                      <Row gutter={[16, 16]}>
+                        {filteredTests.map((test) => (
+                            <Col xs={24} sm={12} lg={8} key={test.id}>
+                              <Card
+                                  style={{ borderRadius: '12px', height: '100%' }}
+                                  hoverable
+                                  onClick={() => {
+                                    const token = getToken();
+                                    if (!token) {
+                                      message.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
+                                      router.push(`/${locale}/login?redirect=/${locale}/lab`);
+                                      return;
+                                    }
+                                    handleSelectTest(test.id);
+                                  }}
+                              >
+                                <div style={{ textAlign: 'center', fontSize: '40px', marginBottom: '12px' }}>
+                                  🔬
+                                </div>
+                                <Title level={4} style={{ textAlign: 'center' }}>
+                                  {test.name}
+                                </Title>
+                                <div style={{ textAlign: 'center' }}>
+                                  <Tag color="blue">{test.category}</Tag>
+                                </div>
+                                <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                                  <Text type="secondary">{test.description}</Text>
+                                </div>
+                                <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                                  <Text strong style={{ fontSize: '18px', color: '#2563eb' }}>
+                                    {test.price?.toLocaleString() || 0}
+                                  </Text>
+                                  <Text type="secondary"> تومان</Text>
+                                </div>
+                                {test.requires_doctor && (
+                                    <div style={{ textAlign: 'center', marginTop: '4px' }}>
+                                      <Tag color="orange">نیاز به تجویز پزشک</Tag>
+                                    </div>
+                                )}
+                                {selectedTests.includes(test.id) && (
+                                    <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                                      <Tag color="success">انتخاب شده</Tag>
+                                    </div>
+                                )}
+                              </Card>
+                            </Col>
+                        ))}
+                      </Row>
+                  ) : (
+                      <Empty description="هیچ آزمایشی یافت نشد" />
+                  )}
+                </TabPane>
+
+                <TabPane tab="📊 سفارشات من" key="orders">
+                  {orders.length > 0 ? (
+                      <Table
+                          dataSource={orders}
+                          columns={orderColumns}
+                          rowKey="id"
+                          pagination={{ pageSize: 10 }}
+                      />
+                  ) : (
+                      <Empty description="هیچ سفارشی ثبت نشده است" />
+                  )}
+                </TabPane>
+              </Tabs>
+            </Card>
           </div>
+        </main>
 
-          {/* تب‌ها */}
-          <Card style={{ borderRadius: '16px' }}>
-            <Tabs activeKey={activeTab} onChange={setActiveTab}>
-              <TabPane tab="📋 آزمایش‌ها" key="tests">
-                <div style={{ marginBottom: '16px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                  <Search
-                    placeholder="جستجوی آزمایش..."
-                    prefix={<SearchOutlined />}
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    style={{ maxWidth: '400px' }}
-                    enterButton
-                  />
-                  <Select
-                    placeholder="دسته‌بندی"
-                    style={{ width: '200px' }}
-                    value={selectedCategory}
-                    onChange={setSelectedCategory}
-                  >
-                    <Option value="all">همه دسته‌ها</Option>
-                  </Select>
-                </div>
-
-                {filteredTests.length > 0 ? (
-                  <Row gutter={[16, 16]}>
-                    {filteredTests.map((test) => (
-                      <Col xs={24} sm={12} lg={8} key={test.id}>
-                        <Card
-                          style={{ borderRadius: '12px', height: '100%' }}
-                          hoverable
-                          onClick={() => handleSelectTest(test.id)}
-                        >
-                          <div style={{ textAlign: 'center', fontSize: '40px', marginBottom: '12px' }}>
-                            🔬
-                          </div>
-                          <Title level={4} style={{ textAlign: 'center' }}>
-                            {test.name}
-                          </Title>
-                          <div style={{ textAlign: 'center' }}>
-                            <Tag color="blue">{test.category}</Tag>
-                          </div>
-                          <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                            <Text type="secondary">{test.description}</Text>
-                          </div>
-                          <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                            <Text strong style={{ fontSize: '18px', color: '#2563eb' }}>
-                              {test.price?.toLocaleString() || 0}
-                            </Text>
-                            <Text type="secondary"> تومان</Text>
-                          </div>
-                          {test.requires_doctor && (
-                            <div style={{ textAlign: 'center', marginTop: '4px' }}>
-                              <Tag color="orange">نیاز به تجویز پزشک</Tag>
-                            </div>
-                          )}
-                          {selectedTests.includes(test.id) && (
-                            <div style={{ textAlign: 'center', marginTop: '8px' }}>
-                              <Tag color="success">انتخاب شده</Tag>
-                            </div>
-                          )}
-                        </Card>
-                      </Col>
-                    ))}
-                  </Row>
-                ) : (
-                  <Empty description="هیچ آزمایشی یافت نشد" />
-                )}
-              </TabPane>
-
-              <TabPane tab="📊 سفارشات من" key="orders">
-                {orders.length > 0 ? (
-                  <Table
-                    dataSource={orders}
-                    columns={orderColumns}
-                    rowKey="id"
-                    pagination={{ pageSize: 10 }}
-                  />
-                ) : (
-                  <Empty description="هیچ سفارشی ثبت نشده است" />
-                )}
-              </TabPane>
-            </Tabs>
-          </Card>
-        </div>
-      </main>
-
-      {/* مودال سفارش آزمایش */}
-      <Modal
-        title="🧪 سفارش آزمایش جدید"
-        open={modalVisible}
-        onCancel={() => {
-          setModalVisible(false);
-          setSelectedTests([]);
-          form.resetFields();
-        }}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmitOrder}
-          size="large"
+        {/* مودال سفارش آزمایش */}
+        <Modal
+            title="🧪 سفارش آزمایش جدید"
+            open={modalVisible}
+            onCancel={() => {
+              setModalVisible(false);
+              setSelectedTests([]);
+              form.resetFields();
+            }}
+            footer={null}
+            width={600}
         >
-          <Form.Item
-            name="tests"
-            label="آزمایش‌های انتخاب شده"
-          >
-            <div style={{ marginBottom: '8px' }}>
-              {selectedTests.length > 0 ? (
-                <Space wrap>
-                  {selectedTests.map(id => {
-                    const test = tests.find(t => t.id === id);
-                    return test ? (
-                      <Tag key={id} color="blue" closable onClose={() => handleSelectTest(id)}>
-                        {test.name}
-                      </Tag>
-                    ) : null;
-                  })}
-                </Space>
-              ) : (
-                <Text type="secondary">هیچ آزمایشی انتخاب نشده است</Text>
-              )}
-            </div>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              برای انتخاب آزمایش، از لیست آزمایش‌ها انتخاب کنید
-            </Text>
-          </Form.Item>
-
-          <Form.Item
-            name="notes"
-            label="توضیحات"
-          >
-            <Input.TextArea rows={3} placeholder="توضیحات اضافی..." />
-          </Form.Item>
-
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={submitting}
-              block
+          <Form
+              form={form}
+              layout="vertical"
+              onFinish={handleSubmitOrder}
               size="large"
+          >
+            <Form.Item
+                name="tests"
+                label="آزمایش‌های انتخاب شده"
             >
-              ثبت سفارش
-            </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
+              <div style={{ marginBottom: '8px' }}>
+                {selectedTests.length > 0 ? (
+                    <Space wrap>
+                      {selectedTests.map(id => {
+                        const test = tests.find(t => t.id === id);
+                        return test ? (
+                            <Tag key={id} color="blue" closable onClose={() => handleSelectTest(id)}>
+                              {test.name}
+                            </Tag>
+                        ) : null;
+                      })}
+                    </Space>
+                ) : (
+                    <Text type="secondary">هیچ آزمایشی انتخاب نشده است</Text>
+                )}
+              </div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                برای انتخاب آزمایش، از لیست آزمایش‌ها انتخاب کنید
+              </Text>
+            </Form.Item>
 
-      <Footer />
-    </>
+            <Form.Item
+                name="notes"
+                label="توضیحات"
+            >
+              <Input.TextArea rows={3} placeholder="توضیحات اضافی..." />
+            </Form.Item>
+
+            <Form.Item>
+              <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={submitting}
+                  block
+                  size="large"
+              >
+                ثبت سفارش
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        <Footer />
+      </>
   );
 }

@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
+import Hero from '@/components/front/Hero/Hero.js';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
@@ -38,8 +39,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
-  // دریافت تخصص‌ها از API
-  // دریافت تخصص‌ها از API
   const fetchSpecialties = async () => {
     try {
       const res = await fetch(`${API_URL}/api/specialties`, {
@@ -48,7 +47,6 @@ export default function HomePage() {
         },
       });
       const data = await res.json();
-      console.log('📦 Specialties response:', data);
 
       if (data.success) {
         let specialtiesData = [];
@@ -58,10 +56,8 @@ export default function HomePage() {
           specialtiesData = data.data.data;
         }
 
-        // ✅ فیلتر کردن تخصص‌های فعال
         const filtered = specialtiesData.filter(s => s.is_active !== false);
 
-        // ✅ اگر تخصصی وجود نداره، از داده‌های پیش‌فرض استفاده کن
         if (filtered.length === 0) {
           setSpecialties([
             { id: 1, name: 'داخلی', icon: 'fa-stethoscope' },
@@ -81,7 +77,6 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error('Error fetching specialties:', error);
-      // داده‌های پیش‌فرض
       setSpecialties([
         { id: 1, name: 'داخلی', icon: 'fa-stethoscope' },
         { id: 2, name: 'قلب و عروق', icon: 'fa-heart' },
@@ -95,7 +90,6 @@ export default function HomePage() {
     }
   };
 
-  // دریافت پزشکان برتر از API
   const fetchTopDoctors = async () => {
     try {
       const res = await fetch(`${API_URL}/api/doctors/public`, {
@@ -118,7 +112,6 @@ export default function HomePage() {
     }
   };
 
-  // دریافت داروهای فعال از API
   const fetchDrugs = async () => {
     try {
       const res = await fetch(`${API_URL}/api/drugs/active`, {
@@ -136,7 +129,6 @@ export default function HomePage() {
     }
   };
 
-  // دریافت آمار از API
   const fetchStats = async () => {
     try {
       const res = await fetch(`${API_URL}/api/landing/stats`, {
@@ -175,10 +167,8 @@ export default function HomePage() {
       return;
     }
 
-    // دریافت سبد خرید فعلی
     let cart = JSON.parse(localStorage.getItem('pharmacyCart') || '[]');
 
-    // بررسی اینکه دارو قبلاً در سبد هست
     const existing = cart.find(item => item.id === drug.id);
     if (existing) {
       existing.quantity += 1;
@@ -230,118 +220,83 @@ export default function HomePage() {
         <Header />
         <main>
           {/* Hero Section */}
-          <div className="container" style={{ marginBottom: '40px' }}>
-            <div className="hero hero-primary">
-              <div className="hero-content">
-              <span className="hero-badge">
-                <i className="fas fa-bolt" /> نوبت‌دهی هوشمند
-              </span>
-                <h1>
-                  نوبت خود را <span>سریع و آسان</span> رزرو کنید
-                </h1>
-                <p>
-                  بیش از {stats.doctors || 500} پزشک متخصص در {specialties.length || 30} تخصص مختلف،
-                  آماده ارائه خدمت به شما هستند. نوبت‌دهی آنلاین، پرداخت امن و پرونده الکترونیک.
-                </p>
-                <div className="hero-actions">
-                  <Link href={`/${locale}/doctors`}>
-                    <Button type="primary" size="large" className="hero-cta">
-                      <i className="fas fa-arrow-left" /> شروع کنید
-                    </Button>
-                  </Link>
-                  {/*<Button size="large" className="hero-cta-outline" onClick={() => {*/}
-                  {/*  document.getElementById('specialties-section').scrollIntoView({ behavior: 'smooth' });*/}
-                  {/*}}>*/}
-                  {/*  <i className="fas fa-play" /> نحوه کار*/}
-                  {/*</Button>*/}
-                </div>
-              </div>
-            </div>
-          </div>
+          <Hero />
 
-          {/* آمار */}
-          <section className="container" style={{ marginBottom: '48px' }}>
-            <div className="stats-row">
-              <div className="stat-card">
-                <div className="stat-icon blue">
-                  <UserOutlined />
-                </div>
-                <div className="stat-info">
-                  <div className="number">{stats.doctors || 500}+</div>
-                  <div className="label">پزشک متخصص</div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon green">
-                  <CalendarOutlined />
-                </div>
-                <div className="stat-info">
-                  <div className="number">{stats.appointments || 12400}+</div>
-                  <div className="label">نوبت رزرو شده</div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon purple">
-                  <StarOutlined />
-                </div>
-                <div className="stat-info">
-                  <div className="number">{stats.rating || 4.9}</div>
-                  <div className="label">میانگین امتیاز</div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon orange">
-                  <TeamOutlined />
-                </div>
-                <div className="stat-info">
-                  <div className="number">{stats.satisfaction || 98}%</div>
-                  <div className="label">رضایت بیماران</div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* بخش تخصص‌ها */}
-          <section className="container section" id="specialties-section" style={{ marginBottom: '48px' }}>
-            <div className="section-header">
-              <div className="section-header-left">
-                <h2>
-                  <i className="fas fa-stethoscope" style={{ color: '#2563eb' }} /> تخصص‌های پزشکی
-                </h2>
-                <span className="tag">{specialties.length} تخصص</span>
-                <span className="tag hot">محبوب</span>
-              </div>
-              <Link href={`/${locale}/specialties`}>
-                مشاهده همه <i className="fas fa-chevron-left" />
-              </Link>
-            </div>
-
-            {specialties.length > 0 ? (
-                <Card>
-                  <div className="specialties-grid">
-                    {specialties.slice(0, 12).map((specialty) => (
-                        <Link
-                            key={specialty.id}
-                            href={`/${locale}/doctors?specialty=${specialty.id}`}
-                            className="specialty-item"
-                        >
-                          <div className="specialty-icon">
-                            {specialty.icon ? (
-                                <i className={`fas ${specialty.icon}`} style={{ fontSize: '28px', color: '#2563eb' }} />
-                            ) : (
-                                <i className="fas fa-stethoscope" style={{ fontSize: '28px', color: '#2563eb' }} />
-                            )}
-                          </div>
-                          <span>{specialty.name}</span>
-                          <span className="count">{specialty.doctors_count || 0} پزشک</span>
-                        </Link>
-                    ))}
+          {/* Quick Access Cards - 4 باکس شیک متحرک */}
+          <section className="quick-access">
+            <div className="container">
+              <div className="quick-grid">
+                {/* Card 1 - نوبت‌دهی مطب */}
+                <Link href={`/${locale}/appointments/new`} className="quick-card card-1">
+                  <div className="quick-card-inner">
+                    <div className="quick-icon-wrapper">
+                      <div className="quick-icon-bg"></div>
+                      <span className="quick-icon">🏥</span>
+                    </div>
+                    <h3>نوبت‌دهی مطب</h3>
+                    <p>دریافت نوبت حضوری از پزشکان متخصص</p>
+                    <div className="quick-footer">
+                      <span className="quick-arrow">→</span>
+                      <span className="quick-badge">همین حالا</span>
+                    </div>
                   </div>
-                </Card>
-            ) : (
-                <Empty description="هیچ تخصصی یافت نشد" />
-            )}
+                  <div className="quick-shine"></div>
+                </Link>
+
+                {/* Card 2 - داروخانه */}
+                <Link href={`/${locale}/pharmacy`} className="quick-card card-2">
+                  <div className="quick-card-inner">
+                    <div className="quick-icon-wrapper">
+                      <div className="quick-icon-bg"></div>
+                      <span className="quick-icon">💊</span>
+                    </div>
+                    <h3>داروخانه</h3>
+                    <p>خرید آنلاین دارو با ارسال سریع</p>
+                    <div className="quick-footer">
+                      <span className="quick-arrow">→</span>
+                      <span className="quick-badge">۲۴ ساعته</span>
+                    </div>
+                  </div>
+                  <div className="quick-shine"></div>
+                </Link>
+
+                {/* Card 3 - آزمایشگاه */}
+                <Link href={`/${locale}/lab`} className="quick-card card-3">
+                  <div className="quick-card-inner">
+                    <div className="quick-icon-wrapper">
+                      <div className="quick-icon-bg"></div>
+                      <span className="quick-icon">🔬</span>
+                    </div>
+                    <h3>آزمایشگاه</h3>
+                    <p>رزرو آزمایش و دریافت نتیجه آنلاین</p>
+                    <div className="quick-footer">
+                      <span className="quick-arrow">→</span>
+                      <span className="quick-badge">دقیق</span>
+                    </div>
+                  </div>
+                  <div className="quick-shine"></div>
+                </Link>
+
+                {/* Card 4 - هوش مصنوعی */}
+                <Link href={`/${locale}/ai-chat`} className="quick-card card-4">
+                  <div className="quick-card-inner">
+                    <div className="quick-icon-wrapper">
+                      <div className="quick-icon-bg"></div>
+                      <span className="quick-icon">🤖</span>
+                    </div>
+                    <h3>هوش مصنوعی</h3>
+                    <p>مشاوره هوشمند و پاسخ به سوالات پزشکی</p>
+                    <div className="quick-footer">
+                      <span className="quick-arrow">→</span>
+                      <span className="quick-badge">جدید</span>
+                    </div>
+                  </div>
+                  <div className="quick-shine"></div>
+                </Link>
+              </div>
+            </div>
           </section>
+
           {/* بخش پزشکان برتر */}
           <section className="container section" style={{ marginBottom: '48px' }}>
             <div className="section-header">
@@ -570,6 +525,292 @@ export default function HomePage() {
         >
           <i className="fas fa-comment-dots" />
         </button>
+
+        <style jsx>{`
+          /* ===== Quick Access Cards ===== */
+          .quick-access {
+            padding: 40px 0 50px;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+            position: relative;
+            overflow: hidden;
+          }
+
+          .quick-access::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.03) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+          }
+
+          .quick-access::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.03) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+          }
+
+          .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            position: relative;
+            z-index: 1;
+          }
+
+          .quick-card {
+            position: relative;
+            display: block;
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 0;
+            text-decoration: none;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            cursor: pointer;
+          }
+
+          .quick-card-inner {
+            padding: 32px 24px 28px;
+            position: relative;
+            z-index: 2;
+            background: #ffffff;
+          }
+
+          /* Shine Effect */
+          .quick-shine {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 60%);
+            opacity: 0;
+            transform: rotate(25deg) translateY(-100%);
+            transition: all 0.6s ease;
+            pointer-events: none;
+            z-index: 1;
+          }
+
+          .quick-card:hover .quick-shine {
+            opacity: 0.6;
+            transform: rotate(25deg) translateY(100%);
+          }
+
+          /* Card Colors */
+          .card-1 { border-color: rgba(37, 99, 235, 0.15); }
+          .card-1 .quick-icon-bg { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+          .card-1:hover { border-color: #2563eb; box-shadow: 0 12px 40px rgba(37, 99, 235, 0.2); }
+
+          .card-2 { border-color: rgba(16, 185, 129, 0.15); }
+          .card-2 .quick-icon-bg { background: linear-gradient(135deg, #10b981, #34d399); }
+          .card-2:hover { border-color: #10b981; box-shadow: 0 12px 40px rgba(16, 185, 129, 0.2); }
+
+          .card-3 { border-color: rgba(139, 92, 246, 0.15); }
+          .card-3 .quick-icon-bg { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+          .card-3:hover { border-color: #8b5cf6; box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2); }
+
+          .card-4 { border-color: rgba(245, 158, 11, 0.15); }
+          .card-4 .quick-icon-bg { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+          .card-4:hover { border-color: #f59e0b; box-shadow: 0 12px 40px rgba(245, 158, 11, 0.2); }
+
+          .quick-card:hover {
+            transform: translateY(-8px) scale(1.02);
+          }
+
+          .quick-icon-wrapper {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .quick-icon-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 18px;
+            opacity: 0.15;
+            transition: all 0.3s ease;
+            transform: rotate(0deg);
+          }
+
+          .quick-card:hover .quick-icon-bg {
+            transform: rotate(10deg) scale(1.1);
+            opacity: 0.25;
+          }
+
+          .quick-icon {
+            position: relative;
+            font-size: 36px;
+            z-index: 1;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+
+          .quick-card:hover .quick-icon {
+            transform: scale(1.15) rotate(-8deg);
+          }
+
+          .quick-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 8px 0;
+            line-height: 1.3;
+            transition: color 0.3s ease;
+          }
+
+          .quick-card:hover h3 {
+            color: #0f172a;
+          }
+
+          .quick-card p {
+            font-size: 14px;
+            color: #64748b;
+            margin: 0 0 16px 0;
+            line-height: 1.6;
+          }
+
+          .quick-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 2px solid #f1f5f9;
+            transition: border-color 0.3s ease;
+          }
+
+          .quick-card:hover .quick-footer {
+            border-color: #e2e8f0;
+          }
+
+          .quick-arrow {
+            font-size: 22px;
+            color: #94a3b8;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 300;
+          }
+
+          .quick-card:hover .quick-arrow {
+            color: #2563eb;
+            transform: translateX(-6px);
+          }
+
+          .card-2:hover .quick-arrow { color: #10b981; }
+          .card-3:hover .quick-arrow { color: #8b5cf6; }
+          .card-4:hover .quick-arrow { color: #f59e0b; }
+
+          .quick-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 20px;
+            background: #f1f5f9;
+            color: #64748b;
+            transition: all 0.3s ease;
+            letter-spacing: 0.3px;
+          }
+
+          .card-1:hover .quick-badge {
+            background: rgba(37, 99, 235, 0.1);
+            color: #2563eb;
+          }
+          .card-2:hover .quick-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+          }
+          .card-3:hover .quick-badge {
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
+          }
+          .card-4:hover .quick-badge {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+          }
+
+          /* Responsive */
+          @media (max-width: 1024px) {
+            .quick-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+            }
+          }
+
+          @media (max-width: 768px) {
+            .quick-access {
+              padding: 30px 0 40px;
+            }
+            .quick-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: 16px;
+            }
+            .quick-card-inner {
+              padding: 24px 18px 20px;
+            }
+            .quick-icon-wrapper {
+              width: 60px;
+              height: 60px;
+            }
+            .quick-icon {
+              font-size: 30px;
+            }
+            .quick-card h3 {
+              font-size: 17px;
+            }
+            .quick-card p {
+              font-size: 13px;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .quick-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: 12px;
+            }
+            .quick-card-inner {
+              padding: 18px 14px 16px;
+            }
+            .quick-icon-wrapper {
+              width: 50px;
+              height: 50px;
+              margin-bottom: 12px;
+            }
+            .quick-icon {
+              font-size: 26px;
+            }
+            .quick-card h3 {
+              font-size: 15px;
+            }
+            .quick-card p {
+              font-size: 12px;
+              margin-bottom: 12px;
+            }
+            .quick-footer {
+              padding-top: 10px;
+            }
+            .quick-arrow {
+              font-size: 18px;
+            }
+            .quick-badge {
+              font-size: 10px;
+              padding: 3px 10px;
+            }
+          }
+        `}</style>
       </>
   );
 }

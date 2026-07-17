@@ -40,7 +40,12 @@ export default function PharmacyPage() {
   const [totalItems, setTotalItems] = useState(0);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
-  const getToken = () => localStorage.getItem('token');
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
+    }
+    return null;
+  };
 
   const fetchDrugs = useCallback(async () => {
     setLoading(true);
@@ -57,7 +62,7 @@ export default function PharmacyPage() {
 
       const res = await fetch(`${API_URL}/api/drugs/active?${params}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
       });
@@ -81,19 +86,13 @@ export default function PharmacyPage() {
     }
   }, [searchTerm, selectedCategory, requiresPrescription, currentPage, pageSize, appMessage, t]);
 
+  // ✅ بارگذاری اولیه - بدون نیاز به لاگین
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      router.push(`/${locale}/login`);
-      return;
-    }
     fetchDrugs();
-
-    // ✅ بارگذاری سبد خرید از localStorage
     const savedCart = JSON.parse(localStorage.getItem('pharmacyCart') || '[]');
     console.log('🛒 Loaded cart:', savedCart);
     setCart(savedCart);
-  }, [fetchDrugs, locale, router]);
+  }, [fetchDrugs]);
 
   // ✅ ذخیره سبد خرید در localStorage
   useEffect(() => {
@@ -101,7 +100,15 @@ export default function PharmacyPage() {
     console.log('💾 Cart saved:', cart);
   }, [cart]);
 
+  // ✅ افزودن به سبد - نیاز به لاگین
   const addToCart = (drug) => {
+    const token = getToken();
+    if (!token) {
+      appMessage.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
+      router.push(`/${locale}/login?redirect=/${locale}/pharmacy`);
+      return;
+    }
+
     const existing = cart.find(item => item.id === drug.id);
     let newCart;
     if (existing) {
@@ -146,14 +153,20 @@ export default function PharmacyPage() {
     fetchDrugs();
   };
 
-  // ✅ رفتن به صفحه تسویه حساب
+  // ✅ رفتن به صفحه تسویه حساب - نیاز به لاگین
   const goToCheckout = () => {
     if (cart.length === 0) {
       appMessage.warning(t('cartEmpty') || 'سبد خرید شما خالی است');
       return;
     }
 
-    // ✅ ذخیره اطلاعات برای checkout
+    const token = getToken();
+    if (!token) {
+      appMessage.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
+      router.push(`/${locale}/login?redirect=/${locale}/pharmacy/cart`);
+      return;
+    }
+
     const checkoutData = {
       items: cart.map(item => ({
         id: item.id,
