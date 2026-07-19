@@ -39,22 +39,6 @@ export default function Hero() {
             >
                 {/* متن سمت چپ */}
                 <div style={{ flex: 1, minWidth: '280px' }}>
-    <span
-        className="hero-badge"
-        style={{
-            display: 'inline-block',
-            background: 'rgba(0,0,0,0.3)',
-            padding: '6px 18px',
-            borderRadius: '50px',
-            fontSize: '14px',
-            fontWeight: '600',
-            marginBottom: '20px',
-            border: '1px solid rgba(255,255,255,0.2)',
-            backdropFilter: 'blur(10px)',
-        }}
-    >
-        <i className="fas fa-bolt" /> نوبت‌دهی هوشمند
-    </span>
 
                     <div className="hero-actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                         <Link href="/fa/doctors">
