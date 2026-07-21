@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from 'antd';
@@ -19,7 +20,6 @@ export default function Hero() {
                 overflow: 'hidden',
             }}
         >
-            {/* محتوای اصلی */}
             <div
                 className="hero-content"
                 style={{
@@ -37,332 +37,279 @@ export default function Hero() {
                     flexWrap: 'wrap',
                 }}
             >
-                {/* متن سمت چپ */}
                 <div style={{ flex: 1, minWidth: '280px' }}>
 
-                    <div className="hero-actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        <Link href="/fa/doctors">
-                            <Button
-                                type="primary"
-                                size="large"
-                                className="hero-cta"
-                                style={{
-                                    background: 'rgba(255,255,255,0.15)',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    borderRadius: '12px',
-                                    height: '50px',
-                                    padding: '0 32px',
-                                    fontWeight: '600',
-                                    fontSize: '16px',
-                                    color: '#fff',
-                                    backdropFilter: 'blur(10px)',
-                                    boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-                                }}
-                            >
-                                <i className="fas fa-arrow-left" style={{ marginRight: '8px' }} />
-                                شروع کنید
-                            </Button>
-                        </Link>
+
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+
+
                     </div>
                 </div>
 
-                {/* باکس‌های متحرک سمت راست */}
                 <div
                     style={{
-                        flex: '0 0 280px',
+                        flex: '0 0 300px',
                         display: 'grid',
                         gridTemplateColumns: '1fr 1fr',
-                        gap: '14px',
+                        gap: '12px',
                     }}
                 >
-                    {/* باکس 1 - نوبت‌دهی */}
-                    <div
-                        className="hero-float-card"
-                        style={{
-                            background: 'rgba(0,0,0,0.3)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.15)',
-                            borderRadius: '16px',
-                            padding: '18px 14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            animation: 'floatCard1 4s ease-in-out infinite',
-                            transition: 'all 0.3s ease',
-                            cursor: 'default',
-                        }}
-                    >
+                    <Link href="/fa/appointments/new" style={{ textDecoration: 'none' }}>
                         <div
                             style={{
-                                fontSize: '30px',
-                                width: '46px',
-                                height: '46px',
+                                background: 'rgba(255,255,255,0.12)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '16px',
+                                padding: '16px 12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                textAlign: 'center',
+                                gap: '6px',
+                                transition: 'all 0.3s ease',
+                                cursor: 'pointer',
+                                animation: 'floatBtn1 4s ease-in-out infinite',
+                            }}
+                        >
+                            <div style={{
+                                fontSize: '32px',
+                                width: '52px',
+                                height: '52px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 background: 'rgba(37,99,235,0.3)',
                                 borderRadius: '12px',
-                                flexShrink: 0,
-                            }}
-                        >
-                            🏥
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#93c5fd' }}>
-                                ۱۲,۴۰۰+
+                            }}>
+                                🩺
                             </div>
-                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
-                                نوبت رزرو شده
-                            </div>
+                            <div style={{ fontWeight: 700, fontSize: '14px', color: '#fff' }}>رزرو پزشک</div>
+                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>نوبت‌دهی آنلاین</div>
                         </div>
-                    </div>
+                    </Link>
 
-                    {/* باکس 2 - پزشکان */}
-                    <div
-                        className="hero-float-card"
-                        style={{
-                            background: 'rgba(0,0,0,0.3)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.15)',
-                            borderRadius: '16px',
-                            padding: '18px 14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            animation: 'floatCard2 4s ease-in-out infinite 0.8s',
-                            transition: 'all 0.3s ease',
-                            cursor: 'default',
-                        }}
-                    >
+                    <Link href="/fa/lab" style={{ textDecoration: 'none' }}>
                         <div
                             style={{
-                                fontSize: '30px',
-                                width: '46px',
-                                height: '46px',
+                                background: 'rgba(255,255,255,0.12)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '16px',
+                                padding: '16px 12px',
                                 display: 'flex',
+                                flexDirection: 'column',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                background: 'rgba(16,185,129,0.3)',
-                                borderRadius: '12px',
-                                flexShrink: 0,
+                                textAlign: 'center',
+                                gap: '6px',
+                                transition: 'all 0.3s ease',
+                                cursor: 'pointer',
+                                animation: 'floatBtn2 4s ease-in-out infinite 0.4s',
                             }}
                         >
-                            👨‍⚕️
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#6ee7b7' }}>
-                                ۵۰۰+
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
-                                پزشک متخصص
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* باکس 3 - آزمایشگاه */}
-                    <div
-                        className="hero-float-card"
-                        style={{
-                            background: 'rgba(0,0,0,0.3)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.15)',
-                            borderRadius: '16px',
-                            padding: '18px 14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            animation: 'floatCard3 4s ease-in-out infinite 1.6s',
-                            transition: 'all 0.3s ease',
-                            cursor: 'default',
-                        }}
-                    >
-                        <div
-                            style={{
-                                fontSize: '30px',
-                                width: '46px',
-                                height: '46px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: 'rgba(139,92,246,0.3)',
-                                borderRadius: '12px',
-                                flexShrink: 0,
-                            }}
-                        >
-                            🔬
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#c4b5fd' }}>
-                                ۲۰۰+
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
-                                آزمایش انجام شده
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* باکس 4 - هوش مصنوعی */}
-                    <div
-                        className="hero-float-card"
-                        style={{
-                            background: 'rgba(0,0,0,0.3)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.15)',
-                            borderRadius: '16px',
-                            padding: '18px 14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            animation: 'floatCard4 4s ease-in-out infinite 2.4s',
-                            transition: 'all 0.3s ease',
-                            cursor: 'default',
-                        }}
-                    >
-                        <div
-                            style={{
-                                fontSize: '30px',
-                                width: '46px',
-                                height: '46px',
+                            <div style={{
+                                fontSize: '32px',
+                                width: '52px',
+                                height: '52px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 background: 'rgba(245,158,11,0.3)',
                                 borderRadius: '12px',
-                                flexShrink: 0,
+                            }}>
+                                🔬
+                            </div>
+                            <div style={{ fontWeight: 700, fontSize: '14px', color: '#fff' }}>آزمایشگاه</div>
+                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>انجام آزمایش</div>
+                        </div>
+                    </Link>
+
+                    <Link href="/fa/imaging" style={{ textDecoration: 'none' }}>
+                        <div
+                            style={{
+                                background: 'rgba(255,255,255,0.12)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '16px',
+                                padding: '16px 12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                textAlign: 'center',
+                                gap: '6px',
+                                transition: 'all 0.3s ease',
+                                cursor: 'pointer',
+                                animation: 'floatBtn3 4s ease-in-out infinite 0.8s',
                             }}
                         >
-                            🤖
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#fcd34d' }}>
-                                ۲۴/۷
+                            <div style={{
+                                fontSize: '32px',
+                                width: '52px',
+                                height: '52px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(236,72,153,0.3)',
+                                borderRadius: '12px',
+                            }}>
+                                📷
                             </div>
-                            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
-                                پشتیبانی هوشمند
-                            </div>
+                            <div style={{ fontWeight: 700, fontSize: '14px', color: '#fff' }}>تصویربرداری</div>
+                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>سونوگرافی، ام‌آرآی</div>
                         </div>
-                    </div>
+                    </Link>
+
+                    <Link href="/fa/pharmacy" style={{ textDecoration: 'none' }}>
+                        <div
+                            style={{
+                                background: 'rgba(255,255,255,0.12)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '16px',
+                                padding: '16px 12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                textAlign: 'center',
+                                gap: '6px',
+                                transition: 'all 0.3s ease',
+                                cursor: 'pointer',
+                                animation: 'floatBtn4 4s ease-in-out infinite 1.2s',
+                            }}
+                        >
+                            <div style={{
+                                fontSize: '32px',
+                                width: '52px',
+                                height: '52px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(16,185,129,0.3)',
+                                borderRadius: '12px',
+                            }}>
+                                💊
+                            </div>
+                            <div style={{ fontWeight: 700, fontSize: '14px', color: '#fff' }}>داروخانه</div>
+                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>خرید آنلاین دارو</div>
+                        </div>
+                    </Link>
+
+                    <Link href="/fa/ai-chat" style={{ textDecoration: 'none' }}>
+                        <div
+                            style={{
+                                background: 'rgba(255,255,255,0.12)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '16px',
+                                padding: '16px 12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                textAlign: 'center',
+                                gap: '6px',
+                                transition: 'all 0.3s ease',
+                                cursor: 'pointer',
+                                animation: 'floatBtn5 4s ease-in-out infinite 1.6s',
+                            }}
+                        >
+                            <div style={{
+                                fontSize: '32px',
+                                width: '52px',
+                                height: '52px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(139,92,246,0.3)',
+                                borderRadius: '12px',
+                            }}>
+                                🤖
+                            </div>
+                            <div style={{ fontWeight: 700, fontSize: '14px', color: '#fff' }}>چت AI</div>
+                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>هوش مصنوعی پزشکی</div>
+                        </div>
+                    </Link>
                 </div>
             </div>
 
-            {/* انیمیشن‌های CSS */}
             <style jsx>{`
-                @keyframes floatCard1 {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-12px); }
-                }
-                @keyframes floatCard2 {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-12px); }
-                }
-                @keyframes floatCard3 {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-12px); }
-                }
-                @keyframes floatCard4 {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-12px); }
-                }
+@keyframes floatBtn1 {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+@keyframes floatBtn2 {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+@keyframes floatBtn3 {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+@keyframes floatBtn4 {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+@keyframes floatBtn5 {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
 
-                .hero-float-card:hover {
-                    background: rgba(0, 0, 0, 0.4) !important;
-                    border-color: rgba(255, 255, 255, 0.3) !important;
-                    transform: scale(1.03) !important;
-                }
+[style*="animation: floatBtn"]:hover {
+    background: rgba(255,255,255,0.25) !important;
+    border-color: rgba(255,255,255,0.4) !important;
+    transform: scale(1.05) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+}
 
-                @media (max-width: 1024px) {
-                    .hero-content {
-                        flex-direction: column;
-                        text-align: center;
-                        gap: 30px;
-                    }
-                    .hero-content h1 {
-                        font-size: 36px !important;
-                    }
-                    .hero-content p {
-                        margin: 0 auto 24px !important;
-                    }
-                    .hero-actions {
-                        justify-content: center !important;
-                    }
-                    .hero-float-card {
-                        padding: 14px 12px !important;
-                    }
-                    .hero-float-card > div:first-child {
-                        font-size: 26px !important;
-                        width: 40px !important;
-                        height: 40px !important;
-                    }
-                    .hero-float-card > div:last-child > div:first-child {
-                        font-size: 16px !important;
-                    }
-                    .hero-float-card > div:last-child > div:last-child {
-                        font-size: 11px !important;
-                    }
-                }
+@media (max-width: 1024px) {
+.hero-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 30px;
+    }
+.hero-content h1 {
+        font-size: 36px !important;
+    }
+.hero-content p {
+        margin: 0 auto 24px !important;
+    }
+    div[style*="flex: 0 0 300px"] {
+        flex: 1 1 100% !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
 
-                @media (max-width: 768px) {
-                    .hero {
-                        min-height: 80vh !important;
-                    }
-                    .hero-content h1 {
-                        font-size: 28px !important;
-                    }
-                    .hero-content p {
-                        font-size: 15px !important;
-                    }
-                    .hero-cta {
-                        height: 44px !important;
-                        font-size: 14px !important;
-                        padding: 0 24px !important;
-                    }
-                    .hero-float-card {
-                        padding: 12px 10px !important;
-                    }
-                    .hero-float-card > div:first-child {
-                        font-size: 22px !important;
-                        width: 34px !important;
-                        height: 34px !important;
-                    }
-                    .hero-float-card > div:last-child > div:first-child {
-                        font-size: 14px !important;
-                    }
-                    .hero-float-card > div:last-child > div:last-child {
-                        font-size: 10px !important;
-                    }
-                }
+@media (max-width: 768px) {
+.hero {
+        min-height: 80vh !important;
+    }
+.hero-content h1 {
+        font-size: 28px !important;
+    }
+.hero-content p {
+        font-size: 15px !important;
+    }
+    div[style*="flex: 0 0 300px"] {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+    }
+}
 
-                @media (max-width: 480px) {
-                    .hero {
-                        min-height: 70vh !important;
-                    }
-                    .hero-content h1 {
-                        font-size: 22px !important;
-                    }
-                    .hero-content p {
-                        font-size: 13px !important;
-                    }
-                    .hero-cta {
-                        height: 38px !important;
-                        font-size: 13px !important;
-                        padding: 0 18px !important;
-                    }
-                    .hero-float-card {
-                        padding: 10px 8px !important;
-                    }
-                    .hero-float-card > div:first-child {
-                        font-size: 18px !important;
-                        width: 28px !important;
-                        height: 28px !important;
-                    }
-                    .hero-float-card > div:last-child > div:first-child {
-                        font-size: 12px !important;
-                    }
-                    .hero-float-card > div:last-child > div:last-child {
-                        font-size: 9px !important;
-                    }
-                }
-            `}</style>
+@media (max-width: 480px) {
+.hero {
+        min-height: 70vh !important;
+    }
+.hero-content h1 {
+        font-size: 22px !important;
+    }
+.hero-content p {
+        font-size: 13px !important;
+    }
+    div[style*="flex: 0 0 300px"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+    }
+}
+`}</style>
         </div>
     );
 }
