@@ -1,4 +1,3 @@
-// /src/components/front/Services/Services.js
 'use client';
 
 import Link from 'next/link';
@@ -39,17 +38,14 @@ export default function Services() {
                             key={service.id}
                             href={service.link}
                             className="services-card"
-                            style={{
-                                backgroundImage: `url('${service.image}')`,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center',
-                                backgroundRepeat: 'no-repeat'
-                            }}
                         >
+                            <img
+                                src={service.image}
+                                alt=""
+                                className="service-image"
+                            />
                             <div className="services-card-overlay"></div>
-                            <div className="services-card-content">
-                                {/* بدون دکمه */}
-                            </div>
+                            <div className="services-card-content"></div>
                         </Link>
                     ))}
                 </div>
@@ -67,25 +63,31 @@ export default function Services() {
                 }
                 .services-grid {
                     display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 40px;
+                    grid-template-columns: repeat(4, 350px);
+                    gap: 35px;
+                    justify-content: center;
                 }
                 .services-card {
                     position: relative;
-                    border-radius: 28px;
+                    border-radius: 24px;
                     overflow: hidden;
-                    height: 228px;
+                    width: 350px;
+                    height: 460px;
                     text-decoration: none;
                     cursor: pointer;
                     transition: all 0.4s ease;
                     display: block;
-                    max-width: 400px;
-                    width: 100%;
-                    margin: 0 auto;
+                    background: #f0f0f0;
                 }
                 .services-card:hover {
-                    transform: translateY(-12px);
+                    transform: translateY(-12px) scale(1.02);
                     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+                }
+                .service-image {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                    display: block;
                 }
                 .services-card-overlay {
                     position: absolute;
@@ -93,7 +95,6 @@ export default function Services() {
                     z-index: 1;
                     transition: all 0.4s ease;
                 }
-
                 .services-card:hover .services-card-overlay {
                     background: linear-gradient(180deg,
                     rgba(0,0,0,0.02) 0%,
@@ -101,49 +102,57 @@ export default function Services() {
                     rgba(0,0,0,0.65) 100%
                     );
                 }
-
                 .services-card-content {
-                    position: relative;
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
                     z-index: 2;
-                    padding: 40px;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: flex-end;
+                    padding: 30px;
                     color: #fff;
                 }
 
-                @media (max-width: 1440px) {
-                    .services-card {
-                        height: 228px;
-                        max-width: 400px;
-                    }
+                @media (max-width: 1600px) {
                     .services-grid {
-                        gap: 32px;
+                        grid-template-columns: repeat(4, 320px);
+                        gap: 30px;
+                    }
+                    .services-card {
+                        width: 320px;
+                        height: 420px;
+                    }
+                }
+
+                @media (max-width: 1400px) {
+                    .services-grid {
+                        grid-template-columns: repeat(4, 280px);
+                        gap: 24px;
+                    }
+                    .services-card {
+                        width: 280px;
+                        height: 380px;
                     }
                 }
 
                 @media (max-width: 1200px) {
-                    .services-card {
-                        height: 228px;
-                        max-width: 400px;
-                    }
                     .services-grid {
-                        gap: 28px;
+                        grid-template-columns: repeat(4, 240px);
+                        gap: 20px;
+                    }
+                    .services-card {
+                        width: 240px;
+                        height: 320px;
                     }
                 }
 
                 @media (max-width: 1024px) {
                     .services-grid {
-                        grid-template-columns: repeat(2, 1fr);
-                        gap: 28px;
+                        grid-template-columns: repeat(2, 300px);
+                        gap: 24px;
                     }
                     .services-card {
-                        height: 228px;
-                        max-width: 400px;
-                    }
-                    .services-card-content {
-                        padding: 32px;
+                        width: 300px;
+                        height: 400px;
                     }
                 }
 
@@ -152,41 +161,46 @@ export default function Services() {
                         padding: 40px 0 50px;
                     }
                     .services-grid {
-                        grid-template-columns: 1fr 1fr;
-                        gap: 18px;
+                        grid-template-columns: repeat(2, 260px);
+                        gap: 16px;
                     }
                     .services-card {
-                        height: 228px;
-                        max-width: 400px;
-                        border-radius: 20px;
-                    }
-                    .services-card-content {
-                        padding: 24px;
-                    }
-                }
-
-                @media (max-width: 480px) {
-                    .services-wrapper {
-                        padding: 30px 0 40px;
-                    }
-                    .services-grid {
-                        grid-template-columns: 1fr 1fr;
-                        gap: 14px;
-                    }
-                    .services-card {
-                        height: 228px;
-                        max-width: 400px;
+                        width: 260px;
+                        height: 350px;
                         border-radius: 16px;
                     }
                     .services-card-content {
-                        padding: 18px;
+                        padding: 20px;
                     }
                 }
 
-                @media (max-width: 400px) {
+                @media (max-width: 600px) {
+                    .services-grid {
+                        grid-template-columns: repeat(2, 200px);
+                        gap: 14px;
+                    }
                     .services-card {
-                        height: 180px;
-                        max-width: 100%;
+                        width: 200px;
+                        height: 270px;
+                        border-radius: 14px;
+                    }
+                    .services-card-content {
+                        padding: 14px;
+                    }
+                }
+
+                @media (max-width: 450px) {
+                    .services-grid {
+                        grid-template-columns: repeat(2, 160px);
+                        gap: 12px;
+                    }
+                    .services-card {
+                        width: 160px;
+                        height: 220px;
+                        border-radius: 12px;
+                    }
+                    .services-card-content {
+                        padding: 10px;
                     }
                 }
             `}</style>
