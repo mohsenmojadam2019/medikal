@@ -1,4 +1,3 @@
-// /home/god/Videos/medikal/front/src/components/front/Header/NavBar.jsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -59,6 +58,8 @@ const NavBar = () => {
     { key: 'home', label: 'صفحه اصلی', href: `/${locale}` },
     { key: 'appointments', label: 'نوبت‌دهی', href: `/${locale}/appointments/new` },
     { key: 'pharmacy', label: 'داروخانه', href: `/${locale}/pharmacy` },
+    { key: 'lab', label: 'آزمایشگاه', href: `/${locale}/lab` },
+    { key: 'imaging', label: 'تصویربرداری', href: `/${locale}/imaging` },
     { key: 'ai-chat', label: 'هوش مصنوعی', href: `/${locale}/ai-chat` },
     { key: 'about', label: 'درباره ما', href: `/${locale}/about` },
     { key: 'contact', label: 'تماس با ما', isContact: true },
@@ -281,7 +282,6 @@ const NavBar = () => {
         </Modal>
 
         <style jsx global>{`
-          /* زدن مستقیم به a های داخل منو */
           .navbar-modern a,
           .navbar-modern a:visited,
           .navbar-modern a:hover,
@@ -315,7 +315,6 @@ const NavBar = () => {
             text-decoration: none !important;
           }
 
-          /* استایل اصلی منو */
           .navbar-modern {
             background: white;
             border-bottom: 1px solid #e2e8f0;
@@ -349,7 +348,7 @@ const NavBar = () => {
             padding: 10px 20px;
             border-radius: 8px;
             font-weight: 500;
-            font-size: 18px;
+            font-size: 16px;
             background: none;
             border: none;
             cursor: pointer;
@@ -480,6 +479,26 @@ const NavBar = () => {
             transform: scale(1.1);
           }
 
+          @media (max-width: 1200px) {
+            .nav-link {
+              padding: 8px 14px;
+              font-size: 14px;
+            }
+            .nav-desktop {
+              gap: 4px;
+            }
+          }
+
+          @media (max-width: 1024px) {
+            .nav-link {
+              padding: 8px 12px;
+              font-size: 13px;
+            }
+            .nav-desktop {
+              gap: 2px;
+            }
+          }
+
           @media (max-width: 768px) {
             .navbar-container {
               padding: 0 12px;
@@ -494,28 +513,6 @@ const NavBar = () => {
               display: flex !important;
               align-items: center;
               justify-content: center;
-            }
-          }
-
-          @media (max-width: 1024px) and (min-width: 769px) {
-            .nav-link {
-              padding: 8px 14px;
-              font-size: 16px;
-            }
-
-            .nav-desktop {
-              gap: 4px;
-            }
-          }
-
-          @media (min-width: 1025px) {
-            .nav-link {
-              padding: 10px 24px;
-              font-size: 18px;
-            }
-
-            .nav-desktop {
-              gap: 12px;
             }
           }
         `}</style>

@@ -30,7 +30,6 @@ class BIController extends Controller
         $this->reportService = $reportService;
         $this->backupService = $backupService;
         $this->logService = $logService;
-        $this->middleware(['auth:sanctum', 'role:admin|super_admin']);
     }
 
     // ============================================================
