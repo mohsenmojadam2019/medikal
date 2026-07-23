@@ -31,9 +31,6 @@ class PharmacyController extends Controller
     /**
      * پرداخت callback برای داروخانه
      */
-    /**
-     * پرداخت callback برای داروخانه
-     */
     public function paymentCallback(Request $request)
     {
         try {
@@ -155,9 +152,7 @@ class PharmacyController extends Controller
         return $this->success($pharmacies, 'لیست داروخانه‌های طرف قرارداد');
     }
 
-    /**
-     * جستجوی داروخانه‌ها
-     */
+
     /**
      * جستجوی داروها
      */
@@ -220,16 +215,10 @@ class PharmacyController extends Controller
             $data = $request->validated();
             $data['patient_id'] = $patient->id;
 
-            // ✅ تنظیم pharmacy_id پیش‌فرض
-            // اگر در درخواست نیومده، از اولین داروخانه فعال استفاده کن
+            // تنظیم pharmacy_id پیش‌فرض
             if (!isset($data['pharmacy_id']) || empty($data['pharmacy_id'])) {
                 $pharmacy = Pharmacy::active()->online()->first();
-                if ($pharmacy) {
-                    $data['pharmacy_id'] = $pharmacy->id;
-                } else {
-                    // اگر هیچ داروخانه‌ای وجود نداره، از ۱ استفاده کن
-                    $data['pharmacy_id'] = 1;
-                }
+                $data['pharmacy_id'] = $pharmacy?->id ?? 1;
             }
 
             // محاسبه total_amount
@@ -249,14 +238,10 @@ class PharmacyController extends Controller
 
             $data['subtotal'] = $subtotal;
             $data['total_amount'] = $subtotal + ($data['delivery_fee'] ?? 0) + ($data['tax'] ?? 0);
-
-            // ذخیره اطلاعات تحویل
             $data['recipient_name'] = $request->recipient_name ?? $user->name;
             $data['recipient_phone'] = $request->recipient_phone ?? $user->mobile;
             $data['delivery_address'] = $request->delivery_address;
             $data['delivery_notes'] = $request->delivery_notes ?? null;
-
-            // تنظیم status پیش‌فرض
             $data['status'] = 'payment_pending';
             $data['payment_status'] = 'pending';
 
@@ -269,12 +254,31 @@ class PharmacyController extends Controller
 
             $order = $this->orderService->createOrder($data);
 
-            $orderData = $this->orderService->getOrderStatus($order);
+            // ============================================================
+            // ✅ اگر روش پرداخت gateway بود، لینک پرداخت رو هم برگردون
+            // ============================================================
+            $paymentLink = null;
+            if ($request->payment_method === 'gateway' && !empty($request->gateway)) {
+                $gateway = $request->gateway ?? 'local';
+                $result = $this->orderService->initiatePayment($order, $gateway);
 
+                if ($result['success']) {
+                    $paymentLink = $result['redirect_url'] ?? $result['payment_link'] ?? null;
+                }
+
+                Log::info('💳 Payment link generated', [
+                    'order_id' => $order->id,
+                    'gateway' => $gateway,
+                    'payment_link' => $paymentLink
+                ]);
+            }
+
+            $orderData = $this->orderService->getOrderStatus($order);
             $orderData['recipient_name'] = $order->recipient_name;
             $orderData['recipient_phone'] = $order->recipient_phone;
             $orderData['delivery_address'] = $order->delivery_address;
             $orderData['delivery_notes'] = $order->delivery_notes;
+            $orderData['payment_link'] = $paymentLink; // ✅ اضافه شد
 
             return $this->success($orderData, 'سفارش با موفقیت ثبت شد', 201);
 

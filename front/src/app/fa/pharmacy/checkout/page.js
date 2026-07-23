@@ -319,6 +319,7 @@ export default function PharmacyCheckoutPage() {
                 recipient_name: recipientName,
                 recipient_phone: recipientPhone,
                 payment_method: 'gateway',
+                gateway: selectedGateway,
                 subtotal: getSubtotal(),
                 tax: getTax(),
                 total_price: getTotal(),
@@ -335,14 +336,6 @@ export default function PharmacyCheckoutPage() {
                 body: JSON.stringify(orderData),
             });
 
-            if (!orderRes.ok) {
-                const errorData = await orderRes.text();
-                console.error('❌ Order error:', errorData);
-                message.error(`خطا در ثبت سفارش: ${orderRes.status}`);
-                setSubmitting(false);
-                return;
-            }
-
             const orderDataResponse = await orderRes.json();
             console.log('📦 Order response:', orderDataResponse);
 
@@ -352,56 +345,36 @@ export default function PharmacyCheckoutPage() {
                 return;
             }
 
+            // ✅ دریافت لینک پرداخت از پاسخ
             const paymentLink = orderDataResponse.data?.payment_link;
 
-            if (paymentLink) {
-                console.log('🔗 Original payment link:', paymentLink);
-
-                localStorage.setItem('pendingOrder', JSON.stringify({
-                    orderNumber: orderDataResponse.data.order_number,
-                    returnUrl: `/${locale}/profile/pharmacy-orders`,
-                }));
-
-                message.success('در حال انتقال به درگاه پرداخت...');
-
-                // ============================================
-                // ✅ اصلاح کامل لینک - نسخه نهایی
-                // ============================================
-                let cleanPaymentLink = paymentLink
-                    .replace(/\\/g, '')    // حذف backslash
-                    .replace(/"/g, '');     // حذف quotation marks
-
-                // ✅ مرحله 1: پیدا کردن موقعیت اولین ?
-                const firstQIndex = cleanPaymentLink.indexOf('?');
-
-                if (firstQIndex !== -1) {
-                    // ✅ مرحله 2: جدا کردن بخش قبل و بعد از اولین ?
-                    const before = cleanPaymentLink.substring(0, firstQIndex + 1);
-                    let after = cleanPaymentLink.substring(firstQIndex + 1);
-
-                    // ✅ مرحله 3: تبدیل همه ? های بعدی به &
-                    after = after.replace(/\?/g, '&');
-
-                    // ✅ مرحله 4: ترکیب مجدد
-                    cleanPaymentLink = before + after;
-                }
-
-                // ✅ مرحله 5: اطمینان از وجود success=true
-                if (!cleanPaymentLink.includes('success=true')) {
-                    cleanPaymentLink = cleanPaymentLink.includes('?')
-                        ? `${cleanPaymentLink}&success=true`
-                        : `${cleanPaymentLink}?success=true`;
-                }
-
-                console.log('🔗 Final payment link:', cleanPaymentLink);
-
-                setTimeout(() => {
-                    window.location.href = cleanPaymentLink;
-                }, 500);
-            } else {
+            if (!paymentLink) {
                 message.error('لینک پرداخت یافت نشد');
                 setSubmitting(false);
+                return;
             }
+
+            console.log('🔗 Payment link from server:', paymentLink);
+
+            // ✅ حذف کاراکترهای اضافی
+            let cleanLink = paymentLink
+                .replace(/\\/g, '')
+                .replace(/"/g, '')
+                .replace(/\s/g, '');
+
+            console.log('✅ Clean payment link:', cleanLink);
+
+            localStorage.setItem('pendingOrder', JSON.stringify({
+                orderNumber: orderDataResponse.data?.order_number,
+                returnUrl: `/${locale}/profile/pharmacy-orders`,
+            }));
+
+            message.success('در حال انتقال به درگاه پرداخت...');
+
+            setTimeout(() => {
+                window.location.href = cleanLink;
+            }, 500);
+
         } catch (error) {
             console.error('❌ Network error:', error);
             message.error('خطا در ارتباط با سرور');

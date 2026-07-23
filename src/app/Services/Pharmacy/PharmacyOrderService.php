@@ -166,42 +166,46 @@ class PharmacyOrderService
                 throw new \Exception('مبلغ سفارش صفر است');
             }
 
-            if ($gateway === 'local') {
-                $transactionId = 'LOCAL_' . $order->id . '_' . time();
+            // ============================================================
+            // ✅ تولید لینک پرداخت تست (local)
+            // ============================================================
+            $transactionId = 'LOCAL_' . $order->id . '_' . time();
 
-                $paymentLink = route('pharmacy.payment.callback', ['gateway' => 'local']) . '?' . http_build_query([
-                        'order_number' => $order->order_number,
-                        'amount' => $order->total_amount,
-                        'gateway' => 'local',
-                        'transactionId' => $transactionId,
-                        'success' => 'true',
-                    ]);
+            // ✅ ساخت لینک پرداخت با پارامترهای درست
+            $baseUrl = config('app.url', 'http://localhost:8210');
+            $callbackUrl = $baseUrl . '/api/pharmacy/payment/callback';
 
-                $order->update([
-                    'payment_gateway' => 'local',
-                    'payment_authority' => $transactionId,
-                    'payment_link' => $paymentLink,
-                ]);
-
-                Log::info('💳 Payment initiated', [
-                    'order_id' => $order->id,
-                    'order_number' => $order->order_number,
-                    'gateway' => $gateway,
-                    'transactionId' => $transactionId
-                ]);
-
-                return [
-                    'success' => true,
-                    'redirect_url' => $paymentLink,
+            $paymentLink = $callbackUrl . '?' . http_build_query([
                     'order_number' => $order->order_number,
                     'amount' => $order->total_amount,
                     'gateway' => 'local',
                     'transactionId' => $transactionId,
-                    'message' => 'لینک پرداخت تست ساخته شد. برای تکمیل پرداخت روی لینک کلیک کنید.',
-                ];
-            }
+                    'success' => 'true',
+                ]);
 
-            throw new \Exception("درگاه {$gateway} فعلاً پشتیبانی نمی‌شود");
+            Log::info('💳 Payment link created', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'payment_link' => $paymentLink
+            ]);
+
+            // ✅ ذخیره لینک در دیتابیس
+            $order->update([
+                'payment_gateway' => 'local',
+                'payment_authority' => $transactionId,
+                'payment_link' => $paymentLink,
+            ]);
+
+            return [
+                'success' => true,
+                'redirect_url' => $paymentLink,
+                'payment_link' => $paymentLink,
+                'order_number' => $order->order_number,
+                'amount' => $order->total_amount,
+                'gateway' => 'local',
+                'transactionId' => $transactionId,
+                'message' => 'لینک پرداخت ساخته شد',
+            ];
 
         } catch (\Exception $e) {
             Log::error('❌ Payment initiation failed: ' . $e->getMessage(), [
@@ -211,7 +215,6 @@ class PharmacyOrderService
             throw $e;
         }
     }
-
     /**
      * تایید پرداخت
      */

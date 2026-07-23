@@ -1,20 +1,20 @@
-// /src/app/fa/profile/pharmacy-orders/page.js
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Card, Table, Tag, Button, Typography, Space,
-    Spin, Empty, Tabs, Badge, Avatar, Descriptions,
-    Modal, Divider, Timeline, Alert, Skeleton, App, Tooltip
+    Card, Table, Tag, Button, Space, Typography, Spin,
+    Tabs, Empty, App, Modal, Descriptions, Divider,
+    Badge, Timeline, Statistic, Row, Col, Tooltip, message,
+    Popconfirm
 } from 'antd';
 import {
-    MedicineBoxOutlined, EyeOutlined, CheckCircleOutlined,
-    CloseCircleOutlined, ClockCircleOutlined, TruckOutlined,
-    HomeOutlined, UserOutlined, PhoneOutlined,
-    WalletOutlined, CreditCardOutlined, ReloadOutlined,
-    ShoppingCartOutlined, LeftOutlined, InfoCircleOutlined,
-    DeleteOutlined, ArrowRightOutlined
+    EyeOutlined, CheckCircleOutlined, ClockCircleOutlined,
+    CloseCircleOutlined, TruckOutlined, HomeOutlined,
+    ShoppingOutlined, DollarOutlined, MedicineBoxOutlined,
+    UserOutlined, PhoneOutlined, EnvironmentOutlined,
+    ReloadOutlined, SendOutlined, CheckOutlined,
+    SyncOutlined, InboxOutlined, CreditCardOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
@@ -23,11 +23,11 @@ import Breadcrumb from '@/components/shared/Breadcrumb';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
+const { TabPane } = Tabs;
 
-// ============================================
-// توابع کمکی
-// ============================================
-
+// ============================================================
+// ✅ تبدیل اعداد به فارسی
+// ============================================================
 function toPersianNumber(num) {
     if (!num && num !== 0) return '۰';
     const persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -36,72 +36,57 @@ function toPersianNumber(num) {
 
 function formatPrice(price) {
     if (!price && price !== 0) return '۰ تومان';
-    const num = typeof price === 'string' ? parseFloat(price) : price;
-    return toPersianNumber(num.toLocaleString()) + ' تومان';
+    return toPersianNumber(price.toLocaleString()) + ' تومان';
 }
 
 function formatDate(dateStr) {
-    if (!dateStr) return '---';
+    if (!dateStr) return '—';
     try {
         const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return '---';
-        const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+        return date.toLocaleDateString('fa-IR', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
         });
-        return formatter.format(date);
     } catch {
         return dateStr;
     }
 }
 
-function getStatusConfig(status) {
-    const statusMap = {
-        'pending': { color: '#faad14', label: 'در انتظار تایید', icon: <ClockCircleOutlined />, bg: '#fff7e6' },
-        'payment_pending': { color: '#faad14', label: 'در انتظار پرداخت', icon: <ClockCircleOutlined />, bg: '#fff7e6' },
-        'processing': { color: '#1890ff', label: 'در حال پردازش', icon: <TruckOutlined />, bg: '#e6f7ff' },
-        'shipped': { color: '#722ed1', label: 'ارسال شده', icon: <TruckOutlined />, bg: '#f9f0ff' },
-        'delivered': { color: '#52c41a', label: 'تحویل شده', icon: <CheckCircleOutlined />, bg: '#f6ffed' },
-        'cancelled': { color: '#ff4d4f', label: 'لغو شده', icon: <CloseCircleOutlined />, bg: '#fff1f0' },
-        'paid': { color: '#13c2c2', label: 'پرداخت شده', icon: <WalletOutlined />, bg: '#e6fffa' },
-        'preparing': { color: '#1890ff', label: 'در حال آماده‌سازی', icon: <MedicineBoxOutlined />, bg: '#e6f7ff' },
-        'ready': { color: '#faad14', label: 'آماده تحویل', icon: <CheckCircleOutlined />, bg: '#fff7e6' },
-    };
-    return statusMap[status] || { color: '#d9d9d9', label: status, icon: null, bg: '#fafafa' };
-}
+// ============================================================
+// ✅ وضعیت‌های سفارش
+// ============================================================
+const ORDER_STATUS = {
+    pending: { label: 'در انتظار', color: 'default', icon: <ClockCircleOutlined /> },
+    payment_pending: { label: 'در انتظار پرداخت', color: 'warning', icon: <ClockCircleOutlined /> },
+    paid: { label: 'پرداخت شده', color: 'blue', icon: <CheckCircleOutlined /> },
+    processing: { label: 'در حال آماده‌سازی', color: 'processing', icon: <SyncOutlined spin /> },
+    shipped: { label: 'ارسال شده', color: 'purple', icon: <TruckOutlined /> },
+    delivered: { label: 'تحویل داده شد', color: 'success', icon: <HomeOutlined /> },
+    cancelled: { label: 'لغو شده', color: 'error', icon: <CloseCircleOutlined /> },
+    failed: { label: 'ناموفق', color: 'error', icon: <CloseCircleOutlined /> },
+};
 
-function getPaymentStatusConfig(status) {
-    const statusMap = {
-        'pending': { color: '#faad14', label: 'در انتظار پرداخت' },
-        'payment_pending': { color: '#faad14', label: 'در انتظار پرداخت' },
-        'paid': { color: '#52c41a', label: 'پرداخت شده' },
-        'failed': { color: '#ff4d4f', label: 'ناموفق' },
-        'refunded': { color: '#722ed1', label: 'عودت داده شده' },
-    };
-    return statusMap[status] || { color: '#d9d9d9', label: status };
-}
-
-// ============================================
-// کامپوننت اصلی
-// ============================================
+const STATUS_ORDER = ['pending', 'payment_pending', 'paid', 'processing', 'shipped', 'delivered'];
 
 export default function PharmacyOrdersPage() {
     const router = useRouter();
     const { locale } = useLanguage();
-    const { message, modal } = App.useApp();
+    const { message: appMessage } = App.useApp();
 
-    const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('all');
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
-    const [activeTab, setActiveTab] = useState('all');
-    const [isMounted, setIsMounted] = useState(false);
-    const [cancelling, setCancelling] = useState(false);
+    const [updating, setUpdating] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [payingOrderId, setPayingOrderId] = useState(null);
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
+
     const getToken = () => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('token');
@@ -109,28 +94,25 @@ export default function PharmacyOrdersPage() {
         return null;
     };
 
-    // حل مشکل Hydration
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
-
-    // دریافت لیست سفارشات
-    useEffect(() => {
-        if (!isMounted) return;
-
+    // ============================================================
+    // ✅ دریافت لیست سفارشات
+    // ============================================================
+    const fetchOrders = useCallback(async () => {
         const token = getToken();
         if (!token) {
-            router.push(`/${locale}/login?redirect=/${locale}/profile/pharmacy-orders`);
+            router.push(`/${locale}/login`);
             return;
         }
 
-        fetchOrders();
-    }, [locale, router, isMounted]);
-
-    const fetchOrders = async () => {
         setLoading(true);
         try {
-            const token = getToken();
+            const userRes = await fetch(`${API_URL}/api/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const userData = await userRes.json();
+            const userRole = userData.data?.role || userData.data?.roles?.[0] || '';
+            setIsAdmin(userRole === 'admin' || userRole === 'super_admin');
+
             const res = await fetch(`${API_URL}/api/pharmacy/orders`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -138,173 +120,171 @@ export default function PharmacyOrdersPage() {
                 },
             });
 
-            if (!res.ok) {
-                throw new Error(`HTTP error! status: ${res.status}`);
-            }
-
             const data = await res.json();
+            console.log('📦 Orders response:', data);
 
-            if (data.success && Array.isArray(data.data?.data)) {
-                setOrders(data.data.data);
-            } else if (data.success && Array.isArray(data.data)) {
-                setOrders(data.data);
+            if (data.success) {
+                let ordersData = data.data?.data || data.data || [];
+                setOrders(ordersData);
             } else {
-                setOrders([]);
-                if (data.message) {
-                    message.warning(data.message);
-                }
+                appMessage.error(data.message || 'خطا در دریافت سفارشات');
             }
         } catch (error) {
-            console.error('Error fetching orders:', error);
-            message.error('خطا در دریافت لیست سفارشات');
-            setOrders([]);
+            console.error('❌ Error fetching orders:', error);
+            appMessage.error('خطا در ارتباط با سرور');
         } finally {
             setLoading(false);
         }
-    };
+    }, [router, locale, appMessage, API_URL]);
 
-    // مشاهده جزئیات سفارش
-    const viewOrderDetails = (order) => {
-        setSelectedOrder(order);
-        setModalVisible(true);
-    };
+    useEffect(() => {
+        fetchOrders();
+    }, [fetchOrders]);
 
-    // لغو سفارش
-    const cancelOrder = async (orderId) => {
-        setCancelling(true);
+    // ============================================================
+    // ✅ پرداخت سفارش (کاربر)
+    // ============================================================
+    const handlePayOrder = async (orderId) => {
+        setPayingOrderId(orderId);
         try {
             const token = getToken();
-            const res = await fetch(`${API_URL}/api/pharmacy/orders/${orderId}/cancel`, {
+
+            const res = await fetch(`${API_URL}/api/pharmacy/orders/${orderId}/pay`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
+                body: JSON.stringify({ gateway: 'local' }),
             });
 
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+            const data = await res.json();
+            console.log('💳 Pay response:', data);
+
+            if (data.success) {
+                const paymentLink = data.data?.redirect_url || data.data?.payment_link;
+
+                if (paymentLink) {
+                    message.success('در حال انتقال به درگاه پرداخت...');
+
+                    // ✅ اصلاح لینک
+                    let cleanLink = paymentLink
+                        .replace(/\\/g, '')
+                        .replace(/"/g, '')
+                        .replace(/\s/g, '');
+
+                    // ✅ اصلاح ? های اضافی
+                    const firstQIndex = cleanLink.indexOf('?');
+                    if (firstQIndex !== -1) {
+                        const baseUrl = cleanLink.substring(0, firstQIndex);
+                        let params = cleanLink.substring(firstQIndex + 1);
+                        params = params.replace(/\?/g, '&');
+                        cleanLink = baseUrl + '?' + params;
+                    }
+
+                    if (!cleanLink.includes('success=true')) {
+                        cleanLink = cleanLink.includes('?')
+                            ? `${cleanLink}&success=true`
+                            : `${cleanLink}?success=true`;
+                    }
+
+                    console.log('✅ Final payment link:', cleanLink);
+
+                    setTimeout(() => {
+                        window.location.href = cleanLink;
+                    }, 500);
+                } else {
+                    appMessage.error('لینک پرداخت یافت نشد');
+                }
+            } else {
+                appMessage.error(data.message || 'خطا در شروع پرداخت');
             }
+        } catch (error) {
+            console.error('❌ Pay error:', error);
+            appMessage.error('خطا در ارتباط با سرور');
+        } finally {
+            setPayingOrderId(null);
+        }
+    };
+
+    // ============================================================
+    // ✅ بروزرسانی وضعیت سفارش (ادمین)
+    // ============================================================
+    const updateOrderStatus = async (orderId, newStatus) => {
+        if (!isAdmin) {
+            appMessage.warning('شما دسترسی ادمین ندارید');
+            return;
+        }
+
+        setUpdating(true);
+        try {
+            const token = getToken();
+
+            const res = await fetch(`${API_URL}/api/admin/pharmacy-orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
 
             const data = await res.json();
             if (data.success) {
-                message.success('✅ سفارش با موفقیت لغو شد');
-                await fetchOrders();
+                const statusLabel = ORDER_STATUS[newStatus]?.label || newStatus;
+                appMessage.success(`✅ وضعیت سفارش به "${statusLabel}" تغییر کرد`);
+                fetchOrders();
                 setModalVisible(false);
             } else {
-                message.error(data.message || 'خطا در لغو سفارش');
+                appMessage.error(data.message || 'خطا در بروزرسانی وضعیت');
             }
         } catch (error) {
-            console.error('Error cancelling order:', error);
-            message.error(error.message || 'خطا در لغو سفارش');
+            console.error('❌ Error updating order:', error);
+            appMessage.error('خطا در ارتباط با سرور');
         } finally {
-            setCancelling(false);
+            setUpdating(false);
         }
     };
 
-    // دریافت مجدد سفارش
-    const reorder = (order) => {
-        if (!order || !order.items) {
-            message.warning('امکان سفارش مجدد وجود ندارد');
-            return;
-        }
-        const items = order.items.map(item => ({
-            id: item.drug_id || item.id,
-            name: item.drug?.name || item.name || 'محصول',
-            price: item.price || item.unit_price || 0,
-            quantity: item.quantity || 1,
-        }));
-        localStorage.setItem('pharmacyCart', JSON.stringify(items));
-        message.success('آیتم‌ها به سبد خرید اضافه شدند');
-        router.push(`/${locale}/pharmacy`);
-    };
-
-    // فیلتر کردن سفارشات بر اساس وضعیت
+    // ============================================================
+    // ✅ فیلتر کردن سفارشات بر اساس تب
+    // ============================================================
     const getFilteredOrders = () => {
-        if (!Array.isArray(orders)) return [];
         if (activeTab === 'all') return orders;
         return orders.filter(order => order.status === activeTab);
     };
 
-    const filteredOrders = getFilteredOrders();
-
-    // تنظیمات تب‌ها با شمارش
-    const getTabItems = () => {
-        const counts = {
-            all: orders.length,
-            pending: orders.filter(o => o.status === 'pending').length,
-            payment_pending: orders.filter(o => o.status === 'payment_pending').length,
-            processing: orders.filter(o => o.status === 'processing').length,
-            shipped: orders.filter(o => o.status === 'shipped').length,
-            delivered: orders.filter(o => o.status === 'delivered').length,
-            cancelled: orders.filter(o => o.status === 'cancelled').length,
-        };
-
-        return [
-            { key: 'all', label: `همه (${counts.all})` },
-            { key: 'pending', label: `در انتظار (${counts.pending})` },
-            { key: 'payment_pending', label: `در انتظار پرداخت (${counts.payment_pending})` },
-            { key: 'processing', label: `در حال پردازش (${counts.processing})` },
-            { key: 'shipped', label: `ارسال شده (${counts.shipped})` },
-            { key: 'delivered', label: `تحویل شده (${counts.delivered})` },
-            { key: 'cancelled', label: `لغو شده (${counts.cancelled})` },
-        ];
-    };
-
-    // ستون‌های جدول
+    // ============================================================
+    // ✅ ستون‌های جدول
+    // ============================================================
     const columns = [
         {
             title: 'شماره سفارش',
             dataIndex: 'order_number',
             key: 'order_number',
-            render: (text) => <Text strong style={{ fontSize: '13px' }}>#{text || '---'}</Text>,
+            render: (text) => <Text strong>{text}</Text>,
         },
         {
             title: 'تاریخ',
             dataIndex: 'created_at',
             key: 'created_at',
-            render: (date) => <Text>{formatDate(date)}</Text>,
-            sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+            render: (text) => formatDate(text),
         },
         {
-            title: 'اقلام',
-            key: 'items_count',
-            align: 'center',
-            render: (_, record) => {
-                const count = record.items?.length || 0;
-                return <Badge count={count} showZero style={{ backgroundColor: count > 0 ? '#52c41a' : '#d9d9d9' }} />;
-            },
-        },
-        {
-            title: 'مبلغ کل',
+            title: 'مبلغ',
             dataIndex: 'total_amount',
             key: 'total_amount',
-            render: (price) => (
-                <Text strong style={{ color: '#2563eb', fontSize: '14px' }}>
-                    {formatPrice(price || 0)}
-                </Text>
-            ),
-            sorter: (a, b) => (a.total_amount || 0) - (b.total_amount || 0),
+            render: (amount) => <Text strong>{formatPrice(amount)}</Text>,
         },
         {
-            title: 'وضعیت پرداخت',
-            dataIndex: 'payment_status',
-            key: 'payment_status',
-            render: (status) => {
-                const config = getPaymentStatusConfig(status);
-                return <Tag color={config.color}>{config.label}</Tag>;
-            },
-        },
-        {
-            title: 'وضعیت سفارش',
+            title: 'وضعیت',
             dataIndex: 'status',
             key: 'status',
             render: (status) => {
-                const config = getStatusConfig(status);
+                const statusInfo = ORDER_STATUS[status] || ORDER_STATUS.pending;
                 return (
-                    <Tag color={config.color} style={{ borderRadius: '12px', padding: '2px 12px' }}>
-                        {config.icon} {config.label}
+                    <Tag color={statusInfo.color} icon={statusInfo.icon}>
+                        {statusInfo.label}
                     </Tag>
                 );
             },
@@ -312,66 +292,149 @@ export default function PharmacyOrdersPage() {
         {
             title: 'عملیات',
             key: 'actions',
-            width: 180,
             render: (_, record) => (
-                <Space size="small">
-                    <Tooltip title="مشاهده جزئیات">
+                <Space>
+                    <Button
+                        type="primary"
+                        size="small"
+                        icon={<EyeOutlined />}
+                        onClick={() => {
+                            setSelectedOrder(record);
+                            setModalVisible(true);
+                        }}
+                    >
+                        مشاهده
+                    </Button>
+
+                    {/* ✅ دکمه پرداخت برای کاربر (فقط در انتظار پرداخت) */}
+                    {record.status === 'payment_pending' && (
                         <Button
                             type="primary"
                             size="small"
-                            icon={<EyeOutlined />}
-                            onClick={() => viewOrderDetails(record)}
-                        />
-                    </Tooltip>
-
-                    {(record.status === 'pending' || record.status === 'payment_pending') && (
-                        <Tooltip title="لغو سفارش">
-                            <Button
-                                danger
-                                size="small"
-                                icon={<DeleteOutlined />}
-                                onClick={() => {
-                                    modal.confirm({
-                                        title: 'لغو سفارش',
-                                        content: (
-                                            <div>
-                                                <p>آیا از لغو سفارش <strong>#{record.order_number}</strong> مطمئن هستید؟</p>
-                                                <Text type="secondary" style={{ fontSize: '12px' }}>
-                                                    این اقدام قابل بازگشت نیست.
-                                                </Text>
-                                            </div>
-                                        ),
-                                        okText: 'بله، لغو کن',
-                                        cancelText: 'انصراف',
-                                        okType: 'danger',
-                                        onOk: () => cancelOrder(record.id),
-                                        confirmLoading: cancelling,
-                                    });
-                                }}
-                            />
-                        </Tooltip>
+                            icon={<CreditCardOutlined />}
+                            onClick={() => handlePayOrder(record.id)}
+                            loading={payingOrderId === record.id}
+                            style={{ background: '#22c55e', borderColor: '#22c55e' }}
+                        >
+                            پرداخت
+                        </Button>
                     )}
 
-                    {record.status === 'delivered' && (
-                        <Tooltip title="سفارش مجدد">
+                    {/* ✅ دکمه‌های ادمین */}
+                    {isAdmin && record.status === 'paid' && (
+                        <Popconfirm
+                            title="تایید آماده‌سازی"
+                            description="آیا از شروع فرآیند آماده‌سازی سفارش اطمینان دارید؟"
+                            onConfirm={() => updateOrderStatus(record.id, 'processing')}
+                            okText="بله، شروع کن"
+                            cancelText="انصراف"
+                        >
                             <Button
-                                type="default"
+                                type="primary"
                                 size="small"
-                                icon={<ReloadOutlined />}
-                                onClick={() => reorder(record)}
-                            />
-                        </Tooltip>
+                                icon={<SyncOutlined />}
+                                loading={updating}
+                                style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                            >
+                                شروع آماده‌سازی
+                            </Button>
+                        </Popconfirm>
+                    )}
+
+                    {isAdmin && record.status === 'processing' && (
+                        <Popconfirm
+                            title="تایید ارسال"
+                            description="آیا از ارسال این سفارش اطمینان دارید؟"
+                            onConfirm={() => updateOrderStatus(record.id, 'shipped')}
+                            okText="بله، ارسال کن"
+                            cancelText="انصراف"
+                        >
+                            <Button
+                                type="primary"
+                                size="small"
+                                icon={<SendOutlined />}
+                                loading={updating}
+                                style={{ background: '#8b5cf6', borderColor: '#8b5cf6' }}
+                            >
+                                ارسال دارو
+                            </Button>
+                        </Popconfirm>
+                    )}
+
+                    {isAdmin && record.status === 'shipped' && (
+                        <Popconfirm
+                            title="تایید تحویل"
+                            description="آیا از تحویل سفارش به بیمار اطمینان دارید؟"
+                            onConfirm={() => updateOrderStatus(record.id, 'delivered')}
+                            okText="بله، تحویل شد"
+                            cancelText="انصراف"
+                        >
+                            <Button
+                                type="primary"
+                                size="small"
+                                icon={<CheckOutlined />}
+                                loading={updating}
+                                style={{ background: '#10b981', borderColor: '#10b981' }}
+                            >
+                                تحویل داده شد
+                            </Button>
+                        </Popconfirm>
                     )}
                 </Space>
             ),
         },
     ];
 
-    // ============================================
-    // رندر
-    // ============================================
+    // ============================================================
+    // ✅ تایم‌لاین وضعیت
+    // ============================================================
+    const getStatusTimeline = (order) => {
+        const currentIndex = STATUS_ORDER.indexOf(order.status);
 
-    if (!isMounted) {
+        return STATUS_ORDER.map((status, index) => {
+            const isCompleted = index <= currentIndex;
+            const isCurrent = index === currentIndex;
+            const statusInfo = ORDER_STATUS[status];
+
+            return {
+                dot: isCompleted ? (
+                    <CheckCircleOutlined style={{ color: '#10b981' }} />
+                ) : (
+                    <ClockCircleOutlined style={{ color: '#d1d5db' }} />
+                ),
+                children: (
+                    <div>
+                        <Text strong style={{ color: isCompleted ? '#1e293b' : '#94a3b8' }}>
+                            {statusInfo.icon} {statusInfo.label}
+                        </Text>
+                        {isCurrent && (
+                            <Tag color="blue" style={{ marginLeft: 8 }}>
+                                فعلی
+                            </Tag>
+                        )}
+                        {isCompleted && !isCurrent && (
+                            <Tag color="green" style={{ marginLeft: 8 }}>
+                                انجام شد
+                            </Tag>
+                        )}
+                    </div>
+                ),
+                color: isCompleted ? '#10b981' : '#d1d5db',
+            };
+        });
+    };
+
+    // ============================================================
+    // ✅ آمار وضعیت‌ها
+    // ============================================================
+    const getStatusCount = (status) => {
+        return orders.filter(o => o.status === status).length;
+    };
+
+    // ============================================================
+    // ✅ رندر
+    // ============================================================
+    if (loading) {
         return (
             <>
                 <Header />
@@ -381,17 +444,7 @@ export default function PharmacyOrdersPage() {
         );
     }
 
-    if (loading) {
-        return (
-            <>
-                <Header />
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
-                    <Spin size="large" />
-                </div>
-                <Footer />
-            </>
-        );
-    }
+    const filteredOrders = getFilteredOrders();
 
     return (
         <>
@@ -405,254 +458,357 @@ export default function PharmacyOrdersPage() {
                         ]}
                     />
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '24px',
+                        flexWrap: 'wrap',
+                        gap: '16px'
+                    }}>
                         <div>
                             <Title level={2} style={{ marginBottom: '4px' }}>
-                                📦 سفارشات داروخانه
+                                💊 سفارشات داروخانه
                             </Title>
                             <Text type="secondary">
-                                {orders.length > 0 ? `${toPersianNumber(orders.length)} سفارش` : 'هیچ سفارشی ثبت نشده است'}
+                                {isAdmin ? 'مدیریت تمام سفارشات' : 'مشاهده سفارشات شما'}
                             </Text>
                         </div>
                         <Button
                             type="primary"
-                            icon={<ShoppingCartOutlined />}
-                            onClick={() => router.push(`/${locale}/pharmacy`)}
-                            size="large"
+                            icon={<ReloadOutlined />}
+                            onClick={fetchOrders}
                         >
-                            خرید مجدد
+                            بروزرسانی
                         </Button>
                     </div>
 
-                    <Card style={{ marginTop: '24px', borderRadius: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                        <Tabs
-                            activeKey={activeTab}
-                            onChange={setActiveTab}
-                            items={getTabItems()}
-                            type="card"
-                        />
+                    {/* آمار سفارشات */}
+                    <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+                        <Col xs={12} sm={4}>
+                            <Card size="small">
+                                <Statistic
+                                    title="کل سفارشات"
+                                    value={orders.length}
+                                    prefix={<ShoppingOutlined />}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={12} sm={4}>
+                            <Card size="small">
+                                <Statistic
+                                    title="در انتظار پرداخت"
+                                    value={getStatusCount('payment_pending')}
+                                    prefix={<ClockCircleOutlined style={{ color: '#f59e0b' }} />}
+                                    valueStyle={{ color: '#f59e0b' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={12} sm={4}>
+                            <Card size="small">
+                                <Statistic
+                                    title="پرداخت شده"
+                                    value={getStatusCount('paid')}
+                                    prefix={<CheckCircleOutlined style={{ color: '#3b82f6' }} />}
+                                    valueStyle={{ color: '#3b82f6' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={12} sm={4}>
+                            <Card size="small">
+                                <Statistic
+                                    title="در حال آماده‌سازی"
+                                    value={getStatusCount('processing')}
+                                    prefix={<SyncOutlined style={{ color: '#f59e0b' }} spin />}
+                                    valueStyle={{ color: '#f59e0b' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={12} sm={4}>
+                            <Card size="small">
+                                <Statistic
+                                    title="ارسال شده"
+                                    value={getStatusCount('shipped')}
+                                    prefix={<TruckOutlined style={{ color: '#8b5cf6' }} />}
+                                    valueStyle={{ color: '#8b5cf6' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={12} sm={4}>
+                            <Card size="small">
+                                <Statistic
+                                    title="تحویل شده"
+                                    value={getStatusCount('delivered')}
+                                    prefix={<HomeOutlined style={{ color: '#10b981' }} />}
+                                    valueStyle={{ color: '#10b981' }}
+                                />
+                            </Card>
+                        </Col>
+                    </Row>
 
-                        {filteredOrders.length === 0 ? (
+                    {/* تب‌ها */}
+                    <Card style={{ borderRadius: '16px' }}>
+                        <Tabs activeKey={activeTab} onChange={setActiveTab}>
+                            <TabPane tab={`همه (${orders.length})`} key="all" />
+                            <TabPane tab={`در انتظار پرداخت (${getStatusCount('payment_pending')})`} key="payment_pending" />
+                            <TabPane tab={`پرداخت شده (${getStatusCount('paid')})`} key="paid" />
+                            <TabPane tab={`در حال آماده‌سازی (${getStatusCount('processing')})`} key="processing" />
+                            <TabPane tab={`ارسال شده (${getStatusCount('shipped')})`} key="shipped" />
+                            <TabPane tab={`تحویل شده (${getStatusCount('delivered')})`} key="delivered" />
+                            <TabPane tab={`لغو شده (${getStatusCount('cancelled')})`} key="cancelled" />
+                        </Tabs>
+
+                        {filteredOrders.length > 0 ? (
+                            <Table
+                                dataSource={filteredOrders}
+                                columns={columns}
+                                rowKey="id"
+                                pagination={{ pageSize: 10 }}
+                                scroll={{ x: 700 }}
+                            />
+                        ) : (
                             <Empty
-                                description="هیچ سفارشی در این دسته‌بندی یافت نشد"
+                                description="هیچ سفارشی در این بخش وجود ندارد"
                                 image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                style={{ padding: '60px 0' }}
                             >
                                 <Button
                                     type="primary"
                                     onClick={() => router.push(`/${locale}/pharmacy`)}
                                 >
-                                    شروع خرید
+                                    خرید از داروخانه
                                 </Button>
                             </Empty>
-                        ) : (
-                            <Table
-                                columns={columns}
-                                dataSource={filteredOrders}
-                                rowKey="id"
-                                pagination={{
-                                    pageSize: 10,
-                                    showTotal: (total) => `تعداد ${toPersianNumber(total)} سفارش`,
-                                    locale: { items_per_page: '/ صفحه' },
-                                    placement: ['bottomCenter'],
-                                    showSizeChanger: true,
-                                    showQuickJumper: true,
-                                    pageSizeOptions: ['5', '10', '20', '50', '100'],
-                                }}
-                                scroll={{ x: '100%' }}
-                                locale={{
-                                    emptyText: 'هیچ سفارشی یافت نشد',
-                                }}
-                                rowClassName={(record) => {
-                                    if (record.status === 'cancelled') return 'row-cancelled';
-                                    if (record.status === 'delivered') return 'row-delivered';
-                                    return '';
-                                }}
-                            />
                         )}
                     </Card>
                 </div>
             </main>
 
-            {/* مودال جزئیات سفارش */}
+            {/* ============================================================
+            ✅ مودال جزئیات سفارش
+            ============================================================ */}
             <Modal
-                title={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span>📋 جزئیات سفارش</span>
-                        <Tag color={getStatusConfig(selectedOrder?.status)?.color}>
-                            {getStatusConfig(selectedOrder?.status)?.label}
-                        </Tag>
-                    </div>
-                }
+                title={`جزئیات سفارش #${selectedOrder?.order_number || ''}`}
                 open={modalVisible}
                 onCancel={() => setModalVisible(false)}
                 footer={[
-                    (selectedOrder?.status === 'pending' || selectedOrder?.status === 'payment_pending') && (
-                        <Button
-                            key="cancel"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => {
-                                modal.confirm({
-                                    title: 'لغو سفارش',
-                                    content: 'آیا از لغو این سفارش مطمئن هستید؟',
-                                    onOk: () => cancelOrder(selectedOrder.id),
-                                    okText: 'بله، لغو کن',
-                                    cancelText: 'انصراف',
-                                });
-                            }}
-                            loading={cancelling}
-                        >
-                            لغو سفارش
-                        </Button>
-                    ),
-                    selectedOrder?.status === 'delivered' && (
-                        <Button
-                            key="reorder"
-                            type="primary"
-                            icon={<ReloadOutlined />}
-                            onClick={() => reorder(selectedOrder)}
-                        >
-                            سفارش مجدد
-                        </Button>
-                    ),
                     <Button key="close" onClick={() => setModalVisible(false)}>
                         بستن
                     </Button>,
+                    // ✅ دکمه پرداخت در مودال (کاربر)
+                    selectedOrder?.status === 'payment_pending' && (
+                        <Button
+                            key="pay"
+                            type="primary"
+                            icon={<CreditCardOutlined />}
+                            onClick={() => handlePayOrder(selectedOrder.id)}
+                            loading={payingOrderId === selectedOrder.id}
+                            style={{ background: '#22c55e', borderColor: '#22c55e' }}
+                            size="large"
+                        >
+                            پرداخت سفارش
+                        </Button>
+                    ),
+                    // ✅ دکمه‌های ادمین در مودال
+                    isAdmin && selectedOrder?.status === 'paid' && (
+                        <Button
+                            key="processing"
+                            type="primary"
+                            icon={<SyncOutlined />}
+                            onClick={() => updateOrderStatus(selectedOrder.id, 'processing')}
+                            loading={updating}
+                            style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                        >
+                            شروع آماده‌سازی
+                        </Button>
+                    ),
+                    isAdmin && selectedOrder?.status === 'processing' && (
+                        <Button
+                            key="ship"
+                            type="primary"
+                            icon={<SendOutlined />}
+                            onClick={() => updateOrderStatus(selectedOrder.id, 'shipped')}
+                            loading={updating}
+                            style={{ background: '#8b5cf6', borderColor: '#8b5cf6' }}
+                        >
+                            ارسال دارو
+                        </Button>
+                    ),
+                    isAdmin && selectedOrder?.status === 'shipped' && (
+                        <Button
+                            key="deliver"
+                            type="primary"
+                            icon={<CheckOutlined />}
+                            onClick={() => updateOrderStatus(selectedOrder.id, 'delivered')}
+                            loading={updating}
+                            style={{ background: '#10b981', borderColor: '#10b981' }}
+                        >
+                            تحویل داده شد
+                        </Button>
+                    ),
                 ]}
-                width={750}
-                centered
-                style={{ maxWidth: '95vw' }}
+                width={700}
             >
                 {selectedOrder && (
                     <div>
+                        {/* وضعیت فعلی */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <Badge
+                                status={ORDER_STATUS[selectedOrder.status]?.color || 'default'}
+                                text={
+                                    <Text strong style={{ fontSize: '16px' }}>
+                                        وضعیت: {ORDER_STATUS[selectedOrder.status]?.label || selectedOrder.status}
+                                    </Text>
+                                }
+                            />
+                            {/* اگر در انتظار پرداخت است، پیام ویژه */}
+                            {selectedOrder.status === 'payment_pending' && (
+                                <div style={{ marginTop: '8px' }}>
+                                    <Tag color="warning" icon={<ClockCircleOutlined />}>
+                                        ⚠️ این سفارش هنوز پرداخت نشده است
+                                    </Tag>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* اطلاعات سفارش */}
                         <Descriptions bordered size="small" column={2}>
-                            <Descriptions.Item label="شماره سفارش" span={2}>
-                                <Text strong>#{selectedOrder.order_number}</Text>
+                            <Descriptions.Item label="شماره سفارش">
+                                {selectedOrder.order_number}
                             </Descriptions.Item>
                             <Descriptions.Item label="تاریخ ثبت">
                                 {formatDate(selectedOrder.created_at)}
                             </Descriptions.Item>
-                            <Descriptions.Item label="وضعیت سفارش">
-                                <Tag color={getStatusConfig(selectedOrder.status).color}>
-                                    {getStatusConfig(selectedOrder.status).label}
-                                </Tag>
+                            <Descriptions.Item label="مبلغ کل">
+                                <Text strong style={{ color: '#2563eb' }}>
+                                    {formatPrice(selectedOrder.total_amount)}
+                                </Text>
                             </Descriptions.Item>
                             <Descriptions.Item label="وضعیت پرداخت">
-                                <Tag color={getPaymentStatusConfig(selectedOrder.payment_status).color}>
-                                    {getPaymentStatusConfig(selectedOrder.payment_status).label}
+                                <Tag color={selectedOrder.is_paid ? 'green' : 'red'}>
+                                    {selectedOrder.is_paid ? 'پرداخت شده' : 'پرداخت نشده'}
                                 </Tag>
                             </Descriptions.Item>
-                            <Descriptions.Item label="روش پرداخت">
-                                {selectedOrder.payment_method === 'wallet' ? (
-                                    <Space>
-                                        <WalletOutlined />
-                                        کیف پول
-                                    </Space>
-                                ) : (
-                                    <Space>
-                                        <CreditCardOutlined />
-                                        درگاه پرداخت
-                                    </Space>
-                                )}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="گیرنده">
-                                {selectedOrder.recipient_name || '---'}
+                        </Descriptions>
+
+                        <Divider />
+
+                        {/* اطلاعات تحویل */}
+                        <Title level={5}>📦 اطلاعات تحویل</Title>
+                        <Descriptions bordered size="small" column={1}>
+                            <Descriptions.Item label="نام گیرنده">
+                                <UserOutlined /> {selectedOrder.recipient_name || '—'}
                             </Descriptions.Item>
                             <Descriptions.Item label="شماره تماس">
-                                {selectedOrder.recipient_phone || '---'}
+                                <PhoneOutlined /> {selectedOrder.recipient_phone || '—'}
                             </Descriptions.Item>
-                            <Descriptions.Item label="آدرس تحویل" span={2}>
-                                {selectedOrder.delivery_address || '---'}
+                            <Descriptions.Item label="آدرس تحویل">
+                                <EnvironmentOutlined /> {selectedOrder.delivery_address || '—'}
                             </Descriptions.Item>
                             {selectedOrder.delivery_notes && (
-                                <Descriptions.Item label="توضیحات" span={2}>
+                                <Descriptions.Item label="توضیحات">
                                     {selectedOrder.delivery_notes}
                                 </Descriptions.Item>
                             )}
                         </Descriptions>
 
-                        <Divider style={{ margin: '16px 0' }} />
+                        <Divider />
 
-                        <Title level={5}>📋 اقلام سفارش</Title>
+                        {/* محصولات */}
+                        <Title level={5}>💊 محصولات</Title>
                         {selectedOrder.items?.length > 0 ? (
-                            selectedOrder.items.map((item, index) => (
-                                <div
-                                    key={index}
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        padding: '10px 0',
-                                        borderBottom: index < selectedOrder.items.length - 1 ? '1px solid #f0f0f0' : 'none',
-                                    }}
-                                >
-                                    <Space>
-                                        <MedicineBoxOutlined style={{ color: '#1890ff', fontSize: '18px' }} />
-                                        <div>
-                                            <Text strong>{item.drug?.name || item.name || 'محصول'}</Text>
-                                            <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>
-                                                {item.drug?.generic_name || ''}
-                                            </Text>
-                                        </div>
-                                    </Space>
-                                    <Space>
-                                        <Text type="secondary">× {toPersianNumber(item.quantity)}</Text>
-                                        <Text strong style={{ color: '#2563eb' }}>
-                                            {formatPrice((item.price || item.unit_price || 0) * (item.quantity || 1))}
-                                        </Text>
-                                    </Space>
-                                </div>
-                            ))
+                            <Table
+                                dataSource={selectedOrder.items}
+                                columns={[
+                                    { title: 'نام محصول', dataIndex: 'drug', key: 'drug', render: (drug) => drug?.name || '—' },
+                                    { title: 'تعداد', dataIndex: 'quantity', key: 'quantity', render: (q) => toPersianNumber(q) },
+                                    {
+                                        title: 'قیمت واحد',
+                                        dataIndex: 'unit_price',
+                                        key: 'unit_price',
+                                        render: (p) => formatPrice(p)
+                                    },
+                                    {
+                                        title: 'جمع',
+                                        key: 'total',
+                                        render: (_, item) => formatPrice(item.unit_price * item.quantity)
+                                    },
+                                ]}
+                                rowKey="id"
+                                pagination={false}
+                                size="small"
+                            />
                         ) : (
-                            <Text type="secondary">هیچ اقلامی برای این سفارش وجود ندارد</Text>
+                            <Empty description="هیچ محصولی در این سفارش وجود ندارد" />
                         )}
 
-                        <Divider style={{ margin: '16px 0' }} />
+                        <Divider />
 
-                        <div style={{
-                            background: '#f8fafc',
-                            padding: '16px',
-                            borderRadius: '12px',
-                            marginTop: '8px'
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <Text>جمع اقلام:</Text>
-                                <Text>{formatPrice(selectedOrder.subtotal || 0)}</Text>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <Text>هزینه ارسال:</Text>
-                                <Text>{formatPrice(selectedOrder.delivery_fee || 0)}</Text>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <Text>مالیات:</Text>
-                                <Text>{formatPrice(selectedOrder.tax || 0)}</Text>
-                            </div>
-                            {selectedOrder.discount_amount > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                    <Text style={{ color: '#ff4d4f' }}>تخفیف:</Text>
-                                    <Text style={{ color: '#ff4d4f' }}>-{formatPrice(selectedOrder.discount_amount)}</Text>
-                                </div>
-                            )}
-                            <Divider style={{ margin: '8px 0' }} />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                                <Text strong style={{ fontSize: '16px' }}>جمع کل:</Text>
-                                <Text strong style={{ color: '#2563eb', fontSize: '18px' }}>
-                                    {formatPrice(selectedOrder.total_amount || selectedOrder.total_price || 0)}
-                                </Text>
-                            </div>
-                        </div>
+                        {/* تایم‌لاین وضعیت */}
+                        <Title level={5}>⏳ روند سفارش</Title>
+                        <Timeline items={getStatusTimeline(selectedOrder)} />
 
-                        {selectedOrder.cancelled_at && (
-                            <>
-                                <Divider />
-                                <div style={{ padding: '12px', background: '#fff1f0', borderRadius: '8px' }}>
-                                    <Text type="danger">
-                                        <CloseCircleOutlined /> لغو شده در: {formatDate(selectedOrder.cancelled_at)}
+                        {/* دکمه‌های مدیریت در پایین مودال */}
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
+                            {selectedOrder.status === 'payment_pending' ? (
+                                <div>
+                                    <Text type="warning" style={{ display: 'block', marginBottom: '8px' }}>
+                                        ⚠️ این سفارش پرداخت نشده است
                                     </Text>
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        icon={<CreditCardOutlined />}
+                                        onClick={() => handlePayOrder(selectedOrder.id)}
+                                        loading={payingOrderId === selectedOrder.id}
+                                        style={{ background: '#22c55e', borderColor: '#22c55e' }}
+                                        block
+                                    >
+                                        پرداخت سفارش
+                                    </Button>
                                 </div>
-                            </>
-                        )}
+                            ) : isAdmin ? (
+                                <div>
+                                    <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
+                                        🔑 عملیات ادمین:
+                                    </Text>
+                                    <Space wrap>
+                                        {selectedOrder.status === 'paid' && (
+                                            <Button
+                                                type="primary"
+                                                icon={<SyncOutlined />}
+                                                onClick={() => updateOrderStatus(selectedOrder.id, 'processing')}
+                                                loading={updating}
+                                                style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                                            >
+                                                شروع آماده‌سازی
+                                            </Button>
+                                        )}
+                                        {selectedOrder.status === 'processing' && (
+                                            <Button
+                                                type="primary"
+                                                icon={<SendOutlined />}
+                                                onClick={() => updateOrderStatus(selectedOrder.id, 'shipped')}
+                                                loading={updating}
+                                                style={{ background: '#8b5cf6', borderColor: '#8b5cf6' }}
+                                            >
+                                                ارسال دارو
+                                            </Button>
+                                        )}
+                                        {selectedOrder.status === 'shipped' && (
+                                            <Button
+                                                type="primary"
+                                                icon={<CheckOutlined />}
+                                                onClick={() => updateOrderStatus(selectedOrder.id, 'delivered')}
+                                                loading={updating}
+                                                style={{ background: '#10b981', borderColor: '#10b981' }}
+                                            >
+                                                تحویل داده شد
+                                            </Button>
+                                        )}
+                                    </Space>
+                                </div>
+                            ) : null}
+                        </div>
                     </div>
                 )}
             </Modal>

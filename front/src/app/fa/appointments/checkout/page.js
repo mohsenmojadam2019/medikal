@@ -1,20 +1,22 @@
-// /home/god/Videos/medikal/front/src/app/fa/appointments/checkout/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Card, Row, Col, Button, Typography, Spin, Tag,
-  Space, Divider, Alert, Input, Radio, Avatar, Modal, Empty, App
+  Space, Divider, Alert, Input, Radio, Avatar,
+  Modal, Empty, App, Steps, Form, Select,
+  InputNumber, Checkbox, Result, Skeleton, message
 } from 'antd';
 import {
-  CheckCircleOutlined, WalletOutlined, CreditCardOutlined,
-  LeftOutlined, GiftOutlined,
-  SafetyOutlined, UserOutlined,
-  DollarOutlined,
-  ClockCircleOutlined, CalendarOutlined,
-  ReloadOutlined, LoginOutlined
+  ShoppingCartOutlined, WalletOutlined, CreditCardOutlined,
+  LeftOutlined, GiftOutlined, SafetyOutlined,
+  TruckOutlined, HomeOutlined, UserOutlined,
+  DollarOutlined, CheckCircleOutlined,
+  ReloadOutlined, MedicineBoxOutlined,
+  EditOutlined, UserAddOutlined, PlusOutlined,
+  PhoneOutlined
 } from '@ant-design/icons';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
@@ -22,177 +24,127 @@ import Breadcrumb from '@/components/shared/Breadcrumb';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
+const { Step } = Steps;
 
-function toPersianDate(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (!date || isNaN(date.getTime())) return '';
-  try {
-    const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long',
-    });
-    return formatter.format(date);
-  } catch {
-    return '';
-  }
+function toPersianNumber(num) {
+  if (!num && num !== 0) return '۰';
+  const persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  return num.toString().replace(/\d/g, d => persian[d]);
 }
 
-function formatTime(timeStr) {
-  if (!timeStr) return '';
-  if (timeStr.includes('T')) {
-    const date = new Date(timeStr);
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-  }
-  if (timeStr.includes(':')) {
-    const parts = timeStr.split(':');
-    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
-  }
-  return timeStr;
+function formatPrice(price) {
+  if (!price && price !== 0) return '۰ تومان';
+  return toPersianNumber(price.toLocaleString()) + ' تومان';
 }
 
-const getToken = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('token');
-  }
-  return null;
-};
-
-export default function CheckoutPage() {
+export default function PharmacyCheckoutPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { locale } = useLanguage();
-  const { message: appMessage } = App.useApp();
-
-  // ✅ Stateها
-  const [appointmentData, setAppointmentData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [userLoading, setUserLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('wallet');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [cart, setCart] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
-  const [discountCode, setDiscountCode] = useState('');
-  const [discountApplied, setDiscountApplied] = useState(null);
-  const [applyingDiscount, setApplyingDiscount] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('wallet');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
   const [gateways, setGateways] = useState([]);
-  const [selectedGateway, setSelectedGateway] = useState(null);
-  const [gatewayModalVisible, setGatewayModalVisible] = useState(false);
-  const [fetchingGateways, setFetchingGateways] = useState(false);
-  const [invoice, setInvoice] = useState(null);
-  const [fetchingInvoice, setFetchingInvoice] = useState(false);
+  const [selectedGateway, setSelectedGateway] = useState('local');
+  const [userProfile, setUserProfile] = useState(null);
+  const [useDifferentAddress, setUseDifferentAddress] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
+    }
+    return null;
+  };
 
-  // ✅ بررسی لاگین و بازیابی اطلاعات نوبت
+  // حل مشکل Hydration
   useEffect(() => {
-    const token = getToken();
-    const isLoggedIn = !!token;
-    setIsLoggedIn(isLoggedIn);
+    setIsMounted(true);
+  }, []);
 
-    // ✅ بازیابی اطلاعات نوبت از localStorage
-    let storedData = localStorage.getItem('appointmentData');
-
-    // ✅ اگر در appointmentData نبود، از tempAppointment استفاده کن
-    if (!storedData) {
-      const tempData = localStorage.getItem('tempAppointment');
-      if (tempData) {
-        try {
-          const parsed = JSON.parse(tempData);
-          // ✅ بررسی انقضا (حداکثر 30 دقیقه)
-          if (Date.now() - parsed.timestamp < 30 * 60 * 1000) {
-            storedData = tempData;
-          } else {
-            appMessage.warning('زمان رزرو منقضی شده است. لطفاً دوباره اقدام کنید.');
-            localStorage.removeItem('tempAppointment');
-            router.push(`/${locale}/doctors`);
-            return;
-          }
-        } catch (error) {
-          console.error('Error parsing tempAppointment:', error);
-        }
-      }
-    }
-
-    if (!storedData) {
-      appMessage.warning('اطلاعات نوبت یافت نشد. لطفاً از صفحه انتخاب نوبت اقدام کنید.');
-      router.push(`/${locale}/doctors`);
-      return;
-    }
-
-    try {
-      const data = JSON.parse(storedData);
-
-      // ✅ اگر appointmentId ندارد و کاربر لاگین نیست، لاگین لازم است
-      if (!data.appointmentId && !isLoggedIn) {
-        setShowLoginModal(true);
-        setLoading(false);
-        return;
-      }
-
-      setAppointmentData(data);
-
-      // ✅ اگر لاگین است، اطلاعات کامل را دریافت کن
-      if (isLoggedIn && data.appointmentId) {
-        fetchInvoice(data.appointmentId);
-        fetchWalletBalance();
-        fetchGateways();
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.error('Error parsing data:', error);
-      appMessage.error('خطا در خواندن اطلاعات نوبت');
-      router.push(`/${locale}/doctors`);
-    }
-  }, [locale, router, appMessage]);
-
-  // ✅ دریافت فاکتور
-  const fetchInvoice = async (appointmentId) => {
-    if (!appointmentId) return null;
-
-    setFetchingInvoice(true);
+  const fetchUserProfile = async () => {
     try {
       const token = getToken();
-      if (!token) {
-        setShowLoginModal(true);
-        return null;
-      }
+      if (!token) return;
 
-      const res = await fetch(`${API_URL}/api/invoices/appointment/${appointmentId}`, {
+      const res = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-
       const data = await res.json();
+      if (data.success) {
+        setUserProfile(data.data);
+        setRecipientName(data.data.name || '');
+        setRecipientPhone(data.data.mobile || '');
 
-      if (data.success && data.data) {
-        setInvoice(data.data);
-        return data.data;
-      } else {
-        console.log('Invoice not found:', data.message);
-        return null;
+        const patientRes = await fetch(`${API_URL}/api/patients/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const patientData = await patientRes.json();
+        if (patientData.success && patientData.data?.address) {
+          setDeliveryAddress(patientData.data.address);
+        }
       }
     } catch (error) {
-      console.error('Error fetching invoice:', error);
-      return null;
+      console.error('Error fetching user profile:', error);
     } finally {
-      setFetchingInvoice(false);
+      setUserLoading(false);
     }
   };
 
-  // ✅ دریافت موجودی کیف پول
-  const fetchWalletBalance = async () => {
-    const token = getToken();
-    if (!token) return;
+  useEffect(() => {
+    if (!isMounted) return;
 
+    let cartData = [];
+    const cartStorage = localStorage.getItem('pharmacyCart');
+    const checkoutStorage = localStorage.getItem('pharmacyCheckoutData');
+
+    if (checkoutStorage) {
+      try {
+        const data = JSON.parse(checkoutStorage);
+        cartData = data.items || [];
+      } catch (error) {
+        console.error('Error parsing checkout data:', error);
+      }
+    } else if (cartStorage) {
+      try {
+        cartData = JSON.parse(cartStorage);
+      } catch (error) {
+        console.error('Error parsing cart data:', error);
+      }
+    }
+
+    if (cartData.length === 0) {
+      message.warning('سبد خرید شما خالی است');
+      setTimeout(() => router.push(`/${locale}/pharmacy`), 1500);
+    }
+
+    setCart(cartData);
+    setLoading(false);
+
+    fetchUserProfile();
+    fetchWalletBalance();
+    fetchGateways();
+  }, [isMounted]);
+
+  const fetchWalletBalance = async () => {
     try {
+      const token = getToken();
+      if (!token) return;
+
       const res = await fetch(`${API_URL}/api/wallet/balance`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -208,311 +160,257 @@ export default function CheckoutPage() {
     }
   };
 
-  // ✅ دریافت درگاه‌های پرداخت
   const fetchGateways = async () => {
-    const token = getToken();
-    if (!token) {
-      setGateways([
-        { name: 'local', title: 'درگاه تست (آفلاین)', icon: '🔄', is_default: true }
-      ]);
-      setSelectedGateway('local');
-      return;
-    }
-
-    setFetchingGateways(true);
     try {
+      const token = getToken();
       const res = await fetch(`${API_URL}/api/payments/gateways`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-
       const data = await res.json();
       if (data.success) {
-        const availableGateways = data.data?.available || [];
-        setGateways(availableGateways);
-        const defaultGateway = data.data?.default || availableGateways[0]?.name || 'local';
+        setGateways(data.data?.available || []);
+        const defaultGateway = data.data?.default || 'local';
         setSelectedGateway(defaultGateway);
-      } else {
-        setGateways([
-          { name: 'local', title: 'درگاه تست (آفلاین)', icon: '🔄', is_default: true }
-        ]);
-        setSelectedGateway('local');
       }
     } catch (error) {
       console.error('Error fetching gateways:', error);
-      setGateways([
-        { name: 'local', title: 'درگاه تست (آفلاین)', icon: '🔄', is_default: true }
-      ]);
-      setSelectedGateway('local');
-    } finally {
-      setFetchingGateways(false);
     }
   };
 
-  // ✅ اعمال کد تخفیف
-  const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) {
-      appMessage.warning('لطفاً کد تخفیف را وارد کنید');
-      return;
-    }
-
-    setApplyingDiscount(true);
-    const token = getToken();
-
-    try {
-      const res = await fetch(`${API_URL}/api/discounts/validate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code: discountCode,
-          amount: appointmentData?.doctorFee || 0,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setDiscountApplied(data.data);
-        appMessage.success(data.data?.message || 'کد تخفیف با موفقیت اعمال شد');
-      } else {
-        appMessage.error(data.message || 'کد تخفیف نامعتبر است');
-        setDiscountApplied(null);
-      }
-    } catch (error) {
-      console.error('Error validating discount:', error);
-      appMessage.error('خطا در اعتبارسنجی کد تخفیف');
-      setDiscountApplied(null);
-    } finally {
-      setApplyingDiscount(false);
-    }
+  const getSubtotal = () => {
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  // ✅ محاسبه قیمت نهایی
-  const calculateFinalPrice = () => {
-    const basePrice = appointmentData?.doctorFee || 0;
-    if (discountApplied) {
-      if (discountApplied.type === 'percentage') {
-        return Math.max(0, basePrice - (basePrice * discountApplied.value / 100));
-      } else if (discountApplied.type === 'fixed') {
-        return Math.max(0, basePrice - discountApplied.value);
+  const getDeliveryFee = () => 0;
+  const getTax = () => getSubtotal() * 0.09;
+  const getTotal = () => getSubtotal() + getDeliveryFee() + getTax();
+  const canUseWallet = walletBalance >= getTotal();
+
+  const useUserInfo = () => {
+    if (userProfile) {
+      setRecipientName(userProfile.name || '');
+      setRecipientPhone(userProfile.mobile || '');
+      if (userProfile.address) {
+        setDeliveryAddress(userProfile.address);
       }
-    }
-    return basePrice;
-  };
-
-  const finalPrice = calculateFinalPrice();
-  const isFree = finalPrice === 0;
-  const canUseWallet = walletBalance >= finalPrice;
-
-  // ✅ تابع هدایت به لاگین با ذخیره اطلاعات
-  const handleGoToLogin = () => {
-    setShowLoginModal(false);
-
-    // ✅ ذخیره اطلاعات نوبت در tempAppointment
-    const tempData = {
-      doctorId: appointmentData?.doctorId || null,
-      doctorName: appointmentData?.doctorName || '',
-      doctorSpecialty: appointmentData?.doctorSpecialty || '',
-      date: appointmentData?.date || '',
-      time: appointmentData?.time || '',
-      doctorFee: appointmentData?.doctorFee || 0,
-      appointmentId: appointmentData?.appointmentId || null,
-      timestamp: Date.now(),
-      fromPage: 'checkout'
-    };
-    localStorage.setItem('tempAppointment', JSON.stringify(tempData));
-
-    // ✅ هدایت به لاگین
-    router.push(`/${locale}/login?redirect=/${locale}/appointments/checkout`);
-  };
-
-  // ✅ پرداخت با کیف پول
-  const handleWalletPayment = async () => {
-    if (!isLoggedIn) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    if (!canUseWallet && !isFree) {
-      appMessage.warning('موجودی کیف پول شما کافی نیست');
-      return;
-    }
-
-    setSubmitting(true);
-    const token = getToken();
-
-    try {
-      const appointmentId = appointmentData.appointmentId;
-      if (!appointmentId) {
-        appMessage.error('شناسه نوبت یافت نشد');
-        setSubmitting(false);
-        return;
-      }
-
-      let currentInvoice = invoice;
-      if (!currentInvoice) {
-        currentInvoice = await fetchInvoice(appointmentId);
-        if (!currentInvoice) {
-          appMessage.error('فاکتور یافت نشد. لطفاً دوباره تلاش کنید.');
-          setSubmitting(false);
-          return;
-        }
-      }
-
-      if (!isFree) {
-        const payRes = await fetch(`${API_URL}/api/wallet/pay-appointment`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            appointment_id: appointmentId,
-            discount_code: discountApplied?.code || null,
-          }),
-        });
-        const payData = await payRes.json();
-        if (!payData.success) {
-          appMessage.error(payData.message || 'خطا در پرداخت');
-          setSubmitting(false);
-          return;
-        }
-      }
-
-      const confirmationData = {
-        appointmentId,
-        invoiceId: currentInvoice?.id || null,
-        doctorName: appointmentData.doctorName,
-        doctorSpecialty: appointmentData.doctorSpecialty,
-        date: appointmentData.date,
-        time: appointmentData.time,
-        fee: finalPrice,
-        discount: discountApplied ? (appointmentData.doctorFee - finalPrice) : 0,
-        paymentMethod: isFree ? 'رایگان' : 'کیف پول',
-        status: 'confirmed',
-        invoiceNumber: currentInvoice?.invoice_number || null,
-      };
-      localStorage.setItem('appointmentConfirmation', JSON.stringify(confirmationData));
-      localStorage.removeItem('appointmentData');
-      localStorage.removeItem('tempAppointment');
-
-      appMessage.success('✅ پرداخت با موفقیت انجام شد');
-      router.push(`/${locale}/appointments/confirmation`);
-    } catch (error) {
-      console.error('Error in wallet payment:', error);
-      appMessage.error('خطا در پردازش پرداخت');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // ✅ پرداخت با درگاه
-  const handleGatewayPayment = async (gateway) => {
-    if (!isLoggedIn) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    setSubmitting(true);
-    setGatewayModalVisible(false);
-    const token = getToken();
-
-    try {
-      const appointmentId = appointmentData.appointmentId;
-      if (!appointmentId) {
-        appMessage.error('شناسه نوبت یافت نشد');
-        setSubmitting(false);
-        return;
-      }
-
-      let currentInvoice = invoice;
-      if (!currentInvoice) {
-        currentInvoice = await fetchInvoice(appointmentId);
-        if (!currentInvoice) {
-          appMessage.error('فاکتور یافت نشد. لطفاً دوباره تلاش کنید.');
-          setSubmitting(false);
-          return;
-        }
-      }
-
-      const payRes = await fetch(`${API_URL}/api/payments/initiate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          invoice_id: currentInvoice.id,
-          gateway: gateway,
-          amount: finalPrice,
-          discount_code: discountApplied?.code || null,
-        }),
-      });
-      const payData = await payRes.json();
-
-      if (payData.success) {
-        if (payData.data?.redirect_url) {
-          window.location.href = payData.data.redirect_url;
-        } else {
-          appMessage.success('پرداخت با موفقیت انجام شد');
-          const confirmationData = {
-            appointmentId,
-            invoiceId: currentInvoice.id,
-            doctorName: appointmentData.doctorName,
-            doctorSpecialty: appointmentData.doctorSpecialty,
-            date: appointmentData.date,
-            time: appointmentData.time,
-            fee: finalPrice,
-            discount: discountApplied ? (appointmentData.doctorFee - finalPrice) : 0,
-            paymentMethod: 'درگاه پرداخت',
-            status: 'confirmed',
-            invoiceNumber: currentInvoice.invoice_number,
-          };
-          localStorage.setItem('appointmentConfirmation', JSON.stringify(confirmationData));
-          localStorage.removeItem('appointmentData');
-          localStorage.removeItem('tempAppointment');
-          router.push(`/${locale}/appointments/confirmation`);
-        }
-      } else {
-        appMessage.error(payData.message || 'خطا در شروع پرداخت');
-        setSubmitting(false);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      appMessage.error('خطا در ارتباط با درگاه پرداخت');
-      setSubmitting(false);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // ✅ پرداخت اصلی
-  const handlePayment = async () => {
-    if (!isLoggedIn) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    if (paymentMethod === 'wallet') {
-      await handleWalletPayment();
+      message.success('اطلاعات شما وارد شد');
     } else {
-      if (gateways.length === 0) {
-        appMessage.info('در حال بارگیری لیست درگاه‌ها...');
-        await fetchGateways();
-        if (gateways.length === 0) {
-          appMessage.error('هیچ درگاه پرداختی در دسترس نیست');
-          return;
-        }
-      }
-      setGatewayModalVisible(true);
+      message.warning('اطلاعات کاربر یافت نشد');
     }
   };
 
-  // ✅ نمایش لودینگ
-  if (loading) {
+  const handleSubmitOrder = async () => {
+    if (cart.length === 0) {
+      message.warning('سبد خرید شما خالی است');
+      return;
+    }
+
+    if (!recipientName.trim()) {
+      message.warning('لطفاً نام گیرنده را وارد کنید');
+      return;
+    }
+
+    if (!recipientPhone.trim()) {
+      message.warning('لطفاً شماره تماس گیرنده را وارد کنید');
+      return;
+    }
+
+    if (!deliveryAddress.trim()) {
+      message.warning('لطفاً آدرس تحویل را وارد کنید');
+      return;
+    }
+
+    if (!canUseWallet) {
+      message.warning('موجودی کیف پول کافی نیست');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = getToken();
+
+      const orderData = {
+        items: cart.map(item => ({
+          drug_id: item.id,
+          quantity: item.quantity,
+          price: item.price,
+          name: item.name,
+        })),
+        delivery_address: deliveryAddress,
+        delivery_notes: deliveryNotes || '',
+        recipient_name: recipientName,
+        recipient_phone: recipientPhone,
+        payment_method: 'wallet',
+        subtotal: getSubtotal(),
+        tax: getTax(),
+        total_price: getTotal(),
+      };
+
+      console.log('📦 Creating order with wallet...', orderData);
+
+      const orderRes = await fetch(`${API_URL}/api/pharmacy/orders`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!orderRes.ok) {
+        const errorData = await orderRes.text();
+        console.error('❌ Order error:', errorData);
+        message.error(`خطا در ثبت سفارش: ${orderRes.status}`);
+        setSubmitting(false);
+        return;
+      }
+
+      const orderDataResponse = await orderRes.json();
+      console.log('📦 Order response:', orderDataResponse);
+
+      if (!orderDataResponse.success) {
+        message.error(orderDataResponse.message || 'خطا در ثبت سفارش');
+        setSubmitting(false);
+        return;
+      }
+
+      message.success('سفارش با موفقیت ثبت شد و از کیف پول شما کسر گردید');
+      localStorage.removeItem('pharmacyCart');
+      localStorage.removeItem('pharmacyCheckoutData');
+
+      setTimeout(() => {
+        router.push(`/${locale}/profile/pharmacy-orders`);
+      }, 1500);
+    } catch (error) {
+      console.error('❌ Network error:', error);
+      message.error('خطا در ثبت سفارش');
+      setSubmitting(false);
+    }
+  };
+
+  // ============================================================
+  // ✅ اصلاح کامل لینک پرداخت
+  // ============================================================
+  const handleGatewayPayment = async () => {
+    if (!recipientName.trim() || !recipientPhone.trim() || !deliveryAddress.trim()) {
+      message.warning('لطفاً ابتدا اطلاعات تحویل را کامل کنید');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = getToken();
+
+      const orderData = {
+        items: cart.map(item => ({
+          drug_id: item.id,
+          quantity: item.quantity,
+          price: item.price,
+          name: item.name,
+        })),
+        delivery_address: deliveryAddress,
+        delivery_notes: deliveryNotes || '',
+        recipient_name: recipientName,
+        recipient_phone: recipientPhone,
+        payment_method: 'gateway',
+        gateway: selectedGateway,
+        subtotal: getSubtotal(),
+        tax: getTax(),
+        total_price: getTotal(),
+      };
+
+      console.log('📦 Creating order...', orderData);
+
+      const orderRes = await fetch(`${API_URL}/api/pharmacy/orders`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!orderRes.ok) {
+        const errorData = await orderRes.text();
+        console.error('❌ Order error:', errorData);
+        message.error(`خطا در ثبت سفارش: ${orderRes.status}`);
+        setSubmitting(false);
+        return;
+      }
+
+      const orderDataResponse = await orderRes.json();
+      console.log('📦 Order response:', orderDataResponse);
+
+      if (!orderDataResponse.success) {
+        message.error(orderDataResponse.message || 'خطا در ثبت سفارش');
+        setSubmitting(false);
+        return;
+      }
+
+      let paymentLink = orderDataResponse.data?.payment_link;
+
+      if (!paymentLink) {
+        message.error('لینک پرداخت یافت نشد');
+        setSubmitting(false);
+        return;
+      }
+
+      console.log('🔗 Original payment link:', paymentLink);
+
+      // ✅ مرحله 1: حذف کاراکترهای اضافی
+      let cleanLink = paymentLink
+          .replace(/\\/g, '')      // حذف backslash
+          .replace(/"/g, '')       // حذف quotation marks
+          .replace(/\s/g, '');     // حذف فاصله‌ها
+
+      // ✅ مرحله 2: پیدا کردن موقعیت اولین ?
+      const firstQIndex = cleanLink.indexOf('?');
+
+      if (firstQIndex !== -1) {
+        // ✅ مرحله 3: جدا کردن بخش قبل و بعد از اولین ?
+        const baseUrl = cleanLink.substring(0, firstQIndex);
+        let params = cleanLink.substring(firstQIndex + 1);
+
+        // ✅ مرحله 4: تبدیل همه ? های بعدی به &
+        params = params.replace(/\?/g, '&');
+
+        // ✅ مرحله 5: ساخت لینک نهایی
+        cleanLink = baseUrl + '?' + params;
+      }
+
+      // ✅ مرحله 6: اگر success=true نبود، اضافه کن
+      if (!cleanLink.includes('success=true')) {
+        cleanLink = cleanLink.includes('?')
+            ? `${cleanLink}&success=true`
+            : `${cleanLink}?success=true`;
+      }
+
+      console.log('✅ Final payment link:', cleanLink);
+
+      // ✅ مرحله 7: ذخیره اطلاعات سفارش
+      localStorage.setItem('pendingOrder', JSON.stringify({
+        orderNumber: orderDataResponse.data?.order_number,
+        returnUrl: `/${locale}/profile/pharmacy-orders`,
+      }));
+
+      message.success('در حال انتقال به درگاه پرداخت...');
+
+      // ✅ مرحله 8: هدایت به لینک پرداخت
+      setTimeout(() => {
+        window.location.href = cleanLink;
+      }, 500);
+
+    } catch (error) {
+      console.error('❌ Network error:', error);
+      message.error('خطا در ارتباط با سرور');
+      setSubmitting(false);
+    }
+  };
+
+  if (loading || userLoading || !isMounted) {
     return (
         <>
           <Header />
@@ -522,15 +420,13 @@ export default function CheckoutPage() {
     );
   }
 
-  // ✅ اگر اطلاعات نوبت وجود نداشت
-  if (!appointmentData) {
+  if (!cart.length) {
     return (
         <>
-          <Header />
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <Title level={4}>اطلاعات نوبت یافت نشد</Title>
-            <Button onClick={() => router.push(`/${locale}/doctors`)}>
-              بازگشت به پزشکان
+          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px', textAlign: 'center' }}>
+            <Empty description="سبد خرید شما خالی است" />
+            <Button type="primary" onClick={() => router.push(`/${locale}/pharmacy`)}>
+              ادامه خرید
             </Button>
           </div>
           <Footer />
@@ -538,255 +434,255 @@ export default function CheckoutPage() {
     );
   }
 
-  const discountAmount = appointmentData.doctorFee - finalPrice;
-  const persianDate = toPersianDate(appointmentData.date);
-  const formattedTime = formatTime(appointmentData.time);
-  const doctorName = appointmentData.doctorName || 'پزشک';
-  const doctorSpecialty = appointmentData.doctorSpecialty || 'عمومی';
+  const isFormValid = recipientName.trim().length > 0 &&
+      recipientPhone.trim().length > 0 &&
+      deliveryAddress.trim().length > 0 &&
+      !(paymentMethod === 'wallet' && !canUseWallet);
 
   return (
       <>
         <Header />
         <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)' }}>
           <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 20px' }}>
-            <Breadcrumb />
+            <Breadcrumb
+                items={[
+                  { title: 'خانه', href: `/${locale}` },
+                  { title: 'داروخانه', href: `/${locale}/pharmacy` },
+                  { title: 'تسویه حساب' },
+                ]}
+            />
 
-            <Title level={2} style={{ marginBottom: '4px' }}>💳 تایید و پرداخت</Title>
-            <Text type="secondary">اطلاعات نوبت را بررسی و پرداخت را تکمیل کنید</Text>
+            <Title level={2} style={{ marginBottom: '4px' }}>
+              💳 تسویه حساب
+            </Title>
+            <Text type="secondary">اطلاعات سفارش را تکمیل کنید</Text>
 
-            {/* ✅ هشدار لاگین */}
-            {!isLoggedIn && (
-                <Alert
-                    message="برای تکمیل پرداخت نیاز به ورود دارید"
-                    description="لطفاً وارد حساب کاربری خود شوید تا بتوانید پرداخت را تکمیل کنید."
-                    type="warning"
-                    showIcon
-                    action={
-                      <Button size="small" type="primary" icon={<LoginOutlined />} onClick={handleGoToLogin}>
-                        ورود / ثبت‌نام
-                      </Button>
-                    }
-                    style={{ marginTop: 16, borderRadius: '12px' }}
-                />
-            )}
+            <Steps current={currentStep} style={{ marginTop: '24px' }}>
+              <Step title="بررسی سفارش" />
+              <Step title="پرداخت" />
+              <Step title="تایید" />
+            </Steps>
 
             <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
-              <Col xs={24} lg={10}>
-                <Card
-                    title="📋 خلاصه نوبت"
-                    style={{ borderRadius: '16px' }}
-                    styles={{ body: { padding: '20px' } }}
-                >
-                  <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-                    <div>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>پزشک</Text>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                        <Avatar size={32} style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
-                          {doctorName.charAt(0)}
-                        </Avatar>
-                        <Text strong style={{ fontSize: '16px' }}>{doctorName}</Text>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>تخصص</Text>
-                      <div style={{ marginTop: '4px' }}>
-                        <Tag color="blue">{doctorSpecialty}</Tag>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>تاریخ و ساعت</Text>
-                      <div style={{ marginTop: '4px' }}>
-                        <Space>
-                          <Tag icon={<CalendarOutlined />} color="blue">{persianDate}</Tag>
-                          <Tag icon={<ClockCircleOutlined />} color="green">{formattedTime}</Tag>
-                        </Space>
-                      </div>
-                    </div>
-
-                    <Divider style={{ margin: '8px 0' }} />
-
-                    <div>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>هزینه ویزیت</Text>
-                      <div style={{ marginTop: '4px' }}>
-                        <Text strong style={{ fontSize: '20px', color: '#2563eb' }}>
-                          {appointmentData.doctorFee?.toLocaleString() || '۰'}
-                        </Text>
-                        <Text type="secondary"> تومان</Text>
-                      </div>
-                    </div>
-                  </Space>
-                </Card>
-
-                <Card
-                    style={{ marginTop: '16px', borderRadius: '16px', background: '#f0f5ff' }}
-                    styles={{ body: { padding: '16px' } }}
-                >
-                  <Row gutter={[8, 8]}>
-                    <Col span={12}>
-                      <Text type="secondary">هزینه ویزیت</Text>
-                    </Col>
-                    <Col span={12} style={{ textAlign: 'left' }}>
-                      <Text>{appointmentData.doctorFee?.toLocaleString() || '۰'} تومان</Text>
-                    </Col>
-                    {discountAmount > 0 && (
-                        <>
-                          <Col span={12}>
-                            <Text type="secondary" style={{ color: '#10b981' }}>تخفیف</Text>
-                          </Col>
-                          <Col span={12} style={{ textAlign: 'left' }}>
-                            <Text style={{ color: '#10b981' }}>- {discountAmount.toLocaleString()} تومان</Text>
-                          </Col>
-                        </>
-                    )}
-                    <Divider style={{ margin: '4px 0' }} />
-                    <Col span={12}>
-                      <Text strong>مبلغ قابل پرداخت</Text>
-                    </Col>
-                    <Col span={12} style={{ textAlign: 'left' }}>
-                      <Text strong style={{ fontSize: '18px', color: '#2563eb' }}>
-                        {finalPrice.toLocaleString()} تومان
-                      </Text>
-                    </Col>
-                  </Row>
-                </Card>
-              </Col>
-
-              <Col xs={24} lg={14}>
-                <Card
-                    title="💳 اطلاعات پرداخت"
-                    style={{ borderRadius: '16px' }}
-                    styles={{ body: { padding: '20px' } }}
-                >
-                  <div style={{ marginBottom: '20px' }}>
-                    <Text strong><GiftOutlined /> کد تخفیف</Text>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                      <Input
-                          placeholder="کد تخفیف را وارد کنید"
-                          value={discountCode}
-                          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                          disabled={!!discountApplied || !isLoggedIn}
-                          style={{ flex: 1 }}
-                      />
-                      <Button
-                          type="primary"
-                          onClick={handleApplyDiscount}
-                          loading={applyingDiscount}
-                          disabled={!!discountApplied || !discountCode.trim() || !isLoggedIn}
-                      >
-                        {discountApplied ? 'اعمال شده' : 'اعمال'}
-                      </Button>
-                    </div>
-                    {discountApplied && (
-                        <div style={{ marginTop: '8px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '8px' }}>
-                          <Text style={{ color: '#10b981' }}>
-                            ✅ {discountApplied.message || 'کد تخفیف اعمال شد'}
-                          </Text>
+              <Col xs={24} lg={16}>
+                <Card title="📋 خلاصه سفارش" style={{ borderRadius: '16px' }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <Text strong>محصولات:</Text>
+                    {cart.map((item, index) => (
+                        <div key={index} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '8px 0',
+                          borderBottom: index < cart.length - 1 ? '1px solid #f0f0f0' : 'none',
+                        }}>
+                          <Space>
+                            <MedicineBoxOutlined />
+                            <Text>{item.name}</Text>
+                            <Text type="secondary">× {toPersianNumber(item.quantity)}</Text>
+                          </Space>
+                          <Text>{formatPrice(item.price * item.quantity)}</Text>
                         </div>
-                    )}
+                    ))}
                   </div>
 
-                  <Divider style={{ margin: '12px 0' }} />
+                  <Divider />
 
                   <div>
-                    <Text strong>انتخاب روش پرداخت</Text>
-                    <Radio.Group
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        style={{ width: '100%', marginTop: '8px' }}
-                        disabled={!isLoggedIn}
-                    >
-                      <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-                        <Radio value="wallet" disabled={isFree}>
-                          <Space>
-                            <WalletOutlined style={{ fontSize: '18px', color: '#2563eb' }} />
-                            <div>
-                              <div>کیف پول</div>
-                              <Text type="secondary" style={{ fontSize: '12px' }}>
-                                موجودی: {walletBalance?.toLocaleString() || '۰'} تومان
-                              </Text>
-                            </div>
-                            {!canUseWallet && !isFree && (
-                                <Tag color="red" style={{ marginRight: 0 }}>موجودی کافی نیست</Tag>
-                            )}
-                          </Space>
-                        </Radio>
-                        <Radio value="gateway">
-                          <Space>
-                            <CreditCardOutlined style={{ fontSize: '18px', color: '#10b981' }} />
-                            <div>
-                              <div>درگاه پرداخت</div>
-                              <Text type="secondary" style={{ fontSize: '12px' }}>
-                                {gateways.length > 0 ? `${gateways.length} درگاه موجود` : 'بارگیری درگاه‌ها...'}
-                              </Text>
-                            </div>
-                            <Tag color="green" style={{ marginRight: 0 }}>امن</Tag>
-                          </Space>
-                        </Radio>
-                      </Space>
-                    </Radio.Group>
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24} md={12}>
+                        <Input
+                            placeholder="نام گیرنده"
+                            value={recipientName}
+                            onChange={(e) => setRecipientName(e.target.value)}
+                            prefix={<UserOutlined />}
+                            size="large"
+                        />
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <Input
+                            placeholder="شماره تماس گیرنده"
+                            value={recipientPhone}
+                            onChange={(e) => setRecipientPhone(e.target.value)}
+                            prefix={<PhoneOutlined />}
+                            size="large"
+                        />
+                      </Col>
+                    </Row>
                   </div>
 
-                  {!isLoggedIn && (
-                      <Alert
-                          title="برای پرداخت نیاز به ورود دارید"
-                          description="لطفاً ابتدا وارد حساب کاربری خود شوید."
-                          type="warning"
-                          showIcon
-                          style={{ marginTop: '16px' }}
-                          action={
-                            <Button size="small" type="primary" onClick={handleGoToLogin}>
-                              ورود
-                            </Button>
-                          }
-                      />
-                  )}
+                  <Divider />
 
-                  {isFree && isLoggedIn && (
-                      <Alert
-                          title="این نوبت رایگان است"
-                          type="success"
-                          showIcon
-                          style={{ marginTop: '16px' }}
-                      />
-                  )}
+                  <div>
+                    <Text strong>آدرس تحویل:</Text>
+                    <Input.TextArea
+                        placeholder="آدرس کامل تحویل را وارد کنید..."
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        rows={3}
+                        style={{ marginTop: '8px', borderRadius: '8px' }}
+                    />
+                    {userProfile?.address && (
+                        <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                          آدرس پیش‌فرض شما: {userProfile.address}
+                        </Text>
+                    )}
+                  </div>
 
-                  {paymentMethod === 'wallet' && !isFree && !canUseWallet && isLoggedIn && (
+                  <div style={{ marginTop: '16px' }}>
+                    <Text strong>توضیحات:</Text>
+                    <Input.TextArea
+                        placeholder="توضیحات اضافی برای ارسال..."
+                        value={deliveryNotes}
+                        onChange={(e) => setDeliveryNotes(e.target.value)}
+                        rows={2}
+                        style={{ marginTop: '8px', borderRadius: '8px' }}
+                    />
+                  </div>
+                </Card>
+
+                <Card title="💳 روش پرداخت" style={{ borderRadius: '16px', marginTop: '16px' }}>
+                  <Radio.Group
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      style={{ width: '100%' }}
+                  >
+                    <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                      <Radio value="wallet">
+                        <Space>
+                          <WalletOutlined />
+                          <div>
+                            <div>کیف پول</div>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                              موجودی: {formatPrice(walletBalance)}
+                            </Text>
+                          </div>
+                          {!canUseWallet && (
+                              <Tag color="red">موجودی کافی نیست</Tag>
+                          )}
+                        </Space>
+                      </Radio>
+                      <Radio value="gateway">
+                        <Space>
+                          <CreditCardOutlined />
+                          <div>
+                            <div>درگاه پرداخت</div>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                              پرداخت امن از طریق درگاه
+                            </Text>
+                          </div>
+                        </Space>
+                      </Radio>
+                    </Space>
+                  </Radio.Group>
+
+                  {paymentMethod === 'wallet' && !canUseWallet && (
                       <Alert
-                          title="موجودی کیف پول کافی نیست"
+                          message="موجودی کافی نیست"
                           description="لطفاً روش پرداخت دیگری را انتخاب کنید یا کیف پول خود را شارژ کنید"
                           type="warning"
                           showIcon
-                          style={{ marginTop: '16px' }}
+                          style={{ marginTop: '12px' }}
                       />
                   )}
 
-                  <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-                    <Button
-                        onClick={() => router.push(`/${locale}/appointments/new?doctorId=${appointmentData.doctorId}`)}
-                        icon={<LeftOutlined />}
-                        size="large"
-                        style={{ borderRadius: '12px' }}
-                    >
-                      بازگشت
-                    </Button>
-                    <Button
-                        type="primary"
-                        size="large"
-                        onClick={handlePayment}
-                        loading={submitting}
-                        disabled={!isLoggedIn || (paymentMethod === 'wallet' && !canUseWallet && !isFree)}
-                        style={{
-                          flex: 1,
-                          borderRadius: '12px',
-                          height: '48px',
-                          fontWeight: 'bold',
-                        }}
-                    >
-                      {!isLoggedIn ? 'ابتدا وارد شوید' : isFree ? 'تایید نوبت رایگان' : 'پرداخت و تایید نوبت'}
-                    </Button>
+                  {paymentMethod === 'gateway' && (
+                      <div style={{ marginTop: '16px' }}>
+                        <Text strong>انتخاب درگاه:</Text>
+                        <Radio.Group
+                            value={selectedGateway}
+                            onChange={(e) => setSelectedGateway(e.target.value)}
+                            style={{ marginTop: '8px', display: 'block' }}
+                        >
+                          <Space direction="vertical">
+                            {gateways.map((gateway) => (
+                                <Radio key={gateway.name || gateway} value={gateway.name || gateway}>
+                                  <Space>
+                                    <span>{gateway.icon || '💳'}</span>
+                                    <span>{gateway.title || gateway}</span>
+                                    {gateway.is_default && (
+                                        <Tag color="blue">پیش‌فرض</Tag>
+                                    )}
+                                  </Space>
+                                </Radio>
+                            ))}
+                          </Space>
+                        </Radio.Group>
+                      </div>
+                  )}
+                </Card>
+              </Col>
+
+              <Col xs={24} lg={8}>
+                <Card title="💰 خلاصه پرداخت" style={{ borderRadius: '16px' }}>
+                  <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                    <Text>جمع محصولات:</Text>
+                    <Text>{formatPrice(getSubtotal())}</Text>
                   </div>
+                  <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                    <Text>هزینه ارسال:</Text>
+                    <Text>{formatPrice(getDeliveryFee())}</Text>
+                  </div>
+                  <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                    <Text>مالیات:</Text>
+                    <Text>{formatPrice(getTax())}</Text>
+                  </div>
+                  <Divider style={{ margin: '8px 0' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                    <Text strong>جمع کل:</Text>
+                    <Text strong style={{ color: '#2563eb', fontSize: '20px' }}>
+                      {formatPrice(getTotal())}
+                    </Text>
+                  </div>
+
+                  {paymentMethod === 'wallet' ? (
+                      <Button
+                          type="primary"
+                          size="large"
+                          block
+                          onClick={handleSubmitOrder}
+                          loading={submitting}
+                          disabled={!isFormValid}
+                          style={{ marginTop: '16px', borderRadius: '12px', height: '48px' }}
+                      >
+                        {canUseWallet ? 'پرداخت با کیف پول' : 'موجودی کافی نیست'}
+                      </Button>
+                  ) : (
+                      <Button
+                          type="primary"
+                          size="large"
+                          block
+                          onClick={handleGatewayPayment}
+                          loading={submitting}
+                          disabled={!isFormValid}
+                          style={{ marginTop: '16px', borderRadius: '12px', height: '48px' }}
+                      >
+                        پرداخت با درگاه
+                      </Button>
+                  )}
+
+                  {!recipientName.trim() && (
+                      <div style={{ marginTop: '8px' }}>
+                        <Text type="danger" style={{ fontSize: '12px' }}>
+                          ⚠️ لطفاً نام گیرنده را وارد کنید
+                        </Text>
+                      </div>
+                  )}
+
+                  {!recipientPhone.trim() && (
+                      <div style={{ marginTop: '8px' }}>
+                        <Text type="danger" style={{ fontSize: '12px' }}>
+                          ⚠️ لطفاً شماره تماس گیرنده را وارد کنید
+                        </Text>
+                      </div>
+                  )}
+
+                  {!deliveryAddress.trim() && (
+                      <div style={{ marginTop: '8px' }}>
+                        <Text type="danger" style={{ fontSize: '12px' }}>
+                          ⚠️ لطفاً آدرس تحویل را وارد کنید
+                        </Text>
+                      </div>
+                  )}
 
                   <div style={{ marginTop: '16px', textAlign: 'center' }}>
                     <Space>
@@ -801,134 +697,6 @@ export default function CheckoutPage() {
             </Row>
           </div>
         </main>
-
-        {/* ✅ مودال لاگین */}
-        <Modal
-            title="🔐 برای ادامه نیاز به ورود دارید"
-            open={showLoginModal}
-            onCancel={() => {
-              setShowLoginModal(false);
-              router.push(`/${locale}/doctors`);
-            }}
-            footer={[
-              <Button key="cancel" onClick={() => {
-                setShowLoginModal(false);
-                router.push(`/${locale}/doctors`);
-              }}>
-                انصراف
-              </Button>,
-              <Button
-                  key="login"
-                  type="primary"
-                  icon={<LoginOutlined />}
-                  onClick={handleGoToLogin}
-                  size="large"
-              >
-                ورود / ثبت‌نام
-              </Button>,
-            ]}
-            width={480}
-            centered
-        >
-          <div style={{ padding: '20px 0' }}>
-            <Alert
-                message="برای تکمیل رزرو نوبت، لطفاً وارد حساب کاربری خود شوید."
-                description="اگر حساب کاربری ندارید، می‌توانید به راحتی ثبت‌نام کنید."
-                type="info"
-                showIcon
-                style={{ marginBottom: 16 }}
-            />
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text type="secondary">پزشک:</Text>
-                <Text strong>{appointmentData?.doctorName || '---'}</Text>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text type="secondary">تاریخ:</Text>
-                <Text strong>{persianDate || '---'}</Text>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text type="secondary">زمان:</Text>
-                <Text strong>{formattedTime || '---'}</Text>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Text type="secondary">هزینه:</Text>
-                <Text strong style={{ color: '#2563eb' }}>
-                  {appointmentData?.doctorFee?.toLocaleString() || '۰'} تومان
-                </Text>
-              </div>
-            </div>
-            <div style={{ marginTop: 16, textAlign: 'center' }}>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                پس از ورود، اطلاعات نوبت شما ذخیره خواهد شد.
-              </Text>
-            </div>
-          </div>
-        </Modal>
-
-        {/* ✅ مودال انتخاب درگاه */}
-        <Modal
-            title="انتخاب درگاه پرداخت"
-            open={gatewayModalVisible}
-            onCancel={() => setGatewayModalVisible(false)}
-            footer={null}
-            width={500}
-            centered
-        >
-          <div style={{ padding: '8px 0' }}>
-            <Text type="secondary" style={{ display: 'block', marginBottom: '16px' }}>
-              لطفاً یکی از درگاه‌های زیر را برای پرداخت انتخاب کنید:
-            </Text>
-
-            {fetchingGateways ? (
-                <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                  <Spin size="large" />
-                  <div style={{ marginTop: 12 }}>
-                    <Text type="secondary">در حال بارگیری درگاه‌های پرداخت...</Text>
-                  </div>
-                </div>
-            ) : gateways.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                  <Empty description="هیچ درگاه پرداختی در دسترس نیست" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  <Button type="primary" icon={<ReloadOutlined />} onClick={fetchGateways} style={{ marginTop: 16 }} loading={fetchingGateways}>
-                    بارگیری مجدد
-                  </Button>
-                </div>
-            ) : (
-                <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-                  {gateways.map((gateway) => (
-                      <Card
-                          key={gateway.name}
-                          size="small"
-                          hoverable
-                          onClick={() => handleGatewayPayment(gateway.name)}
-                          style={{
-                            borderRadius: '12px',
-                            border: selectedGateway === gateway.name ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                            cursor: 'pointer',
-                          }}
-                          styles={{ body: { padding: '12px 16px' } }}
-                      >
-                        <Space>
-                          <span style={{ fontSize: '24px' }}>{gateway.icon || '💳'}</span>
-                          <div>
-                            <Text strong>{gateway.title}</Text>
-                            {gateway.is_default && <Tag color="blue" style={{ marginLeft: '8px' }}>پیش‌فرض</Tag>}
-                          </div>
-                        </Space>
-                      </Card>
-                  ))}
-                </Space>
-            )}
-
-            <div style={{ marginTop: '20px', padding: '12px 16px', background: '#f8fafc', borderRadius: '8px' }}>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                <SafetyOutlined /> پرداخت شما با امنیت کامل انجام می‌شود
-              </Text>
-            </div>
-          </div>
-        </Modal>
-
         <Footer />
       </>
   );
