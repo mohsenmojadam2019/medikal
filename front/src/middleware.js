@@ -1,86 +1,153 @@
 import { NextResponse } from 'next/server';
 
-// ✅ مسیرهای عمومی (بدون نیاز به لاگین)
-const publicPaths = [
+// ============================================================
+// ✅ تنظیمات مسیرها
+// ============================================================
+
+const PUBLIC_PATHS = [
   '/',
-  '/login',
-  '/register',
-  '/verify',
-  '/doctors',
   '/about',
   '/contact',
-  '/pharmacy',
-  '/lab',
-  '/ai-chat',
-  '/specialties',
-  '/blog',
   '/faq',
   '/support',
   '/search',
-  '/appointments',
-  '/imaging',        // ✅ تصویربرداری عمومی - اضافه شد
+  '/login',
+  '/register',
+  '/verify',
+  '/forgot-password',
+  '/reset-password',
+  '/doctors',          // ✅ لیست پزشکان عمومی
+  '/specialties',
+  '/pharmacy',
+  '/lab',
+  '/ai-chat',
+  '/blog',
+  '/imaging',
+  '/appointments/new', // ✅ صفحه جدید نوبت عمومی (با doctorId)
 ];
 
-// ✅ مسیرهای محافظت‌شده (نیاز به لاگین)
-const protectedPaths = [
+const PROTECTED_PATHS = [
   '/profile',
   '/dashboard',
+  '/settings',
   '/wallet',
+  '/wallet/transactions',
+  '/wallet/deposit',
+  '/wallet/withdraw',
   '/records',
-  '/appointments/checkout',
+  '/records/*',
+  '/appointments',         // ✅ صفحه نوبت‌های من محافظت شده
   '/appointments/my',
+  '/appointments/checkout',
   '/appointments/confirmation',
-  '/appointments/new',
   '/appointments/history',
+  '/appointments/cancel',
+  '/appointments/reschedule',
   '/pharmacy/checkout',
   '/pharmacy/cart',
   '/pharmacy/orders',
+  '/pharmacy/orders/*',
   '/lab/orders',
-  '/imaging/upload',     // ✅ آپلود تصویر نیاز به لاگین
-  '/imaging/my',         // ✅ تصاویر من نیاز به لاگین
+  '/lab/results',
+  '/imaging/upload',
+  '/imaging/my',
+  '/imaging/delete',
+  '/messages',
+  '/notifications',
 ];
 
-export function middleware(request) {
-  const token = request.cookies.get('token')?.value ||
-      request.headers.get('authorization')?.replace('Bearer ', '');
+const STATIC_PATHS = [
+  '/_next',
+  '/images',
+  '/fonts',
+  '/api',
+  '/favicon.ico',
+  '/robots.txt',
+  '/sitemap.xml',
+];
 
+const AUTH_PATHS = ['/login', '/register', '/verify', '/forgot-password', '/reset-password'];
+
+export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // ✅ اجازه دسترسی به فایل‌های استاتیک
-  if (pathname.startsWith('/_next') ||
-      pathname.startsWith('/images') ||
-      pathname.startsWith('/fonts') ||
-      pathname.startsWith('/api')) {
+  if (STATIC_PATHS.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
-  // ✅ اگر کاربر لاگین است و به صفحات لاگین/ثبت‌نام برود
-  if (token && ['/login', '/register', '/verify'].includes(pathname)) {
-    return NextResponse.redirect(new URL('/', request.url));
+  const token = getAuthToken(request);
+  const isLoggedIn = !!token;
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔍 [Middleware] ${pathname} | LoggedIn: ${isLoggedIn}`);
   }
 
-  // ✅ بررسی دقیق مسیرهای محافظت‌شده
-  const isProtected = protectedPaths.some(path => pathname.startsWith(path));
+  if (isLoggedIn && AUTH_PATHS.includes(pathname)) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
 
-  // ✅ اگر کاربر لاگین نیست و به مسیر محافظت‌شده رفته
-  if (!token && isProtected) {
-    // اگر مسیر /appointments/new است، اجازه دسترسی بده (چون داخل خود صفحه چک می‌شه)
-    if (pathname === '/appointments/new' || pathname === '/imaging') {
+  const isProtected = PROTECTED_PATHS.some(path => {
+    if (path.endsWith('/*')) {
+      const basePath = path.slice(0, -2);
+      return pathname.startsWith(basePath);
+    }
+    return pathname === path || pathname.startsWith(path + '/');
+  });
+
+  if (!isLoggedIn && isProtected) {
+    if (isExceptionPath(pathname)) {
       return NextResponse.next();
     }
-
-    const url = new URL('/login', request.url);
-    // ✅ ذخیره مسیر قبلی برای بازگشت
-    const referer = request.headers.get('referer') || '/';
-    url.searchParams.set('redirect', referer);
-    return NextResponse.redirect(url);
+    return redirectToLogin(request);
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  setSecurityHeaders(response);
+
+  return response;
+}
+
+function getAuthToken(request) {
+  return (
+      request.cookies.get('token')?.value ||
+      request.headers.get('authorization')?.replace('Bearer ', '') ||
+      null
+  );
+}
+
+function isExceptionPath(pathname) {
+  const exceptions = [
+    '/appointments/new',
+    '/imaging',
+    '/pharmacy',
+  ];
+  return exceptions.some(path => pathname === path || pathname.startsWith(path + '/'));
+}
+
+function redirectToLogin(request) {
+  const { pathname, search } = request.nextUrl;
+  const url = new URL('/login', request.url);
+  const redirectPath = pathname + search;
+  url.searchParams.set('redirect', redirectPath);
+  return NextResponse.redirect(url);
+}
+
+function setSecurityHeaders(response) {
+  const headers = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  };
+  Object.entries(headers).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+  return response;
 }
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|images|fonts).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|images|fonts|robots.txt|sitemap.xml).*)',
   ],
 };

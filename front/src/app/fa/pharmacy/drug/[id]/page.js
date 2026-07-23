@@ -1,374 +1,539 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { 
-  Card, Row, Col, Button, Typography, Spin, Tag, 
-  Space, Divider, Descriptions, App, Image,
-  InputNumber, Alert, Rate, Skeleton,
-  Tabs, List, Badge, Tooltip
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Card, Row, Col, Typography, Spin, Empty, Tag,
+  Button, Input, Space, App, Badge, Modal,
+  Select, Pagination, Divider, Tooltip
 } from 'antd';
-import { 
-  ShoppingCartOutlined, HeartOutlined, 
-  SafetyOutlined, DollarOutlined,
-  MedicineBoxOutlined, CheckCircleOutlined,
-  CloseCircleOutlined, InfoCircleOutlined,
-  LeftOutlined, ShareAltOutlined
+import {
+  SearchOutlined, ShoppingCartOutlined,
+  PlusOutlined, MinusOutlined, DeleteOutlined,
+  MedicineBoxOutlined, EyeOutlined
 } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
-const { Title, Text, Paragraph } = Typography;
-const { TabPane } = Tabs;
+const { Title, Text } = Typography;
+const { Option } = Select;
 
-export default function DrugDetailPage() {
+export default function PharmacyPage() {
   const router = useRouter();
-  const params = useParams();
   const { t, locale } = useLanguage();
   const { message: appMessage } = App.useApp();
-  const id = params?.id;
-  
-  const [drug, setDrug] = useState(null);
+
+  const [drugs, setDrugs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [quantity, setQuantity] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
   const [cart, setCart] = useState([]);
-  const [relatedDrugs, setRelatedDrugs] = useState([]);
-  
+  const [cartVisible, setCartVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [requiresPrescription, setRequiresPrescription] = useState('all');
+  const [totalItems, setTotalItems] = useState(0);
+
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
-  const getToken = () => localStorage.getItem('token');
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
+    }
+    return null;
+  };
 
+  const fetchDrugs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = getToken();
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      if (requiresPrescription !== 'all') {
+        params.append('requires_prescription', requiresPrescription === 'required' ? '1' : '0');
+      }
+      params.append('page', currentPage);
+      params.append('per_page', pageSize);
+
+      const res = await fetch(`${API_URL}/api/drugs/active?${params}`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        const drugsData = data.data.data || data.data || [];
+        setDrugs(drugsData);
+        setTotalItems(data.data.total || data.data.length || 0);
+
+        const uniqueCategories = [...new Set(drugsData.map(d => d.category).filter(Boolean))];
+        setCategories(uniqueCategories);
+      } else {
+        appMessage.error(data.message || t('pharmacy.errorFetchingDrugs'));
+      }
+    } catch (error) {
+      console.error('Error fetching drugs:', error);
+      appMessage.error(t('pharmacy.serverError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, selectedCategory, requiresPrescription, currentPage, pageSize, appMessage, t]);
+
+  // ✅ بارگذاری اولیه - بدون نیاز به لاگین
   useEffect(() => {
-    const fetchDrug = async () => {
-      if (!id) return;
-      
-      try {
-        const token = getToken();
-        const res = await fetch(`${API_URL}/api/drugs/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        const data = await res.json();
-        if (data.success) {
-          setDrug(data.data);
-          // دریافت داروهای مرتبط
-          fetchRelatedDrugs(data.data.category);
-        } else {
-          appMessage.error(data.message || t('productNotFound') || 'دارو یافت نشد');
-          router.push(`/${locale}/pharmacy`);
-        }
-      } catch (error) {
-        console.error('Error fetching drug:', error);
-        appMessage.error(t('serverError') || 'خطا در دریافت اطلاعات');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchRelatedDrugs = async (category) => {
-      try {
-        const token = getToken();
-        const res = await fetch(
-          `${API_URL}/api/drugs/active?category=${category}&limit=10`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        const data = await res.json();
-        if (data.success) {
-          setRelatedDrugs(data.data.data || data.data || []);
-        }
-      } catch (error) {
-        console.error('Error fetching related drugs:', error);
-      }
-    };
-
-    fetchDrug();
-    
+    fetchDrugs();
     const savedCart = JSON.parse(localStorage.getItem('pharmacyCart') || '[]');
+    console.log('🛒 Loaded cart:', savedCart);
     setCart(savedCart);
-  }, [id]);
+  }, [fetchDrugs]);
 
-  const addToCart = () => {
-    if (!drug) return;
-    
+  // ✅ ذخیره سبد خرید در localStorage
+  useEffect(() => {
+    localStorage.setItem('pharmacyCart', JSON.stringify(cart));
+    console.log('💾 Cart saved:', cart);
+  }, [cart]);
+
+  // ✅ افزودن به سبد - نیاز به لاگین
+  const addToCart = (drug) => {
+    const token = getToken();
+    if (!token) {
+      appMessage.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
+      router.push(`/${locale}/login?redirect=/${locale}/pharmacy`);
+      return;
+    }
+
     const existing = cart.find(item => item.id === drug.id);
     let newCart;
     if (existing) {
       newCart = cart.map(item =>
-        item.id === drug.id ? { ...item, quantity: item.quantity + quantity } : item
+          item.id === drug.id ? { ...item, quantity: item.quantity + 1 } : item
       );
     } else {
-      newCart = [...cart, { 
-        ...drug, 
-        quantity,
-        price: drug.final_price || drug.price 
+      newCart = [...cart, {
+        ...drug,
+        quantity: 1,
+        price: drug.final_price || drug.price
       }];
     }
     setCart(newCart);
-    localStorage.setItem('pharmacyCart', JSON.stringify(newCart));
-    appMessage.success(`${drug.name} ${t('addedToCart') || 'به سبد خرید اضافه شد'}`);
+    appMessage.success(`${drug.name} ${t('pharmacy.addedToCart')}`);
+  };
+
+  const removeFromCart = (drugId) => {
+    const newCart = cart.filter(item => item.id !== drugId);
+    setCart(newCart);
+  };
+
+  const updateQuantity = (drugId, change) => {
+    const newCart = cart.map(item =>
+        item.id === drugId
+            ? { ...item, quantity: Math.max(1, item.quantity + change) }
+            : item
+    );
+    setCart(newCart);
+  };
+
+  const getTotalPrice = () => {
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  };
+
+  const getTotalItems = () => {
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchDrugs();
+  };
+
+// ✅ رفتن به صفحه تسویه حساب - نیاز به لاگین
+  const goToCheckout = () => {
+    if (cart.length === 0) {
+      appMessage.warning(t('cartEmpty') || 'سبد خرید شما خالی است');
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      appMessage.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
+      router.push(`/${locale}/login?redirect=/${locale}/pharmacy/cart`);
+      return;
+    }
+
+    const checkoutData = {
+      items: cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      total: getTotalPrice(),
+    };
+
+    localStorage.setItem('pharmacyCheckoutData', JSON.stringify(checkoutData));
+    console.log('📦 Checkout data saved:', checkoutData);
+
+    setCartVisible(false);
+    router.push(`/${locale}/pharmacy/checkout`);
   };
 
   if (loading) {
     return (
-      <>
-        <Header />
-        <LoadingSpinner />
-        <Footer />
-      </>
-    );
-  }
-
-  if (!drug) {
-    return (
-      <>
-        <Header />
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', textAlign: 'center' }}>
-          <Title level={4}>{t('productNotFound') || 'دارو یافت نشد'}</Title>
-          <Button type="primary" onClick={() => router.push(`/${locale}/pharmacy`)}>
-            {t('backToPharmacy') || 'بازگشت به داروخانه'}
-          </Button>
-        </div>
-        <Footer />
-      </>
+        <>
+          <Header />
+          <LoadingSpinner />
+          <Footer />
+        </>
     );
   }
 
   return (
-    <>
-      <Header />
-      <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 20px' }}>
-          <Breadcrumb 
-            items={[
-              { title: t('home') || 'خانه', href: `/${locale}` },
-              { title: t('pharmacy') || 'داروخانه', href: `/${locale}/pharmacy` },
-              { title: drug.name },
-            ]}
-          />
+      <>
+        <Header />
+        <main style={{
+          minHeight: 'calc(100vh - 200px)',
+          backgroundImage: "url('/image/pha-2.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+          position: 'relative'
+        }}>
+          {/* اوورلی شیشه‌ای */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(255,255,255,0.88)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            zIndex: 0
+          }} />
 
-          <Row gutter={[24, 24]}>
-            {/* تصویر دارو */}
-            <Col xs={24} md={10}>
-              <Card style={{ borderRadius: '16px' }}>
-                <div style={{ 
-                  height: 300, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  background: '#f0f5ff',
-                  borderRadius: '12px',
-                }}>
-                  <MedicineBoxOutlined style={{ fontSize: 100, color: '#2563eb' }} />
-                </div>
-                {drug.requires_prescription && (
-                  <Alert
-                    message={t('requiresPrescription') || 'نیاز به نسخه پزشک'}
-                    description={t('prescriptionInfo') || 'برای خرید این دارو نیاز به ارائه نسخه پزشک معتبر دارید'}
-                    type="warning"
-                    showIcon
-                    style={{ marginTop: '16px' }}
-                  />
-                )}
-              </Card>
-            </Col>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 20px', position: 'relative', zIndex: 1 }}>
+            <Breadcrumb />
 
-            {/* اطلاعات دارو */}
-            <Col xs={24} md={14}>
-              <Card style={{ borderRadius: '16px' }}>
-                <div>
-                  {drug.requires_prescription && (
-                    <Tag color="orange" style={{ marginBottom: '8px', padding: '4px 12px' }}>
-                      📋 {t('requiresPrescription') || 'نیاز به نسخه پزشک'}
-                    </Tag>
-                  )}
-                  <Title level={2} style={{ marginBottom: '4px' }}>
-                    {drug.name}
-                  </Title>
-                  <Space size="middle" wrap>
-                    {drug.category && (
-                      <Tag color="blue">{drug.category}</Tag>
-                    )}
-                    {drug.manufacturer && (
-                      <Text type="secondary">
-                        {t('manufacturer') || 'سازنده'}: {drug.manufacturer}
-                      </Text>
-                    )}
-                    <Rate disabled defaultValue={4} style={{ fontSize: '14px' }} />
-                  </Space>
-                  {drug.generic_name && (
-                    <div style={{ marginTop: '8px' }}>
-                      <Text type="secondary">
-                        {t('genericName') || 'نام ژنریک'}: {drug.generic_name}
-                      </Text>
-                    </div>
-                  )}
-                </div>
-
-                <Divider />
-
-                <Row gutter={[16, 16]}>
-                  <Col xs={24} sm={12}>
-                    <div>
-                      <Text type="secondary">{t('price') || 'قیمت'}:</Text>
-                      <div>
-                        <Text strong style={{ color: '#2563eb', fontSize: '28px' }}>
-                          {drug.price?.toLocaleString() || 0}
-                        </Text>
-                        <Text type="secondary" style={{ fontSize: '16px' }}> تومان</Text>
-                      </div>
-                    </div>
-                  </Col>
-                  <Col xs={24} sm={12}>
-                    <div style={{ textAlign: 'left' }}>
-                      <Text type="secondary">{t('stock') || 'موجودی'}:</Text>
-                      <div>
-                        <Badge 
-                          status={drug.stock > 0 ? 'success' : 'error'} 
-                          text={drug.stock > 0 ? `${drug.stock} ${t('inStock') || 'موجود'}` : t('outOfStock') || 'ناموجود'}
-                        />
-                      </div>
-                    </div>
-                  </Col>
-                </Row>
-
-                <Divider />
-
-                <div>
-                  <Text strong>{t('quantity') || 'تعداد'}:</Text>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
-                    <InputNumber
-                      min={1}
-                      max={drug.stock || 10}
-                      value={quantity}
-                      onChange={setQuantity}
-                      style={{ width: 100 }}
-                    />
-                    <Button 
-                      type="primary" 
-                      size="large"
-                      icon={<ShoppingCartOutlined />}
-                      onClick={addToCart}
-                      disabled={drug.stock === 0}
-                      style={{ borderRadius: '12px', height: '48px', flex: 1 }}
-                    >
-                      {drug.stock > 0 ? t('addToCart') || 'افزودن به سبد خرید' : t('outOfStock') || 'ناموجود'}
-                    </Button>
-                  </div>
-                </div>
-
-                <Divider />
-
-                <Space direction="vertical" style={{ width: '100%' }} size="small">
-                  <div>
-                    <Text type="secondary">
-                      <SafetyOutlined /> {t('safeShopping') || 'خرید امن و تضمینی'}
-                    </Text>
-                  </div>
-                  <div>
-                    <Text type="secondary">
-                      <InfoCircleOutlined /> {t('deliveryInfo') || 'ارسال به سراسر کشور'}
-                    </Text>
-                  </div>
-                </Space>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* توضیحات و مشخصات */}
-          <Card style={{ marginTop: '24px', borderRadius: '16px' }}>
-            <Tabs defaultActiveKey="description">
-              <TabPane tab={t('description') || 'توضیحات'} key="description">
-                <Paragraph>
-                  {drug.description || t('noDescription') || 'توضیحاتی برای این دارو وارد نشده است.'}
-                </Paragraph>
-                {drug.strength && (
-                  <div>
-                    <Text strong>{t('strength') || 'قدرت دارو'}: </Text>
-                    <Text>{drug.strength}</Text>
-                  </div>
-                )}
-                {drug.form && (
-                  <div>
-                    <Text strong>{t('form') || 'شکل دارو'}: </Text>
-                    <Text>{drug.form}</Text>
-                  </div>
-                )}
-              </TabPane>
-              <TabPane tab={t('specifications') || 'مشخصات'} key="specifications">
-                <Descriptions bordered column={2}>
-                  <Descriptions.Item label={t('brand') || 'برند'}>
-                    {drug.brand || '—'}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t('genericName') || 'نام ژنریک'}>
-                    {drug.generic_name || '—'}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t('strength') || 'قدرت دارو'}>
-                    {drug.strength || '—'}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t('form') || 'شکل دارو'}>
-                    {drug.form || '—'}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t('requiresPrescription') || 'نیاز به نسخه'}>
-                    {drug.requires_prescription ? t('yes') || 'بله' : t('no') || 'خیر'}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t('stock') || 'موجودی'}>
-                    {drug.stock} {t('items') || 'عدد'}
-                  </Descriptions.Item>
-                </Descriptions>
-              </TabPane>
-            </Tabs>
-          </Card>
-
-          {/* داروهای مشابه */}
-          {relatedDrugs.length > 0 && (
-            <div style={{ marginTop: '24px' }}>
-              <Title level={4}>{t('relatedProducts') || 'داروهای مشابه'}</Title>
-              <Row gutter={[16, 16]}>
-                {relatedDrugs.filter(d => d.id !== drug.id).slice(0, 8).map((item) => (
-                  <Col key={item.id} xs={12} sm={8} md={6} lg={4}>
-                    <Card
-                      hoverable
-                      style={{ borderRadius: '12px' }}
-                      onClick={() => router.push(`/${locale}/pharmacy/drug/${item.id}`)}
-                      cover={
-                        <div style={{ 
-                          height: 80, 
-                          background: '#f5f5f5', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          borderRadius: '12px 12px 0 0',
-                        }}>
-                          <MedicineBoxOutlined style={{ fontSize: 32, color: '#999' }} />
-                        </div>
-                      }
-                    >
-                      <div style={{ minHeight: 60 }}>
-                        <Text strong style={{ fontSize: '12px' }}>{item.name}</Text>
-                        <div>
-                          <Text strong style={{ color: '#2563eb', fontSize: '14px' }}>
-                            {item.price?.toLocaleString() || 0} تومان
-                          </Text>
-                        </div>
-                      </div>
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
+            <div style={{
+              marginBottom: '24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '16px'
+            }}>
+              <div>
+                <Title level={2} style={{ marginBottom: '4px' }}>
+                  💊 {t('pharmacy.title')}
+                </Title>
+                <Text type="secondary">
+                  {t('pharmacy.subtitle')}
+                </Text>
+              </div>
+              <Badge count={getTotalItems()} offset={[10, 0]} size="large">
+                <Button
+                    type="primary"
+                    icon={<ShoppingCartOutlined />}
+                    onClick={() => setCartVisible(true)}
+                    size="large"
+                    style={{ borderRadius: '12px', height: '48px' }}
+                >
+                  {t('pharmacy.cart')} ({getTotalItems()})
+                </Button>
+              </Badge>
             </div>
+
+            <Card style={{
+              borderRadius: '16px',
+              marginBottom: '24px',
+              background: 'rgba(255,255,255,0.92)',
+              backdropFilter: 'blur(10px)',
+              border: 'none',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.04)'
+            }}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} md={8}>
+                  <Input
+                      placeholder={t('pharmacy.searchProducts')}
+                      prefix={<SearchOutlined />}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onPressEnter={handleSearch}
+                      style={{ borderRadius: '8px' }}
+                      allowClear
+                  />
+                </Col>
+                <Col xs={12} md={6}>
+                  <Select
+                      placeholder={t('pharmacy.selectCategory')}
+                      style={{ width: '100%' }}
+                      value={selectedCategory}
+                      onChange={setSelectedCategory}
+                      allowClear
+                  >
+                    <Option value="all">{t('pharmacy.allCategories')}</Option>
+                    {categories.map(cat => (
+                        <Option key={cat} value={cat}>{cat}</Option>
+                    ))}
+                  </Select>
+                </Col>
+                <Col xs={12} md={6}>
+                  <Select
+                      placeholder={t('pharmacy.prescription')}
+                      style={{ width: '100%' }}
+                      value={requiresPrescription}
+                      onChange={setRequiresPrescription}
+                  >
+                    <Option value="all">{t('pharmacy.all')}</Option>
+                    <Option value="required">{t('pharmacy.withPrescription')}</Option>
+                    <Option value="not_required">{t('pharmacy.withoutPrescription')}</Option>
+                  </Select>
+                </Col>
+                <Col xs={24} md={4}>
+                  <Button
+                      type="primary"
+                      block
+                      onClick={handleSearch}
+                      style={{ borderRadius: '8px' }}
+                  >
+                    {t('common.search') || 'جستجو'}
+                  </Button>
+                </Col>
+              </Row>
+            </Card>
+
+            <div style={{ marginBottom: '16px' }}>
+              <Text type="secondary">
+                {totalItems} {t('pharmacy.products')} {t('pharmacy.found')}
+              </Text>
+            </div>
+
+            {drugs.length > 0 ? (
+                <>
+                  <Row gutter={[16, 16]}>
+                    {drugs.map((drug) => (
+                        <Col xs={24} sm={12} md={8} lg={6} key={drug.id}>
+                          <Card
+                              hoverable
+                              style={{
+                                borderRadius: '12px',
+                                height: '100%',
+                                transition: 'all 0.3s ease',
+                                background: 'rgba(255,255,255,0.95)',
+                                backdropFilter: 'blur(10px)',
+                                border: 'none',
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.04)'
+                              }}
+                              cover={
+                                <div style={{
+                                  height: 140,
+                                  background: 'linear-gradient(135deg, #f0f5ff, #e0e7ff)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: '12px 12px 0 0',
+                                  position: 'relative',
+                                }}>
+                                  <MedicineBoxOutlined style={{ fontSize: 56, color: '#2563eb' }} />
+                                  {drug.requires_prescription && (
+                                      <Tag
+                                          color="orange"
+                                          style={{
+                                            position: 'absolute',
+                                            top: 8,
+                                            left: 8,
+                                            fontSize: '10px',
+                                          }}
+                                      >
+                                        {t('pharmacy.requiresPrescription')}
+                                      </Tag>
+                                  )}
+                                  {drug.stock === 0 && (
+                                      <Tag
+                                          color="red"
+                                          style={{
+                                            position: 'absolute',
+                                            top: 8,
+                                            right: 8,
+                                            fontSize: '10px',
+                                          }}
+                                      >
+                                        {t('pharmacy.outOfStock')}
+                                      </Tag>
+                                  )}
+                                </div>
+                              }
+                              actions={[
+                                <Button
+                                    type="primary"
+                                    size="small"
+                                    icon={<ShoppingCartOutlined />}
+                                    onClick={() => addToCart(drug)}
+                                    disabled={drug.stock === 0}
+                                    block
+                                    style={{ borderRadius: '8px' }}
+                                >
+                                  {drug.stock > 0 ? t('pharmacy.addToCart') : t('pharmacy.outOfStock')}
+                                </Button>,
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<EyeOutlined />}
+                                    onClick={() => router.push(`/${locale}/pharmacy/drug/${drug.id}`)}
+                                />,
+                              ]}
+                          >
+                            <div style={{ minHeight: 80 }}>
+                              <Tooltip title={drug.name}>
+                                <Text strong style={{ fontSize: '14px', display: 'block' }}>
+                                  {drug.name.length > 20 ? drug.name.substring(0, 20) + '...' : drug.name}
+                                </Text>
+                              </Tooltip>
+                              {drug.generic_name && (
+                                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                                    {drug.generic_name}
+                                  </Text>
+                              )}
+                              <div style={{ marginTop: '4px' }}>
+                                <Tag color="blue" style={{ fontSize: '10px' }}>
+                                  {drug.category || 'عمومی'}
+                                </Tag>
+                              </div>
+                              <div style={{ marginTop: '8px' }}>
+                                <Text strong style={{ color: '#2563eb', fontSize: '16px' }}>
+                                  {drug.price?.toLocaleString() || 0}
+                                </Text>
+                                <Text type="secondary" style={{ fontSize: '12px' }}> تومان</Text>
+                              </div>
+                              <div style={{ marginTop: '4px' }}>
+                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                  {t('pharmacy.stock')}: {drug.stock > 0 ? `${drug.stock} عدد` : t('pharmacy.outOfStock')}
+                                </Text>
+                              </div>
+                            </div>
+                          </Card>
+                        </Col>
+                    ))}
+                  </Row>
+
+                  <div style={{ marginTop: '32px', textAlign: 'center' }}>
+                    <Pagination
+                        current={currentPage}
+                        total={totalItems}
+                        pageSize={pageSize}
+                        onChange={(page) => setCurrentPage(page)}
+                        showSizeChanger
+                        onShowSizeChange={(_, size) => {
+                          setPageSize(size);
+                          setCurrentPage(1);
+                        }}
+                        locale={{
+                          items_per_page: `${t('pharmacy.perPage')}`,
+                          jump_to: `${t('pharmacy.goTo')}`,
+                        }}
+                    />
+                  </div>
+                </>
+            ) : (
+                <Empty
+                    description={t('pharmacy.noProducts')}
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                >
+                  <Button type="primary" onClick={() => {
+                    setSearchTerm('');
+                    setSelectedCategory('all');
+                    setRequiresPrescription('all');
+                    setCurrentPage(1);
+                    fetchDrugs();
+                  }}>
+                    {t('pharmacy.resetFilters')}
+                  </Button>
+                </Empty>
+            )}
+          </div>
+        </main>
+
+        {/* مودال سبد خرید */}
+        <Modal
+            title={
+              <Space>
+                <ShoppingCartOutlined />
+                {t('pharmacy.cart')} ({getTotalItems()} {t('common.items')})
+              </Space>
+            }
+            open={cartVisible}
+            onCancel={() => setCartVisible(false)}
+            footer={null}
+            width={600}
+        >
+          {cart.length > 0 ? (
+              <>
+                {cart.map((item) => (
+                    <Card key={item.id} size="small" style={{ marginBottom: '8px', borderRadius: '8px' }}>
+                      <Row align="middle" gutter={[16, 16]}>
+                        <Col flex="auto">
+                          <Text strong>{item.name}</Text>
+                          <br />
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            {item.price.toLocaleString()} تومان
+                          </Text>
+                          {item.requires_prescription && (
+                              <Tag color="orange" style={{ fontSize: '10px', marginLeft: '8px' }}>
+                                {t('pharmacy.requiresPrescription')}
+                              </Tag>
+                          )}
+                        </Col>
+                        <Col>
+                          <Space>
+                            <Button
+                                icon={<MinusOutlined />}
+                                size="small"
+                                onClick={() => updateQuantity(item.id, -1)}
+                            />
+                            <Text strong>{item.quantity}</Text>
+                            <Button
+                                icon={<PlusOutlined />}
+                                size="small"
+                                onClick={() => updateQuantity(item.id, 1)}
+                            />
+                            <Button
+                                icon={<DeleteOutlined />}
+                                size="small"
+                                danger
+                                onClick={() => removeFromCart(item.id)}
+                            />
+                          </Space>
+                        </Col>
+                      </Row>
+                    </Card>
+                ))}
+                <Divider />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text strong style={{ fontSize: '18px' }}>
+                    {t('common.total')}: {getTotalPrice().toLocaleString()} تومان
+                  </Text>
+                  <Button
+                      type="primary"
+                      size="large"
+                      loading={submitting}
+                      onClick={goToCheckout}
+                      style={{ borderRadius: '8px' }}
+                  >
+                    {t('pharmacy.checkout')}
+                  </Button>
+                </div>
+              </>
+          ) : (
+              <Empty description={t('pharmacy.cartEmpty')} />
           )}
-        </div>
-      </main>
-      <Footer />
-    </>
+        </Modal>
+
+        <Footer />
+      </>
   );
 }

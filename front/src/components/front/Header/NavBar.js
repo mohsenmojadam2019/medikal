@@ -54,9 +54,11 @@ const NavBar = () => {
     setContactModalVisible(true);
   };
 
+  // ✅ اصلاح: نوبت‌دهی به لیست پزشکان هدایت می‌شود
   const navItems = [
     { key: 'home', label: 'صفحه اصلی', href: `/${locale}` },
-    { key: 'appointments', label: 'نوبت‌دهی', href: `/${locale}/appointments/new` },
+    { key: 'doctors', label: 'پزشکان', href: `/${locale}/doctors` },
+    { key: 'appointments', label: 'نوبت‌دهی', href: `/${locale}/doctors` }, // ✅ تغییر به لیست پزشکان
     { key: 'pharmacy', label: 'داروخانه', href: `/${locale}/pharmacy` },
     { key: 'lab', label: 'آزمایشگاه', href: `/${locale}/lab` },
     { key: 'imaging', label: 'تصویربرداری', href: `/${locale}/imaging` },

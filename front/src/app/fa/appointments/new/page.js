@@ -1,4 +1,3 @@
-// /home/god/Videos/medikal/front/src/app/fa/appointments/new/page.js
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -21,7 +20,6 @@ import PersianCalendar from '@/components/shared/PersianCalendar';
 
 const { Title, Text } = Typography;
 
-// تبدیل تاریخ میلادی به شمسی
 function toPersianDate(date) {
   if (!date || !(date instanceof Date) || isNaN(date)) return '';
   try {
@@ -37,7 +35,6 @@ function toPersianDate(date) {
   }
 }
 
-// فرمت تاریخ برای API (YYYY-MM-DD)
 function formatDateForAPI(date) {
   if (!date || !(date instanceof Date) || isNaN(date)) return '';
   const year = date.getFullYear();
@@ -52,7 +49,6 @@ export default function NewAppointmentPage() {
   const { locale } = useLanguage();
   const { message: appMessage } = App.useApp();
 
-  // دریافت doctorId از query string
   const doctorId = searchParams.get('doctorId');
   console.log('🔍 doctorId from URL:', doctorId);
 
@@ -73,7 +69,9 @@ export default function NewAppointmentPage() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
-  // بررسی doctorId از چند منبع
+  // ============================================================
+  // ✅ بررسی doctorId - در صورت نبود، ریدایرکت به لیست پزشکان
+  // ============================================================
   useEffect(() => {
     let finalDoctorId = doctorId;
 
@@ -82,14 +80,15 @@ export default function NewAppointmentPage() {
       console.log('📦 doctorId from localStorage:', finalDoctorId);
     }
 
+    // ✅ اگر هیچ doctorId نداریم → ریدایرکت به لیست پزشکان
     if (!finalDoctorId) {
-      setError('شناسه پزشک یافت نشد');
-      setLoading(false);
-      appMessage.error('شناسه پزشک یافت نشد. لطفاً از صفحه پزشکان اقدام کنید.');
+      console.log('⚠️ No doctorId found, redirecting to doctors list');
+      setError('لطفاً ابتدا یک پزشک را از لیست انتخاب کنید');
       setRedirecting(true);
+
       const timer = setTimeout(() => {
         router.push(`/${locale}/doctors`);
-      }, 3000);
+      }, 2000);
       return () => clearTimeout(timer);
     }
 
@@ -97,7 +96,7 @@ export default function NewAppointmentPage() {
       console.log('🔄 Adding doctorId to URL:', finalDoctorId);
       router.replace(`/${locale}/appointments/new?doctorId=${finalDoctorId}`);
     }
-  }, [doctorId, locale, router, appMessage]);
+  }, [doctorId, locale, router]);
 
   // بررسی وضعیت لاگین
   useEffect(() => {
@@ -113,26 +112,16 @@ export default function NewAppointmentPage() {
 
       try {
         setError(null);
-        console.log('🌐 Fetching doctor:', `${API_URL}/api/doctors/${finalDoctorId}/public`);
-
         const res = await fetch(`${API_URL}/api/doctors/${finalDoctorId}/public`, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
         });
 
-        console.log('📡 Response status:', res.status);
-
         if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error('پزشک مورد نظر یافت نشد');
-          }
+          if (res.status === 404) throw new Error('پزشک مورد نظر یافت نشد');
           throw new Error(`خطا در دریافت اطلاعات پزشک (${res.status})`);
         }
 
         const data = await res.json();
-        console.log('📦 Doctor data:', data);
-
         if (data.success && data.data) {
           setDoctor(data.data);
         } else {
@@ -158,24 +147,14 @@ export default function NewAppointmentPage() {
     setLoadingSlots(true);
     try {
       const dateStr = formatDateForAPI(date);
-      console.log('🌐 Fetching slots:', `${API_URL}/api/appointments/doctors/${finalDoctorId}/available-slots?date=${dateStr}`);
-
-      const res = await fetch(`${API_URL}/api/appointments/doctors/${finalDoctorId}/available-slots?date=${dateStr}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const res = await fetch(
+          `${API_URL}/api/appointments/doctors/${finalDoctorId}/available-slots?date=${dateStr}`,
+          { headers: { 'Content-Type': 'application/json' } }
+      );
 
       const data = await res.json();
-      console.log('📦 Slots data:', data);
-
       if (data.success) {
-        const slots = data.data?.slots || [];
-        setAvailableSlots(slots);
-
-        if (slots.length === 0) {
-          // appMessage.info('هیچ زمانی برای این تاریخ موجود نیست');
-        }
+        setAvailableSlots(data.data?.slots || []);
       } else {
         appMessage.error(data.message || 'خطا در دریافت زمان‌ها');
         setAvailableSlots([]);
@@ -197,7 +176,6 @@ export default function NewAppointmentPage() {
     }
   }, [doctorId, selectedDate, fetchAvailableSlots, doctor]);
 
-  // تغییر تاریخ
   const handleDateChange = (date) => {
     if (date && date instanceof Date && !isNaN(date)) {
       setSelectedDate(date);
@@ -205,7 +183,6 @@ export default function NewAppointmentPage() {
     }
   };
 
-  // انتخاب زمان
   const handleSlotSelect = (slot) => {
     if (!slot.is_available) {
       appMessage.warning('این زمان قبلاً رزرو شده است');
@@ -214,7 +191,6 @@ export default function NewAppointmentPage() {
     setSelectedSlot(slot);
   };
 
-  // رزرو نوبت
   const handleBook = async () => {
     if (!isLoggedIn) {
       setShowLoginModal(true);
@@ -251,8 +227,6 @@ export default function NewAppointmentPage() {
         notes: '',
       };
 
-      console.log('📝 Booking data:', bookData);
-
       const res = await fetch(`${API_URL}/api/appointments`, {
         method: 'POST',
         headers: {
@@ -263,12 +237,8 @@ export default function NewAppointmentPage() {
       });
 
       const data = await res.json();
-      console.log('📦 Booking response:', data);
-
       if (data.success) {
         const appointment = data.data;
-        const appointmentId = appointment.id;
-
         const appointmentData = {
           doctorId: finalDoctorId,
           doctorName: doctor?.user?.name || doctor?.name || 'پزشک',
@@ -276,7 +246,7 @@ export default function NewAppointmentPage() {
           date: dateStr,
           time: timeStr,
           doctorFee: parseFloat(doctor?.consultation_fee) || 0,
-          appointmentId: appointmentId,
+          appointmentId: appointment.id,
           status: appointment.status,
         };
 
@@ -288,8 +258,7 @@ export default function NewAppointmentPage() {
       } else {
         let errorMsg = data.message || 'خطا در رزرو نوبت';
         if (data.errors) {
-          const errors = Object.values(data.errors).flat().join('، ');
-          errorMsg = errors || errorMsg;
+          errorMsg = Object.values(data.errors).flat().join('، ') || errorMsg;
         }
         appMessage.error(errorMsg);
       }
@@ -301,7 +270,6 @@ export default function NewAppointmentPage() {
     }
   };
 
-  // هدایت به صفحه لاگین
   const handleGoToLogin = () => {
     setShowLoginModal(false);
     const finalDoctorId = doctorId || localStorage.getItem('selectedDoctorId');
@@ -319,7 +287,6 @@ export default function NewAppointmentPage() {
     router.push(`/${locale}/login?redirect=/${locale}/appointments/checkout`);
   };
 
-  // غیرفعال کردن تاریخ‌های گذشته
   const disabledDate = (date) => {
     if (!date || !(date instanceof Date) || isNaN(date)) return true;
     const todayDate = new Date();
@@ -327,7 +294,37 @@ export default function NewAppointmentPage() {
     return date < todayDate;
   };
 
-  // نمایش لودینگ
+  // ============================================================
+  // ✅ نمایش ریدایرکت
+  // ============================================================
+  if (redirecting) {
+    return (
+        <>
+          <Header />
+          <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)' }}>
+            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px' }}>
+              <Card style={{ borderRadius: '16px', textAlign: 'center', padding: '40px 20px' }}>
+                <Alert
+                    message="در حال انتقال..."
+                    description={error || 'در حال انتقال به لیست پزشکان...'}
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: '24px' }}
+                />
+                <div>
+                  <Spin />
+                  <div style={{ marginTop: 12 }}>
+                    <Text type="secondary">در حال انتقال به صفحه پزشکان...</Text>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </main>
+          <Footer />
+        </>
+    );
+  }
+
   if (loading) {
     return (
         <>
@@ -338,7 +335,6 @@ export default function NewAppointmentPage() {
     );
   }
 
-  // نمایش خطا
   if (error) {
     return (
         <>
@@ -353,22 +349,13 @@ export default function NewAppointmentPage() {
                     showIcon
                     style={{ marginBottom: '24px' }}
                 />
-                {redirecting ? (
-                    <div>
-                      <Spin />
-                      <div style={{ marginTop: 12 }}>
-                        <Text type="secondary">در حال انتقال به صفحه پزشکان...</Text>
-                      </div>
-                    </div>
-                ) : (
-                    <Button
-                        type="primary"
-                        onClick={() => router.push(`/${locale}/doctors`)}
-                        size="large"
-                    >
-                      بازگشت به لیست پزشکان
-                    </Button>
-                )}
+                <Button
+                    type="primary"
+                    onClick={() => router.push(`/${locale}/doctors`)}
+                    size="large"
+                >
+                  بازگشت به لیست پزشکان
+                </Button>
               </Card>
             </div>
           </main>
@@ -377,7 +364,6 @@ export default function NewAppointmentPage() {
     );
   }
 
-  // اگر پزشک وجود نداشت
   if (!doctor) {
     return (
         <>
@@ -405,7 +391,9 @@ export default function NewAppointmentPage() {
     );
   }
 
-  // نمایش اصلی صفحه
+  // ============================================================
+  // ✅ نمایش اصلی صفحه
+  // ============================================================
   return (
       <>
         <Header />
@@ -604,7 +592,7 @@ export default function NewAppointmentPage() {
                           fontWeight: 'bold',
                         }}
                     >
-                      {selectedSlot ? `رزرو و پرداخت` : 'ابتدا یک زمان انتخاب کنید'}
+                      {selectedSlot ? 'رزرو و پرداخت' : 'ابتدا یک زمان انتخاب کنید'}
                     </Button>
                   </div>
 
