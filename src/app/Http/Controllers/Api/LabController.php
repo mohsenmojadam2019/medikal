@@ -26,6 +26,7 @@ class LabController extends Controller
         $this->labService = $labService;
     }
 
+
     // ============================================================
     // ORDERS
     // ============================================================

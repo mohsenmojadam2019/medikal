@@ -1,11 +1,10 @@
 <?php
+// app/Models/PharmacyOrder.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Enums\PharmacyOrderStatusEnum;
-use App\Enums\PharmacyOrderPaymentStatusEnum;
 
 class PharmacyOrder extends Model
 {
@@ -37,12 +36,17 @@ class PharmacyOrder extends Model
         'cancelled_at',
         'metadata',
         'notes',
-
-        // ✅ اضافه کردن فیلدهای اطلاعات تحویل
         'recipient_name',
         'recipient_phone',
         'delivery_address',
         'delivery_notes',
+        // ✅ فیلدهای جدید نسخه پزشکی
+        'prescription_file',
+        'prescription_status',
+        'prescription_reject_reason',
+        'prescription_approved_at',
+        'prescription_rejected_at',
+        'prescription_approved_by',
     ];
 
     protected $casts = [
@@ -61,6 +65,8 @@ class PharmacyOrder extends Model
         'metadata' => 'array',
         'available_items' => 'array',
         'unavailable_items' => 'array',
+        'prescription_approved_at' => 'datetime',
+        'prescription_rejected_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -68,6 +74,7 @@ class PharmacyOrder extends Model
         'status_color',
         'payment_status_label',
         'is_paid',
+        'prescription_status_label', // ✅ اضافه شد
     ];
 
     // ============================================
@@ -92,6 +99,11 @@ class PharmacyOrder extends Model
     public function notifications()
     {
         return $this->hasMany(PharmacyNotification::class);
+    }
+
+    public function prescriptionApprovedBy()
+    {
+        return $this->belongsTo(User::class, 'prescription_approved_by');
     }
 
     // ============================================
@@ -142,6 +154,26 @@ class PharmacyOrder extends Model
         return $this->payment_status === 'paid';
     }
 
+    // ✅ اضافه شد
+    public function getPrescriptionStatusLabelAttribute()
+    {
+        return match ($this->prescription_status) {
+            'none' => 'نیاز به نسخه ندارد',
+            'pending' => 'در انتظار بررسی نسخه',
+            'approved' => 'نسخه تایید شد ✅',
+            'rejected' => 'نسخه رد شد ❌',
+            default => $this->prescription_status,
+        };
+    }
+
+    public function getPrescriptionFileUrlAttribute()
+    {
+        if ($this->prescription_file) {
+            return asset('storage/' . $this->prescription_file);
+        }
+        return null;
+    }
+
     // ============================================
     // Scopes
     // ============================================
@@ -164,5 +196,16 @@ class PharmacyOrder extends Model
     public function scopeByPatient($query, $patientId)
     {
         return $query->where('patient_id', $patientId);
+    }
+
+    // ✅ اسکوپ جدید
+    public function scopePrescriptionPending($query)
+    {
+        return $query->where('prescription_status', 'pending');
+    }
+
+    public function scopePrescriptionApproved($query)
+    {
+        return $query->where('prescription_status', 'approved');
     }
 }

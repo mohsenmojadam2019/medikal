@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('specialty_id')->nullable()->constrained('specialties')->onDelete('set null');
+            $table->foreignId('clinic_id')->nullable()->constrained('clinics')->onDelete('set null');
 
             $table->string('license_number')->unique();
             $table->string('clinic_name')->nullable();

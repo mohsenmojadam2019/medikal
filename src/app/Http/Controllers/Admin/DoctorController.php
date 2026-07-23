@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Admin/DoctorController.php
 
 namespace App\Http\Controllers\Admin;
 
@@ -23,30 +24,41 @@ class DoctorController extends Controller
     }
 
     /**
-     * لیست پزشکان
+     * لیست پزشکان (ادمین)
      */
     public function index(Request $request)
     {
-        $query = Doctor::with(['user', 'specialty']);
+        $query = Doctor::with([
+            'user',
+            'specialty',
+            'clinic',
+            'province',
+            'city'
+        ]);
 
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('clinic_name', 'LIKE', "%{$search}%")
-                    ->orWhereHas('user', function ($q2) use ($search) {
-                        $q2->where('name', 'LIKE', "%{$search}%")
-                            ->orWhere('mobile', 'LIKE', "%{$search}%");
-                    })
-                    ->orWhere('license_number', 'LIKE', "%{$search}%");
-            });
+        // فیلتر بر اساس کلینیک
+        if ($request->has('clinic_id') && $request->clinic_id) {
+            $query->where('clinic_id', $request->clinic_id);
         }
 
-        if ($request->has('fee_type') && $request->fee_type !== 'all') {
-            $query->where('appointment_fee_type', $request->fee_type);
+        // فیلتر بر اساس استان
+        if ($request->has('province_id') && $request->province_id) {
+            $query->where('province_id', $request->province_id);
         }
 
+        // فیلتر بر اساس شهر
+        if ($request->has('city_id') && $request->city_id) {
+            $query->where('city_id', $request->city_id);
+        }
+
+        // فیلتر بر اساس تخصص
         if ($request->has('specialty_id') && $request->specialty_id) {
             $query->where('specialty_id', $request->specialty_id);
+        }
+
+        // فیلتر بر اساس وضعیت
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->is_active);
         }
 
         if ($request->has('is_available')) {
@@ -57,10 +69,28 @@ class DoctorController extends Controller
             $query->where('is_verified', $request->is_verified);
         }
 
+        // فیلتر بر اساس هزینه
+        if ($request->has('fee_type') && $request->fee_type !== 'all') {
+            $query->where('appointment_fee_type', $request->fee_type);
+        }
+
+        // جستجو
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('clinic_name', 'LIKE', "%{$search}%")
+                    ->orWhere('license_number', 'LIKE', "%{$search}%")
+                    ->orWhereHas('user', function ($q2) use ($search) {
+                        $q2->where('name', 'LIKE', "%{$search}%")
+                            ->orWhere('mobile', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
         $doctors = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
-        // اضافه کردن اطلاعات هزینه به هر پزشک
+        // اضافه کردن اطلاعات هزینه
         $doctors->getCollection()->transform(function ($doctor) {
             $doctor->fee_label = $doctor->appointment_fee_label;
             $doctor->fee_value = $doctor->getFeeForAppointment();
@@ -72,25 +102,42 @@ class DoctorController extends Controller
     }
 
     /**
-     * ایجاد پزشک جدید
+     * ایجاد پزشک جدید (ادمین)
      */
     public function store(StoreDoctorRequest $request)
     {
         try {
             $doctor = $this->doctorService->create($request->validated());
-            return $this->success($doctor, 'پزشک با موفقیت ایجاد شد', 201);
+            return $this->success(
+                $doctor->load(['user', 'specialty', 'clinic', 'province', 'city']),
+                'پزشک با موفقیت ایجاد شد',
+                201
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
 
     /**
-     * نمایش پزشک
+     * نمایش پزشک (ادمین)
      */
     public function show($id)
     {
         try {
-            $doctor = $this->doctorService->show($id);
+            $doctor = Doctor::with([
+                'user',
+                'specialty',
+                'clinic',
+                'province',
+                'city',
+                'primaryAddress',
+                'schedules'
+            ])->findOrFail($id);
+
+            $doctor->fee_label = $doctor->appointment_fee_label;
+            $doctor->fee_value = $doctor->getFeeForAppointment();
+            $doctor->is_free = $doctor->isFreeAppointment();
+
             return $this->success($doctor);
         } catch (\Exception $e) {
             return $this->error('پزشک یافت نشد', 404);
@@ -98,21 +145,21 @@ class DoctorController extends Controller
     }
 
     /**
-     * به‌روزرسانی پزشک
+     * به‌روزرسانی پزشک (ادمین)
      */
     public function update(UpdateDoctorRequest $request, $id)
     {
         try {
-            $doctor = Doctor::findOrFail($id);
+            $doctor = Doctor::with(['user', 'specialty', 'clinic', 'province', 'city'])->findOrFail($id);
             $doctor = $this->doctorService->update($doctor, $request->validated());
-            return $this->success($doctor, 'پزشک با موفقیت به‌روزرسانی شد');
+            return $this->success($doctor->load(['user', 'specialty', 'clinic', 'province', 'city']), 'پزشک با موفقیت به‌روزرسانی شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
 
     /**
-     * حذف پزشک
+     * حذف پزشک (ادمین)
      */
     public function destroy($id)
     {
@@ -126,7 +173,7 @@ class DoctorController extends Controller
     }
 
     /**
-     * تغییر وضعیت پزشک
+     * تغییر وضعیت پزشک (ادمین)
      */
     public function toggleAvailability($id)
     {
@@ -140,7 +187,7 @@ class DoctorController extends Controller
     }
 
     /**
-     * تایید پزشک
+     * تایید پزشک (ادمین)
      */
     public function verify($id)
     {
@@ -150,37 +197,6 @@ class DoctorController extends Controller
             return $this->success($doctor, 'پزشک با موفقیت تایید شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
-        }
-    }
-
-    /**
-     * لیست پزشکان عمومی (بدون احراز هویت)
-     */
-    public function publicList(Request $request)
-    {
-        $doctors = $this->doctorService->publicList($request->all(), $request->get('per_page', 15));
-        return $this->success($doctors);
-    }
-
-    /**
-     * نمایش عمومی پزشک
-     */
-    public function publicShow($id)
-    {
-        try {
-            $doctor = Doctor::with(['user', 'specialty', 'primaryAddress', 'schedules'])
-                ->where('is_available', true)
-                ->where('is_verified', true)
-                ->findOrFail($id);
-            
-            // اضافه کردن اطلاعات هزینه
-            $doctor->fee_label = $doctor->appointment_fee_label;
-            $doctor->fee_value = $doctor->getFeeForAppointment();
-            $doctor->is_free = $doctor->isFreeAppointment();
-            
-            return $this->success($doctor);
-        } catch (\Exception $e) {
-            return $this->error('پزشک یافت نشد', 404);
         }
     }
 
@@ -206,13 +222,13 @@ class DoctorController extends Controller
 
         try {
             $doctor->appointment_fee_type = $request->fee_type;
-            
+
             if ($request->fee_type === 'paid') {
                 $doctor->appointment_fee_amount = $request->fee_amount;
             } else {
                 $doctor->appointment_fee_amount = null;
             }
-            
+
             $doctor->save();
 
             return $this->success([
@@ -223,7 +239,6 @@ class DoctorController extends Controller
                 'fee_label' => $doctor->appointment_fee_label,
                 'fee_value' => $doctor->getFeeForAppointment(),
                 'is_free' => $doctor->isFreeAppointment(),
-                'message' => 'هزینه نوبت با موفقیت تنظیم شد'
             ], 'هزینه نوبت با موفقیت تنظیم شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
@@ -231,13 +246,13 @@ class DoctorController extends Controller
     }
 
     /**
-     * دریافت اطلاعات هزینه نوبت پزشک
+     * دریافت اطلاعات هزینه نوبت پزشک (ادمین)
      */
     public function getAppointmentFee($id)
     {
         try {
             $doctor = Doctor::findOrFail($id);
-            
+
             return $this->success([
                 'doctor_id' => $doctor->id,
                 'doctor_name' => $doctor->full_name,
@@ -254,41 +269,7 @@ class DoctorController extends Controller
     }
 
     /**
-     * دریافت لیست پزشکان با فیلتر هزینه (عمومی)
-     */
-    public function getDoctorsByFee(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'fee_type' => 'required|in:free,paid,all',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
-        }
-
-        $query = Doctor::with(['user', 'specialty'])
-            ->where('is_available', true)
-            ->where('is_verified', true);
-
-        if ($request->fee_type !== 'all') {
-            $query->where('appointment_fee_type', $request->fee_type);
-        }
-
-        $doctors = $query->orderBy('rating', 'desc')
-            ->paginate($request->get('per_page', 15));
-
-        $doctors->getCollection()->transform(function ($doctor) {
-            $doctor->fee_label = $doctor->appointment_fee_label;
-            $doctor->fee_value = $doctor->getFeeForAppointment();
-            $doctor->is_free = $doctor->isFreeAppointment();
-            return $doctor;
-        });
-
-        return $this->success($doctors);
-    }
-
-    /**
-     * تنظیم پزشک به صورت رایگان (میانبر)
+     * تنظیم پزشک به صورت رایگان (میانبر - ادمین)
      */
     public function setFree($id)
     {
@@ -312,7 +293,7 @@ class DoctorController extends Controller
     }
 
     /**
-     * تنظیم پزشک به صورت پولی (میانبر)
+     * تنظیم پزشک به صورت پولی (میانبر - ادمین)
      */
     public function setPaid(Request $request, $id)
     {

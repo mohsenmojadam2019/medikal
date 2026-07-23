@@ -13,6 +13,9 @@ class Doctor extends Model
     protected $fillable = [
         'tenant_id',
         'user_id',
+        'clinic_id',
+        'province_id',
+        'city_id',
         'specialty_id',
         'license_number',
         'clinic_name',
@@ -62,6 +65,21 @@ class Doctor extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function clinic()
+    {
+        return $this->belongsTo(Clinic::class);
+    }
+
+    public function province()
+    {
+        return $this->belongsTo(Province::class);
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class);
+    }
+
     public function specialty()
     {
         return $this->belongsTo(Specialty::class);
@@ -102,10 +120,24 @@ class Doctor extends Model
         return $this->hasMany(MedicalNote::class);
     }
 
+    public function medicalImages()
+    {
+        return $this->hasMany(MedicalImage::class);
+    }
+
     // ========== Accessors ==========
     public function getFullNameAttribute(): string
     {
         return $this->user?->name ?? $this->name ?? 'پزشک';
+    }
+
+    public function getFullAddressAttribute(): string
+    {
+        $parts = [];
+        if ($this->clinic_address) $parts[] = $this->clinic_address;
+        if ($this->city) $parts[] = $this->city->name;
+        if ($this->province) $parts[] = $this->province->name;
+        return implode('، ', $parts);
     }
 
     public function getAppointmentFeeLabelAttribute(): string
@@ -167,6 +199,11 @@ class Doctor extends Model
     public function scopeBySpecialty($query, $specialtyId)
     {
         return $query->where('specialty_id', $specialtyId);
+    }
+
+    public function scopeByClinic($query, $clinicId)
+    {
+        return $query->where('clinic_id', $clinicId);
     }
 
     // ========== Methods ==========

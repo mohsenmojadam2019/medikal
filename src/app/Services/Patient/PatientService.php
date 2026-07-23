@@ -1,4 +1,5 @@
 <?php
+// app/Services/Patient/PatientService.php
 
 namespace App\Services\Patient;
 
@@ -21,28 +22,43 @@ class PatientService
     public function list(array $filters = [], int $perPage = 15)
     {
         $query = Patient::where('tenant_id', $this->tenantId)
-            ->with(['user', 'doctor', 'primaryAddress']);
+            ->with(['user', 'doctor', 'province', 'city', 'primaryAddress']);
 
+        // جستجو
         if (isset($filters['search'])) {
             $query->search($filters['search']);
         }
 
+        // فیلتر بر اساس پزشک
         if (isset($filters['doctor_id'])) {
             $query->byDoctor($filters['doctor_id']);
         }
 
+        // ✅ فیلتر بر اساس استان
+        if (isset($filters['province_id']) && $filters['province_id']) {
+            $query->byProvince($filters['province_id']);
+        }
+
+        // ✅ فیلتر بر اساس شهر
+        if (isset($filters['city_id']) && $filters['city_id']) {
+            $query->byCity($filters['city_id']);
+        }
+
+        // فیلتر بر اساس فعال
         if (isset($filters['is_active'])) {
             $query->where('is_active', $filters['is_active']);
         }
 
+        // فیلتر بر اساس تایید شده
         if (isset($filters['is_verified'])) {
             if ($filters['is_verified']) {
                 $query->verified();
             } else {
-                $query->unverified();
+                $query->whereNull('verified_at');
             }
         }
 
+        // فیلتر تاریخ
         if (isset($filters['from_date'])) {
             $query->whereDate('created_at', '>=', $filters['from_date']);
         }
@@ -57,8 +73,9 @@ class PatientService
     public function create(array $data): Patient
     {
         return DB::transaction(function () use ($data) {
+            // ایجاد کاربر
             $userData = [
-                'name' => $data['name'],
+                'name' => $data['name'] ?? $data['full_name'] ?? 'بیمار',
                 'mobile' => $data['mobile'],
                 'is_active' => true,
             ];
@@ -77,6 +94,7 @@ class PatientService
             $patientRole = Role::firstOrCreate(['name' => 'patient', 'guard_name' => 'web']);
             $user->assignRole($patientRole);
 
+            // ایجاد بیمار
             $patientData = [
                 'tenant_id' => $this->tenantId,
                 'user_id' => $user->id,
@@ -84,21 +102,21 @@ class PatientService
                 'full_name' => $data['full_name'] ?? $data['name'] ?? null,
                 'phone' => $data['phone'] ?? $data['mobile'] ?? null,
                 'address' => $data['address'] ?? null,
+                'province_id' => $data['province_id'] ?? null,
+                'city_id' => $data['city_id'] ?? null,
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
                 'insurance_type' => $data['insurance_type'] ?? null,
                 'insurance_number' => $data['insurance_number'] ?? null,
-                'emergency_contact' => $data['emergency_contact'] ?? null,
-                'blood_type' => $data['blood_type'] ?? null,
                 'is_active' => $data['is_active'] ?? true,
                 'doctor_id' => $data['doctor_id'] ?? null,
-                'verified_at' => $data['is_verified'] ?? false ? now() : null,
+                'verified_at' => isset($data['is_verified']) && $data['is_verified'] ? now() : null,
+                'metadata' => $data['metadata'] ?? null,
             ];
-
-            if (isset($data['metadata'])) {
-                $patientData['metadata'] = $data['metadata'];
-            }
 
             $patient = Patient::create($patientData);
 
+            // ایجاد آدرس
             if (isset($data['address']) && is_array($data['address'])) {
                 $patient->addresses()->create(array_merge(
                     $data['address'],
@@ -106,7 +124,7 @@ class PatientService
                 ));
             }
 
-            return $patient->load(['user', 'doctor', 'primaryAddress']);
+            return $patient->load(['user', 'doctor', 'province', 'city', 'primaryAddress']);
         });
     }
 
@@ -117,6 +135,8 @@ class PatientService
                 'user',
                 'doctor.user',
                 'doctor.specialty',
+                'province',
+                'city',
                 'primaryAddress',
                 'primaryAddress.province',
                 'primaryAddress.city',
@@ -151,8 +171,9 @@ class PatientService
             // آپدیت اطلاعات بیمار
             $patientData = array_intersect_key($data, array_flip([
                 'national_code', 'full_name', 'phone', 'address',
-                'insurance_type', 'insurance_number', 'emergency_contact',
-                'blood_type', 'is_active', 'doctor_id', 'metadata'
+                'province_id', 'city_id', 'latitude', 'longitude',
+                'insurance_type', 'insurance_number', 'is_active',
+                'doctor_id', 'verified_at', 'metadata'
             ]));
 
             // اگر full_name وارد نشده ولی name وارد شده، از name استفاده کن
@@ -182,7 +203,7 @@ class PatientService
                 }
             }
 
-            return $patient->fresh(['user', 'doctor', 'primaryAddress']);
+            return $patient->fresh(['user', 'doctor', 'province', 'city', 'primaryAddress']);
         });
     }
 
@@ -221,19 +242,45 @@ class PatientService
 
     public function getMedicalHistory(Patient $patient): array
     {
-        return $patient->getMedicalHistory();
+        return [
+            'patient' => $patient->load(['user', 'doctor', 'province', 'city']),
+            'appointments' => $patient->appointments()->with(['doctor'])->orderBy('date', 'desc')->get(),
+            'prescriptions' => $patient->prescriptions()->with(['doctor'])->orderBy('created_at', 'desc')->get(),
+            'invoices' => $patient->invoices()->orderBy('created_at', 'desc')->get(),
+            'medical_notes' => \App\Models\MedicalNote::where('patient_id', $patient->id)
+                ->with(['doctor'])
+                ->orderBy('created_at', 'desc')
+                ->get(),
+        ];
     }
 
     public function getStatistics(Patient $patient): array
     {
-        return $patient->getStatistics();
+        return [
+            'total_appointments' => $patient->appointments()->count(),
+            'completed_appointments' => $patient->appointments()->where('status', 'completed')->count(),
+            'cancelled_appointments' => $patient->appointments()->where('status', 'cancelled')->count(),
+            'total_prescriptions' => $patient->prescriptions()->count(),
+            'active_prescriptions' => $patient->prescriptions()->where('status', 'active')->count(),
+            'total_invoices' => $patient->invoices()->count(),
+            'paid_invoices' => $patient->invoices()->where('status', 'paid')->count(),
+            'total_spent' => $patient->invoices()->where('status', 'paid')->sum('total_amount'),
+            'last_visit' => $patient->appointments()
+                ->where('status', 'completed')
+                ->orderBy('date', 'desc')
+                ->first(),
+            'next_appointment' => $patient->appointments()
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->orderBy('date', 'asc')
+                ->first(),
+        ];
     }
 
     public function findByNationalCode(string $nationalCode): ?Patient
     {
         return Patient::where('tenant_id', $this->tenantId)
             ->where('national_code', $nationalCode)
-            ->with(['user', 'doctor'])
+            ->with(['user', 'doctor', 'province', 'city'])
             ->first();
     }
 
@@ -243,14 +290,14 @@ class PatientService
             ->whereHas('user', function ($query) use ($mobile) {
                 $query->where('mobile', $mobile);
             })
-            ->with(['user', 'doctor'])
+            ->with(['user', 'doctor', 'province', 'city'])
             ->first();
     }
 
     public function getPatientsWithoutDoctor()
     {
         return Patient::where('tenant_id', $this->tenantId)
-            ->with(['user'])
+            ->with(['user', 'province', 'city'])
             ->whereNull('doctor_id')
             ->where('is_active', true)
             ->get();
@@ -259,7 +306,7 @@ class PatientService
     public function getTopPatients(int $limit = 10)
     {
         return Patient::where('tenant_id', $this->tenantId)
-            ->with(['user'])
+            ->with(['user', 'province', 'city'])
             ->withCount('appointments')
             ->where('is_active', true)
             ->orderBy('appointments_count', 'desc')
@@ -267,20 +314,14 @@ class PatientService
             ->get();
     }
 
-    /**
-     * دریافت اطلاعات بیمار جاری (بر اساس user_id)
-     */
     public function getCurrentPatient(int $userId): ?Patient
     {
         return Patient::where('tenant_id', $this->tenantId)
             ->where('user_id', $userId)
-            ->with(['user'])
+            ->with(['user', 'province', 'city'])
             ->first();
     }
 
-    /**
-     * بروزرسانی اطلاعات بیمار جاری
-     */
     public function updateCurrentPatient(int $userId, array $data): Patient
     {
         return DB::transaction(function () use ($userId, $data) {
@@ -289,7 +330,6 @@ class PatientService
                 ->first();
 
             if (!$patient) {
-                // اگر بیمار وجود نداشت، ایجاد کن
                 $user = User::findOrFail($userId);
                 $patient = Patient::create([
                     'tenant_id' => $this->tenantId,
@@ -300,9 +340,9 @@ class PatientService
                 ]);
             }
 
-            // آپدیت اطلاعات بیمار
             $patientData = array_intersect_key($data, array_flip([
                 'national_code', 'full_name', 'phone', 'address',
+                'province_id', 'city_id', 'latitude', 'longitude',
                 'insurance_type', 'insurance_number'
             ]));
 
@@ -310,7 +350,7 @@ class PatientService
                 $patient->update($patientData);
             }
 
-            return $patient->fresh(['user']);
+            return $patient->fresh(['user', 'province', 'city']);
         });
     }
 }

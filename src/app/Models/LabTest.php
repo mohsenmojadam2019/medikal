@@ -15,6 +15,9 @@ class LabTest extends Model
         'code',
         'name',
         'short_name',
+        'clinic_id',
+        'province_id',
+        'city_id',
         'description',
         'sample_type',
         'unit',
@@ -49,6 +52,21 @@ class LabTest extends Model
         return $this->belongsTo(LabCategory::class, 'category_id');
     }
 
+    public function clinic()
+    {
+        return $this->belongsTo(Clinic::class);
+    }
+
+    public function province()
+    {
+        return $this->belongsTo(Province::class);
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class);
+    }
+
     public function orderTests()
     {
         return $this->hasMany(LabOrderTest::class);
@@ -59,28 +77,18 @@ class LabTest extends Model
         return $this->hasMany(LabResult::class);
     }
 
-    // ========== Scopes ==========
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeSearch($query, string $term)
-    {
-        return $query->where(function ($q) use ($term) {
-            $q->where('name', 'LIKE', "%{$term}%")
-                ->orWhere('code', 'LIKE', "%{$term}%")
-                ->orWhere('short_name', 'LIKE', "%{$term}%")
-                ->orWhere('description', 'LIKE', "%{$term}%");
-        });
-    }
-
-    public function scopeByCategory($query, $categoryId)
-    {
-        return $query->where('category_id', $categoryId);
-    }
-
     // ========== Accessors ==========
+    public function getFullAddressAttribute(): string
+    {
+        $parts = [];
+        if ($this->clinic) {
+            $parts[] = $this->clinic->address;
+            if ($this->city) $parts[] = $this->city->name;
+            if ($this->province) $parts[] = $this->province->name;
+        }
+        return implode('، ', $parts);
+    }
+
     public function getDisplayNameAttribute(): string
     {
         return $this->short_name ? "{$this->name} ({$this->short_name})" : $this->name;
@@ -115,6 +123,32 @@ class LabTest extends Model
     public function getPriceDisplayAttribute(): string
     {
         return number_format($this->price ?? 0) . ' تومان';
+    }
+
+    // ========== Scopes ==========
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeSearch($query, string $term)
+    {
+        return $query->where(function ($q) use ($term) {
+            $q->where('name', 'LIKE', "%{$term}%")
+                ->orWhere('code', 'LIKE', "%{$term}%")
+                ->orWhere('short_name', 'LIKE', "%{$term}%")
+                ->orWhere('description', 'LIKE', "%{$term}%");
+        });
+    }
+
+    public function scopeByCategory($query, $categoryId)
+    {
+        return $query->where('category_id', $categoryId);
+    }
+
+    public function scopeByClinic($query, $clinicId)
+    {
+        return $query->where('clinic_id', $clinicId);
     }
 
     // ========== Methods ==========

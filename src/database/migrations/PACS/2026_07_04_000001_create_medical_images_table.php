@@ -15,6 +15,11 @@ return new class extends Migration
             $table->foreignId('admission_id')->nullable()->constrained('admissions')->nullOnDelete();
             $table->foreignId('appointment_id')->nullable()->constrained('appointments')->nullOnDelete();
 
+            $table->foreignId('clinic_id')->nullable()->constrained('clinics')->nullOnDelete();
+            $table->foreignId('province_id')->nullable()->constrained('provinces')->nullOnDelete();
+            $table->foreignId('city_id')->nullable()->constrained('cities')->nullOnDelete();
+
+
             $table->string('image_type');
             $table->string('file_name');
             $table->string('file_path');
@@ -31,6 +36,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->timestamp('study_date')->nullable();
             $table->text('report')->nullable();
+            $table->boolean('is_active')->default(true);
 
             $table->boolean('is_confidential')->default(false);
             $table->foreignId('uploaded_by')->nullable()->constrained('users')->nullOnDelete();
@@ -43,6 +49,8 @@ return new class extends Migration
             $table->index(['patient_id', 'study_date']);
             $table->index('study_uid');
             $table->index('modality');
+            $table->index('is_active');
+
         });
     }
 

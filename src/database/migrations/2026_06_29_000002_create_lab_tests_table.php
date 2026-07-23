@@ -14,6 +14,9 @@ return new class extends Migration
             $table->string('code')->unique();
             $table->string('name');
             $table->string('short_name')->nullable();
+            $table->foreignId('clinic_id')->nullable()->constrained('clinics')->nullOnDelete();
+            $table->foreignId('province_id')->nullable()->constrained('provinces')->nullOnDelete();
+            $table->foreignId('city_id')->nullable()->constrained('cities')->nullOnDelete();
             $table->text('description')->nullable();
             $table->string('sample_type')->nullable();
             $table->string('unit')->nullable();

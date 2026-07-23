@@ -13,6 +13,8 @@ class Clinic extends Model
         'tenant_id',
         'name',
         'slug',
+        'province_id',
+        'city_id',
         'address',
         'phone',
         'email',
@@ -52,6 +54,16 @@ class Clinic extends Model
     ];
 
     // ========== Relationships ==========
+    public function province()
+    {
+        return $this->belongsTo(Province::class);
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class);
+    }
+
     public function doctors()
     {
         return $this->hasMany(Doctor::class);
@@ -67,7 +79,31 @@ class Clinic extends Model
         return $this->hasMany(Appointment::class);
     }
 
+    public function pharmacies()
+    {
+        return $this->hasMany(Pharmacy::class);
+    }
+
+    public function labTests()
+    {
+        return $this->hasMany(LabTest::class);
+    }
+
+    public function medicalImages()
+    {
+        return $this->hasMany(MedicalImage::class);
+    }
+
     // ========== Accessors ==========
+    public function getFullAddressAttribute(): string
+    {
+        $parts = [];
+        if ($this->address) $parts[] = $this->address;
+        if ($this->city) $parts[] = $this->city->name;
+        if ($this->province) $parts[] = $this->province->name;
+        return implode('، ', $parts);
+    }
+
     public function getLogoUrlAttribute(): ?string
     {
         return $this->logo ? asset('storage/' . $this->logo) : null;
@@ -132,8 +168,8 @@ class Clinic extends Model
                 sin(radians(latitude))
             )) AS distance
         ", [$lat, $lng, $lat])
-        ->having('distance', '<', $radius)
-        ->orderBy('distance', 'asc');
+            ->having('distance', '<', $radius)
+            ->orderBy('distance', 'asc');
     }
 
     // ========== Methods ==========

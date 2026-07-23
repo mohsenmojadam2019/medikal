@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Admin/PatientController.php
 
 namespace App\Http\Controllers\Admin;
 
@@ -22,11 +23,23 @@ class PatientController extends Controller
     }
 
     /**
-     * لیست بیماران
+     * لیست بیماران (با فیلتر استان و شهر)
      */
     public function index(Request $request)
     {
-        $patients = $this->patientService->list($request->all(), $request->get('per_page', 15));
+        $filters = $request->all();
+
+        // فیلتر بر اساس استان
+        if ($request->has('province_id') && $request->province_id) {
+            $filters['province_id'] = $request->province_id;
+        }
+
+        // فیلتر بر اساس شهر
+        if ($request->has('city_id') && $request->city_id) {
+            $filters['city_id'] = $request->city_id;
+        }
+
+        $patients = $this->patientService->list($filters, $request->get('per_page', 15));
         return $this->success($patients);
     }
 
@@ -37,7 +50,11 @@ class PatientController extends Controller
     {
         try {
             $patient = $this->patientService->create($request->validated());
-            return $this->success($patient, 'بیمار با موفقیت ایجاد شد', 201);
+            return $this->success(
+                $patient->load(['user', 'doctor', 'province', 'city']),
+                'بیمار با موفقیت ایجاد شد',
+                201
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -62,9 +79,12 @@ class PatientController extends Controller
     public function update(UpdatePatientRequest $request, $id)
     {
         try {
-            $patient = Patient::findOrFail($id);
+            $patient = Patient::with(['user', 'doctor', 'province', 'city'])->findOrFail($id);
             $patient = $this->patientService->update($patient, $request->validated());
-            return $this->success($patient, 'بیمار با موفقیت به‌روزرسانی شد');
+            return $this->success(
+                $patient->load(['user', 'doctor', 'province', 'city']),
+                'بیمار با موفقیت به‌روزرسانی شد'
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -92,7 +112,10 @@ class PatientController extends Controller
         try {
             $patient = Patient::findOrFail($id);
             $patient = $this->patientService->toggleStatus($patient);
-            return $this->success($patient, 'وضعیت بیمار با موفقیت تغییر کرد');
+            return $this->success(
+                $patient->load(['user', 'doctor', 'province', 'city']),
+                'وضعیت بیمار با موفقیت تغییر کرد'
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -106,7 +129,10 @@ class PatientController extends Controller
         try {
             $patient = Patient::findOrFail($id);
             $patient = $this->patientService->verify($patient);
-            return $this->success($patient, 'بیمار با موفقیت تایید شد');
+            return $this->success(
+                $patient->load(['user', 'doctor', 'province', 'city']),
+                'بیمار با موفقیت تایید شد'
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -120,7 +146,10 @@ class PatientController extends Controller
         try {
             $patient = Patient::findOrFail($id);
             $patient = $this->patientService->unverify($patient);
-            return $this->success($patient, 'تایید بیمار با موفقیت لغو شد');
+            return $this->success(
+                $patient->load(['user', 'doctor', 'province', 'city']),
+                'تایید بیمار با موفقیت لغو شد'
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -138,7 +167,10 @@ class PatientController extends Controller
         try {
             $patient = Patient::findOrFail($id);
             $patient = $this->patientService->assignDoctor($patient, $request->doctor_id);
-            return $this->success($patient, 'پزشک با موفقیت به بیمار اختصاص داده شد');
+            return $this->success(
+                $patient->load(['user', 'doctor', 'province', 'city']),
+                'پزشک با موفقیت به بیمار اختصاص داده شد'
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -185,7 +217,7 @@ class PatientController extends Controller
         if (!$patient) {
             return $this->error('بیمار با این کدملی یافت نشد', 404);
         }
-        return $this->success($patient);
+        return $this->success($patient->load(['user', 'doctor', 'province', 'city']));
     }
 
     /**
@@ -201,7 +233,7 @@ class PatientController extends Controller
         if (!$patient) {
             return $this->error('بیمار با این شماره موبایل یافت نشد', 404);
         }
-        return $this->success($patient);
+        return $this->success($patient->load(['user', 'doctor', 'province', 'city']));
     }
 
     /**

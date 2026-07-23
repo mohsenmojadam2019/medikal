@@ -1,5 +1,13 @@
 <?php
+// routes/admin.php
 
+use App\Http\Controllers\Admin\AIChatAdminController;
+use App\Http\Controllers\Admin\EmergencyController;
+use App\Http\Controllers\Admin\InvoiceController;
+use App\Http\Controllers\Admin\PrescriptionController;
+use App\Http\Controllers\Admin\RatingController;
+use App\Http\Controllers\Admin\ReferralController;
+use App\Http\Controllers\Api\BI\BIController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AppointmentController;
@@ -10,19 +18,13 @@ use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ReminderController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\WebhookController;
-use App\Http\Controllers\Api\Dashboard\ManagementDashboardController;
-use App\Http\Controllers\Api\InsuranceController;
-use App\Http\Controllers\Api\LocationController;
-use App\Http\Controllers\Api\PharmacyController;
-use App\Http\Controllers\Api\SurveyController;
-use App\Http\Controllers\Api\VaccinationController;
-use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Admin\PharmacyOrderController;
+use App\Http\Controllers\Admin\PharmacyManagementController;
 use App\Http\Controllers\Admin\ClinicController;
 use App\Http\Controllers\Admin\DoctorController;
 use App\Http\Controllers\Admin\DoctorProfileController;
 use App\Http\Controllers\Admin\PatientController;
 use App\Http\Controllers\Admin\DrugController;
-use App\Http\Controllers\Admin\PharmacyManagementController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\SeoController;
@@ -32,30 +34,38 @@ use App\Http\Controllers\Admin\SystemController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SuperAdmin\TenantController;
 use App\Http\Controllers\Admin\MedicalNoteController;
+use App\Http\Controllers\Api\Dashboard\ManagementDashboardController;
+use App\Http\Controllers\Api\InsuranceController;
+use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\SurveyController;
+use App\Http\Controllers\Api\VaccinationController;
+use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Admin\LabController as AdminLabController;
+use App\Http\Controllers\Admin\PACSController as AdminPACSController;
 
 /*
 |--------------------------------------------------------------------------
 | Admin Routes
 |--------------------------------------------------------------------------
-| نسخه: 1.0.0
-| تاریخ: 2026-07-09
+| نسخه: 2.0.0
+| تاریخ: 2026-07-24
 |--------------------------------------------------------------------------
 */
 
 // ==========================================
-// تست - فقط برای بررسی لود شدن فایل
+// تست
 // ==========================================
-Route::get('/test-route', function() {
+Route::get('/test-route', function () {
     return response()->json(['message' => 'Admin routes loaded!']);
 });
 
 // ============================================================================
-// 1. مسیرهای عمومی ادمین (بدون احراز هویت)
+// 1. مسیرهای عمومی ادمین
 // ============================================================================
 Route::post('/login', [AdminAuthController::class, 'loginWithEmail']);
 
 // ============================================================================
-// 2. مسیرهای احراز هویت ادمین (نیاز به توکن)
+// 2. مسیرهای احراز هویت
 // ============================================================================
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/logout', [AdminAuthController::class, 'logout']);
@@ -63,12 +73,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 // ============================================================================
-// 3. مسیرهای محافظت‌شده (با احراز هویت و نقش)
+// 3. مسیرهای محافظت‌شده (ادمین)
 // ============================================================================
 Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function () {
 
     // ==========================================
-    // 3.1 پروفایل ادمین
+    // 3.1 پروفایل
     // ==========================================
     Route::prefix('profile')->controller(ProfileController::class)->group(function () {
         Route::get('/', 'show');
@@ -80,7 +90,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.2 داشبورد مدیریت
+    // 3.2 داشبورد
     // ==========================================
     Route::prefix('dashboard/management')->group(function () {
         Route::get('/stats', [ManagementDashboardController::class, 'stats']);
@@ -115,7 +125,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.5 مدیریت نقش‌ها
+    // 3.5 مدیریت نقش‌ها و دسترسی‌ها
     // ==========================================
     Route::prefix('roles')->group(function () {
         Route::get('/', [RoleController::class, 'index']);
@@ -125,9 +135,6 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::delete('/{id}', [RoleController::class, 'destroy']);
     });
 
-    // ==========================================
-    // 3.6 مدیریت دسترسی‌ها
-    // ==========================================
     Route::prefix('permissions')->group(function () {
         Route::get('/', [PermissionController::class, 'index']);
         Route::post('/', [PermissionController::class, 'store']);
@@ -137,7 +144,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.7 مدیریت پزشکان
+    // 3.6 مدیریت پزشکان
     // ==========================================
     Route::prefix('doctors')->group(function () {
         Route::get('/', [DoctorController::class, 'index']);
@@ -147,8 +154,9 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::delete('/{id}', [DoctorController::class, 'destroy']);
         Route::post('/{id}/toggle-availability', [DoctorController::class, 'toggleAvailability']);
         Route::post('/{id}/verify', [DoctorController::class, 'verify']);
-        
-        // پروفایل پزشک
+        Route::post('/{id}/set-fee', [DoctorController::class, 'setAppointmentFee']);
+        Route::get('/{id}/fee', [DoctorController::class, 'getAppointmentFee']);
+
         Route::prefix('profile')->group(function () {
             Route::put('/{id}', [DoctorProfileController::class, 'update']);
             Route::post('/{id}/verify', [DoctorProfileController::class, 'verify']);
@@ -158,7 +166,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.8 مدیریت نوبت‌ها
+    // 3.7 مدیریت نوبت‌ها
     // ==========================================
     Route::prefix('appointments')->group(function () {
         Route::get('/', [AppointmentController::class, 'index']);
@@ -169,14 +177,12 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::post('/{id}/status', [AppointmentController::class, 'changeStatus']);
         Route::post('/{id}/confirm', [AppointmentController::class, 'confirm']);
         Route::post('/{id}/cancel', [AppointmentController::class, 'cancel']);
-        Route::post('/{id}/start', [AppointmentController::class, 'start']);
-        Route::post('/{id}/complete', [AppointmentController::class, 'complete']);
         Route::get('/stats', [AppointmentController::class, 'stats']);
         Route::get('/doctors/{doctorId}/available-slots', [AppointmentController::class, 'getAvailableSlots']);
     });
 
     // ==========================================
-    // 3.9 مدیریت نسخه‌ها
+    // 3.8 مدیریت نسخه‌ها
     // ==========================================
     Route::prefix('prescriptions')->group(function () {
         Route::get('/', [PrescriptionController::class, 'index']);
@@ -189,7 +195,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.10 مدیریت بیماران
+    // 3.9 مدیریت بیماران
     // ==========================================
     Route::prefix('patients')->group(function () {
         Route::get('/', [PatientController::class, 'index']);
@@ -208,7 +214,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.11 مدیریت تخصص‌ها
+    // 3.10 مدیریت تخصص‌ها
     // ==========================================
     Route::prefix('specialties')->group(function () {
         Route::get('/', [SpecialtyController::class, 'index']);
@@ -217,15 +223,13 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::put('/{id}', [SpecialtyController::class, 'update']);
         Route::delete('/{id}', [SpecialtyController::class, 'destroy']);
         Route::post('/{id}/toggle', [SpecialtyController::class, 'toggleStatus']);
-
-        // Specialty Media
         Route::post('/{id}/icon', [SpecialtyMediaController::class, 'uploadIcon']);
         Route::delete('/{id}/icon', [SpecialtyMediaController::class, 'deleteIcon']);
         Route::get('/{id}/icon', [SpecialtyMediaController::class, 'getIcon']);
     });
 
     // ==========================================
-    // 3.12 مدیریت داروها
+    // 3.11 مدیریت داروها
     // ==========================================
     Route::prefix('drugs')->group(function () {
         Route::get('/', [DrugController::class, 'index']);
@@ -237,30 +241,118 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::post('/{id}/increase-stock', [DrugController::class, 'increaseStock']);
         Route::post('/{id}/decrease-stock', [DrugController::class, 'decreaseStock']);
         Route::get('/categories', [DrugController::class, 'categories']);
+        Route::get('/pharmacy/{pharmacyId}', [DrugController::class, 'getPharmacyDrugs']);
+    });
+
+    // ============================================================
+    // 3.12 ✅ مدیریت داروخانه‌ها (با قابلیت فعال/غیرفعال)
+    // ============================================================
+    Route::prefix('pharmacies')->controller(PharmacyManagementController::class)->group(function () {
+        // لیست داروخانه‌ها
+        Route::get('/', 'index');
+
+        // ایجاد داروخانه جدید
+        Route::post('/', 'store');
+
+        // نمایش یک داروخانه
+        Route::get('/{id}', 'show');
+
+        // بروزرسانی داروخانه
+        Route::put('/{id}', 'update');
+
+        // حذف داروخانه
+        Route::delete('/{id}', 'destroy');
+
+        // ✅ فعال/غیرفعال کردن داروخانه
+        Route::post('/{id}/toggle-status', 'toggleStatus');
+
+        // ✅ فعال/غیرفعال کردن فروش آنلاین
+        Route::post('/{id}/toggle-online', 'toggleOnline');
     });
 
     // ==========================================
-    // 3.13 مدیریت داروخانه‌ها
+    // 3.13 ✅ مدیریت سفارشات داروخانه (ادمین)
     // ==========================================
-    Route::prefix('pharmacies')->group(function () {
-        Route::get('/', [PharmacyManagementController::class, 'index']);
-        Route::post('/', [PharmacyManagementController::class, 'store']);
-        Route::get('/{id}', [PharmacyManagementController::class, 'show']);
-        Route::put('/{id}', [PharmacyManagementController::class, 'update']);
-        Route::delete('/{id}', [PharmacyManagementController::class, 'destroy']);
-        Route::post('/{id}/toggle-status', [PharmacyManagementController::class, 'toggleStatus']);
-        Route::post('/{id}/toggle-online', [PharmacyManagementController::class, 'toggleOnline']);
+    Route::prefix('pharmacy')->controller(PharmacyOrderController::class)->group(function () {
+        // لیست سفارشات با فیلتر
+        Route::get('/orders', 'index');
+
+        // جزئیات سفارش
+        Route::get('/orders/{id}', 'show');
+
+        // بروزرسانی وضعیت سفارش
+        Route::put('/orders/{id}/status', 'updateStatus');
+
+        // ✅ تایید نسخه پزشکی
+        Route::post('/orders/{id}/approve-prescription', 'approvePrescription');
+
+        // ✅ رد نسخه پزشکی
+        Route::post('/orders/{id}/reject-prescription', 'rejectPrescription');
+
+        // ✅ ارسال پیام به کاربر
+        Route::post('/orders/{id}/send-message', 'sendMessage');
+
+        // ✅ سفارشات رها شده (سبد رها شده)
+        Route::get('/abandoned-carts', 'abandonedCarts');
+
+        // ✅ آمار سفارشات
+        Route::get('/stats', 'stats');
+
+        // حذف سفارش
+        Route::delete('/orders/{id}', 'destroy');
+    });
+
+    // ============================================================
+    // 3.14 ✅ مدیریت آزمایشگاه (با قابلیت فعال/غیرفعال)
+    // ============================================================
+    Route::prefix('lab')->controller(AdminLabController::class)->group(function () {
+        // ===== دسته‌بندی‌ها =====
+        Route::get('/categories', 'categories');
+        Route::post('/categories', 'storeCategory');
+        Route::put('/categories/{id}', 'updateCategory');
+        Route::delete('/categories/{id}', 'deleteCategory');
+
+        // ===== تست‌ها =====
+        Route::get('/tests', 'tests');
+        Route::post('/tests', 'storeTest');
+        Route::get('/tests/{id}', 'showTest');
+        Route::put('/tests/{id}', 'updateTest');
+        Route::delete('/tests/{id}', 'deleteTest');
+
+        // ✅ فعال/غیرفعال کردن تست آزمایشگاه
+        Route::post('/tests/{id}/toggle', 'toggleTestStatus');
+
+        // ===== سفارشات =====
+        Route::get('/orders', 'orders');
+        Route::get('/orders/{id}', 'showOrder');
+        Route::put('/orders/{id}/status', 'updateOrderStatus');
+
+        // ===== آمار =====
+        Route::get('/stats', 'stats');
+    });
+
+    // ============================================================
+    // 3.15 ✅ مدیریت تصویربرداری PACS (با قابلیت فعال/غیرفعال)
+    // ============================================================
+    Route::prefix('pacs')->controller(AdminPACSController::class)->group(function () {
+        // لیست تصاویر
+        Route::get('/', 'index');
+
+        // نمایش یک تصویر
+        Route::get('/{id}', 'show');
+
+        // حذف تصویر
+        Route::delete('/{id}', 'destroy');
+
+        // ✅ فعال/غیرفعال کردن تصویر
+        Route::post('/{id}/toggle', 'toggleStatus');
+
+        // آمار تصاویر
+        Route::get('/stats', 'stats');
     });
 
     // ==========================================
-    // 3.14 مدیریت سفارشات داروخانه
-    // ==========================================
-    Route::prefix('pharmacy')->group(function () {
-        Route::get('/admin/orders', [PharmacyController::class, 'pharmacyOrders']);
-    });
-
-    // ==========================================
-    // 3.15 مدیریت سئو
+    // 3.16 مدیریت سئو
     // ==========================================
     Route::prefix('seo')->group(function () {
         Route::get('/', [SeoController::class, 'index']);
@@ -272,10 +364,9 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.16 مدیریت اعلان‌ها
+    // 3.17 مدیریت اعلان‌ها
     // ==========================================
     Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
-        // GET
         Route::get('/', 'index');
         Route::get('/stats', 'stats');
         Route::get('/recent', 'recent');
@@ -283,8 +374,6 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::get('/unread/count', 'unreadCount');
         Route::get('/user/{userId}', 'userNotifications');
         Route::get('/{id}', 'show');
-
-        // POST
         Route::post('/mark-all-as-read', 'markAllAsRead');
         Route::post('/{id}/mark-as-read', 'markAsRead');
         Route::post('/send-to-all', 'sendToAll');
@@ -295,17 +384,14 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::post('/send-filtered', 'sendFiltered');
         Route::post('/send-to-users', 'sendToUsers');
         Route::post('/send-to-role', 'sendToRole');
-
-        // DELETE
         Route::delete('/{id}', 'destroy');
         Route::delete('/delete-all-read', 'deleteAllRead');
     });
 
     // ==========================================
-    // 3.17 مدیریت وبلاگ
+    // 3.18 مدیریت وبلاگ
     // ==========================================
     Route::prefix('blog')->controller(BlogController::class)->group(function () {
-        // Posts
         Route::get('/posts', 'posts');
         Route::post('/posts', 'storePost');
         Route::get('/posts/{id}', 'adminShowPost');
@@ -313,31 +399,23 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::delete('/posts/{id}', 'deletePost');
         Route::post('/posts/{id}/publish', 'publishPost');
         Route::post('/posts/{id}/unpublish', 'unpublishPost');
-
-        // Categories
         Route::get('/categories', 'adminCategories');
         Route::post('/categories', 'storeCategory');
         Route::put('/categories/{id}', 'updateCategory');
         Route::delete('/categories/{id}', 'deleteCategory');
-
-        // Tags
         Route::get('/tags', 'adminTags');
         Route::post('/tags', 'storeTag');
         Route::put('/tags/{id}', 'updateTag');
         Route::delete('/tags/{id}', 'deleteTag');
-
-        // Comments
         Route::get('/comments', 'adminComments');
         Route::post('/comments/{id}/approve', 'approveComment');
         Route::post('/comments/{id}/reject', 'rejectComment');
         Route::delete('/comments/{id}', 'deleteComment');
-
-        // Stats
         Route::get('/stats', 'stats');
     });
 
     // ==========================================
-    // 3.18 مدیریت کیف پول
+    // 3.19 مدیریت کیف پول
     // ==========================================
     Route::prefix('wallet')->controller(WalletController::class)->group(function () {
         Route::get('/', 'index');
@@ -349,7 +427,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.19 مدیریت گزارشات
+    // 3.20 مدیریت گزارشات
     // ==========================================
     Route::prefix('reports')->controller(ReportController::class)->group(function () {
         Route::get('/types', 'types');
@@ -360,7 +438,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.20 مدیریت پرداخت‌ها
+    // 3.21 مدیریت پرداخت‌ها
     // ==========================================
     Route::prefix('payments')->controller(PaymentController::class)->group(function () {
         Route::get('/', 'index');
@@ -371,7 +449,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.21 مدیریت وب‌هوک
+    // 3.22 مدیریت وب‌هوک
     // ==========================================
     Route::prefix('webhook')->controller(WebhookController::class)->group(function () {
         Route::get('/status', 'status');
@@ -383,7 +461,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.22 مدیریت یادآوری‌ها
+    // 3.23 مدیریت یادآوری‌ها
     // ==========================================
     Route::prefix('reminders')->controller(ReminderController::class)->group(function () {
         Route::get('/', 'index');
@@ -398,7 +476,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.23 مدیریت فاکتورها
+    // 3.24 مدیریت فاکتورها
     // ==========================================
     Route::prefix('invoices')->group(function () {
         Route::get('/', [InvoiceController::class, 'index']);
@@ -412,7 +490,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.24 مدیریت نظرات
+    // 3.25 مدیریت نظرات
     // ==========================================
     Route::prefix('ratings')->group(function () {
         Route::get('/', [RatingController::class, 'index']);
@@ -425,7 +503,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.25 مدیریت ارجاعات
+    // 3.26 مدیریت ارجاعات
     // ==========================================
     Route::prefix('referrals')->group(function () {
         Route::get('/', [ReferralController::class, 'index']);
@@ -440,31 +518,42 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.26 مدیریت یادداشت‌های پزشکی
+    // 3.27 مدیریت یادداشت‌های پزشکی
     // ==========================================
     Route::prefix('medical-notes')->controller(MedicalNoteController::class)->group(function () {
-        // لیست و جستجو
         Route::get('/', 'index');
         Route::get('/search', 'search');
         Route::get('/stats', 'stats');
-        
-        // بیمار
         Route::get('/patient/{patientId}', 'patientNotes');
         Route::get('/patient-summary/{patientId}', 'patientSummary');
-        
-        // CRUD
         Route::post('/', 'store');
         Route::get('/{id}', 'show');
         Route::put('/{id}', 'update');
         Route::delete('/{id}', 'destroy');
         Route::post('/{id}/status', 'changeStatus');
-        
-        // خروجی
         Route::post('/export', 'export');
     });
 
     // ==========================================
-    // 3.27 مدیریت بیمه
+    // 3.28 مدیریت اورژانس (ادمین)
+    // ==========================================
+    Route::prefix('emergency')->controller(EmergencyController::class)->group(function () {
+        Route::get('/', 'index');
+        Route::get('/{id}', 'show');
+        Route::post('/{id}/triage', 'triage');
+        Route::post('/{id}/start-exam', 'startExam');
+        Route::post('/{id}/start-treatment', 'startTreatment');
+        Route::post('/{id}/dispatch', 'dispatchAmbulance');
+        Route::post('/{id}/arrived', 'arrived');
+        Route::post('/{id}/complete', 'complete');
+        Route::post('/{id}/admit', 'admit');
+        Route::post('/{id}/discharge', 'discharge');
+        Route::post('/{id}/transfer', 'transfer');
+        Route::get('/stats', 'stats');
+    });
+
+    // ==========================================
+    // 3.29 مدیریت بیمه
     // ==========================================
     Route::prefix('insurance')->group(function () {
         Route::get('/', [InsuranceController::class, 'index']);
@@ -473,29 +562,21 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::put('/{id}', [InsuranceController::class, 'update']);
         Route::delete('/{id}', [InsuranceController::class, 'destroy']);
         Route::post('/{id}/toggle-status', [InsuranceController::class, 'toggleStatus']);
-
-        // Patient Insurance
         Route::post('/assign-to-patient', [InsuranceController::class, 'assignToPatient']);
         Route::get('/patients/{patientId}/insurances', [InsuranceController::class, 'patientInsurances']);
         Route::get('/patients/{patientId}/primary', [InsuranceController::class, 'patientPrimaryInsurance']);
         Route::put('/patient-insurances/{id}', [InsuranceController::class, 'updatePatientInsurance']);
         Route::post('/patient-insurances/{id}/deactivate', [InsuranceController::class, 'deactivatePatientInsurance']);
-
-        // Appointment Insurance
         Route::post('/apply-to-appointment', [InsuranceController::class, 'applyToAppointment']);
         Route::get('/appointments/{appointmentId}', [InsuranceController::class, 'appointmentInsurance']);
-
-        // Claims
         Route::post('/claims/{id}/approve', [InsuranceController::class, 'approveClaim']);
         Route::post('/claims/{id}/reject', [InsuranceController::class, 'rejectClaim']);
-
-        // Reports
         Route::get('/stats', [InsuranceController::class, 'stats']);
         Route::get('/reports/{insuranceId}', [InsuranceController::class, 'insuranceReport']);
     });
 
     // ==========================================
-    // 3.28 مدیریت واکسیناسیون
+    // 3.30 مدیریت واکسیناسیون
     // ==========================================
     Route::prefix('vaccination')->group(function () {
         Route::get('/', [VaccinationController::class, 'index']);
@@ -504,24 +585,18 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::put('/{id}', [VaccinationController::class, 'update']);
         Route::delete('/{id}', [VaccinationController::class, 'destroy']);
         Route::post('/{id}/toggle-status', [VaccinationController::class, 'toggleStatus']);
-
-        // Patient Vaccinations
         Route::post('/record', [VaccinationController::class, 'record']);
         Route::get('/patients/{patientId}/vaccinations', [VaccinationController::class, 'patientVaccinations']);
         Route::get('/patients/{patientId}/summary', [VaccinationController::class, 'patientSummary']);
         Route::get('/patients/{patientId}/upcoming', [VaccinationController::class, 'upcoming']);
         Route::get('/patients/{patientId}/overdue', [VaccinationController::class, 'overdue']);
-
-        // Reminders
         Route::get('/patients/{patientId}/reminders', [VaccinationController::class, 'reminders']);
         Route::post('/reminders/process', [VaccinationController::class, 'processReminders']);
-
-        // Stats
         Route::get('/stats', [VaccinationController::class, 'stats']);
     });
 
     // ==========================================
-    // 3.29 مدیریت نظرسنجی
+    // 3.31 مدیریت نظرسنجی
     // ==========================================
     Route::prefix('survey')->group(function () {
         Route::get('/', [SurveyController::class, 'index']);
@@ -530,22 +605,16 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
         Route::put('/{id}', [SurveyController::class, 'update']);
         Route::delete('/{id}', [SurveyController::class, 'destroy']);
         Route::post('/{id}/toggle-status', [SurveyController::class, 'toggleStatus']);
-
-        // Responses
         Route::get('/{surveyId}/responses', [SurveyController::class, 'surveyResponses']);
         Route::get('/patients/{patientId}/responses', [SurveyController::class, 'patientResponses']);
-
-        // Feedback
         Route::get('/feedbacks', [SurveyController::class, 'feedbacks']);
         Route::post('/feedbacks/{id}/reply', [SurveyController::class, 'replyFeedback']);
         Route::post('/feedbacks/{id}/resolve', [SurveyController::class, 'resolveFeedback']);
-
-        // Stats
         Route::get('/stats', [SurveyController::class, 'stats']);
     });
 
     // ==========================================
-    // 3.30 مدیریت سیستم
+    // 3.32 مدیریت سیستم
     // ==========================================
     Route::prefix('system')->group(function () {
         Route::get('/info', [SystemController::class, 'info']);
@@ -557,58 +626,71 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.31 هوش تجاری (BI)
+    // 3.33 هوش تجاری (BI)
     // ==========================================
     Route::prefix('bi')->group(function () {
-        // Predictive Analytics
         Route::get('/predict/appointments', [BIController::class, 'predictAppointments']);
         Route::get('/forecast/revenue', [BIController::class, 'forecastRevenue']);
         Route::get('/segment/patients', [BIController::class, 'segmentPatients']);
         Route::get('/analyze/doctors', [BIController::class, 'analyzeDoctors']);
         Route::get('/analytics', [BIController::class, 'getAnalytics']);
-
-        // Custom Reports
         Route::get('/reports', [BIController::class, 'reports']);
         Route::post('/reports', [BIController::class, 'createReport']);
         Route::put('/reports/{id}', [BIController::class, 'updateReport']);
         Route::delete('/reports/{id}', [BIController::class, 'deleteReport']);
         Route::post('/reports/{id}/generate', [BIController::class, 'generateReport']);
-
-        // Report Scheduling
         Route::post('/schedules', [BIController::class, 'createSchedule']);
         Route::put('/schedules/{id}', [BIController::class, 'updateSchedule']);
         Route::delete('/schedules/{id}', [BIController::class, 'deleteSchedule']);
-
-        // Backup
         Route::post('/backup/database', [BIController::class, 'backupDatabase']);
         Route::post('/backup/files', [BIController::class, 'backupFiles']);
         Route::post('/backup/{id}/restore', [BIController::class, 'restoreBackup']);
         Route::get('/backup/history', [BIController::class, 'backupHistory']);
         Route::delete('/backup/cleanup', [BIController::class, 'cleanupBackups']);
-
-        // Audit Log
         Route::get('/audit-logs', [BIController::class, 'auditLogs']);
         Route::post('/audit-logs', [BIController::class, 'logActivity']);
-
-        // Log Archive
         Route::post('/logs/archive', [BIController::class, 'archiveLogs']);
         Route::get('/logs/archived', [BIController::class, 'archivedLogs']);
         Route::post('/logs/archived/{id}/restore', [BIController::class, 'restoreArchivedLog']);
         Route::delete('/logs/archived/cleanup', [BIController::class, 'cleanupArchivedLogs']);
-
-        // Stats
         Route::get('/stats', [BIController::class, 'stats']);
     });
 
-}); // End auth:sanctum + role
+    // ==========================================
+    // 3.34 AiChat مدیریت
+    // ==========================================
+    Route::prefix('ai')->group(function () {
+        // ===== پرامپت‌ها =====
+        Route::get('/prompts', [AIChatAdminController::class, 'prompts']);
+        Route::post('/prompts', [AIChatAdminController::class, 'storePrompt']);
+        Route::put('/prompts/{id}', [AIChatAdminController::class, 'updatePrompt']);
+        Route::delete('/prompts/{id}', [AIChatAdminController::class, 'deletePrompt']);
+        Route::post('/prompts/{id}/toggle', [AIChatAdminController::class, 'togglePrompt']);
+
+        // ===== تنظیمات =====
+        Route::get('/settings', [AIChatAdminController::class, 'settings']);
+        Route::put('/settings', [AIChatAdminController::class, 'updateSettings']);
+
+        // ===== مدل‌ها =====
+        Route::get('/models', [AIChatAdminController::class, 'models']);
+        Route::post('/models/test', [AIChatAdminController::class, 'testModel']);
+
+        // ===== آمار و تحلیل =====
+        Route::get('/analytics', [AIChatAdminController::class, 'analytics']);
+        Route::get('/analytics/queries', [AIChatAdminController::class, 'queries']);
+        Route::get('/analytics/export', [AIChatAdminController::class, 'exportAnalytics']);
+
+        // ===== پاکسازی =====
+        Route::post('/cleanup', [AIChatAdminController::class, 'cleanup']);
+    });
+});
 
 // ============================================================================
-// 4. مسیرهای سوپرادمین (فقط super_admin)
+// 4. مسیرهای سوپرادمین
 // ============================================================================
 Route::middleware(['auth:sanctum', 'role:super_admin'])
     ->prefix('super-admin')
     ->group(function () {
-        // مدیریت Tenant
         Route::get('/tenants', [TenantController::class, 'index']);
         Route::post('/tenants', [TenantController::class, 'store']);
         Route::get('/tenants/{id}', [TenantController::class, 'show']);
@@ -617,40 +699,3 @@ Route::middleware(['auth:sanctum', 'role:super_admin'])
         Route::get('/stats', [TenantController::class, 'stats']);
         Route::get('/plans', [TenantController::class, 'plans']);
     });
-
-// ==========================================
-// 💰 DOCTOR APPOINTMENT FEE MANAGEMENT (ADMIN)
-// ==========================================
-Route::prefix('doctors')->group(function () {
-    Route::post('/{id}/set-fee', [App\Http\Controllers\Admin\DoctorController::class, 'setAppointmentFee']);
-    Route::get('/{id}/fee', [App\Http\Controllers\Admin\DoctorController::class, 'getAppointmentFee']);
-});
-
-// ============================================================
-// AiChat Admin Routes - مدیریت دکتر آنلاین
-// ============================================================
-Route::prefix('v1/admin/chat')->middleware(['auth:sanctum', 'admin'])->group(function () {
-
-    // مدیریت پرامپت‌ها
-    Route::get('/prompts', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'index']);
-    Route::post('/prompts', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'store']);
-    Route::put('/prompts/{id}', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'update']);
-    Route::delete('/prompts/{id}', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'destroy']);
-    Route::post('/prompts/{id}/toggle', [App\Http\Controllers\Admin\AiChat\PromptController::class, 'toggle']);
-
-    // مدیریت تنظیمات
-    Route::get('/settings', [App\Http\Controllers\Admin\AiChat\SettingsController::class, 'index']);
-    Route::put('/settings', [App\Http\Controllers\Admin\AiChat\SettingsController::class, 'update']);
-
-    // مدیریت مدل‌ها
-    Route::get('/models', [App\Http\Controllers\Admin\AiChat\ModelController::class, 'index']);
-    Route::post('/models/test', [App\Http\Controllers\Admin\AiChat\ModelController::class, 'test']);
-
-    // آمار و گزارشات
-    Route::get('/analytics', [App\Http\Controllers\Admin\AiChat\AnalyticsController::class, 'index']);
-    Route::get('/analytics/queries', [App\Http\Controllers\Admin\AiChat\AnalyticsController::class, 'queries']);
-    Route::get('/analytics/export', [App\Http\Controllers\Admin\AiChat\AnalyticsController::class, 'export']);
-
-    // پاکسازی دستی
-    Route::post('/cleanup', [App\Http\Controllers\Admin\AiChat\CleanupController::class, 'run']);
-});

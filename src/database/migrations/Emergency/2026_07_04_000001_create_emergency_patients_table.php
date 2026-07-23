@@ -12,7 +12,22 @@ return new class extends Migration
             $table->id();
             $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
             $table->foreignId('doctor_id')->nullable()->constrained('doctors')->nullOnDelete();
+
             $table->foreignId('admission_id')->nullable()->constrained('admissions')->nullOnDelete();
+            $table->foreignId('clinic_id')->nullable()->constrained('clinics')->nullOnDelete();
+            $table->foreignId('province_id')->nullable()->constrained('provinces')->nullOnDelete();
+            $table->foreignId('city_id')->nullable()->constrained('cities')->nullOnDelete();
+            $table->string('emergency_contact_name')->nullable();
+            $table->string('emergency_contact_phone', 20)->nullable();
+            $table->string('emergency_contact_relation', 50)->nullable();
+            $table->decimal('request_latitude', 10, 7)->nullable();
+            $table->decimal('request_longitude', 10, 7)->nullable();
+            $table->text('request_address')->nullable();
+            $table->timestamp('dispatched_at')->nullable();
+            $table->timestamp('arrived_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
+            $table->string('ambulance_number', 50)->nullable();
+            $table->string('ambulance_team', 100)->nullable();
 
             $table->string('triage_level');
             $table->timestamp('arrival_time');

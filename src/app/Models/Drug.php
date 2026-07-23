@@ -11,6 +11,7 @@ class Drug extends Model
 
     protected $fillable = [
         'tenant_id',
+        'pharmacy_id',        // ✅ اضافه شد
         'name',
         'generic_name',
         'code',
@@ -34,6 +35,13 @@ class Drug extends Model
     ];
 
     // ========== Relationships ==========
+
+    // ✅ ارتباط با داروخانه
+    public function pharmacy()
+    {
+        return $this->belongsTo(Pharmacy::class);
+    }
+
     public function prescriptionItems()
     {
         return $this->hasMany(PrescriptionItem::class);
@@ -45,6 +53,13 @@ class Drug extends Model
     }
 
     // ========== Scopes ==========
+
+    // ✅ اسکوپ جدید برای فیلتر بر اساس داروخانه
+    public function scopeByPharmacy($query, $pharmacyId)
+    {
+        return $query->where('pharmacy_id', $pharmacyId);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -55,7 +70,6 @@ class Drug extends Model
         return $query->where('requires_prescription', true);
     }
 
-    // ✅ اضافه کردن scopeOverTheCounter
     public function scopeOverTheCounter($query)
     {
         return $query->where('requires_prescription', false);
@@ -143,6 +157,10 @@ class Drug extends Model
             }
             if (empty($drug->tenant_id)) {
                 $drug->tenant_id = session('tenant_id', 1);
+            }
+            // اگر pharmacy_id وارد نشده، از session بگیر
+            if (empty($drug->pharmacy_id)) {
+                $drug->pharmacy_id = session('pharmacy_id', 1);
             }
         });
     }

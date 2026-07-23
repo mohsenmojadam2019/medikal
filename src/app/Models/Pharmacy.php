@@ -11,9 +11,21 @@ class Pharmacy extends Model
 
     protected $fillable = [
         'tenant_id',
-        'name', 'license_number', 'address', 'phone', 'email',
-        'latitude', 'longitude', 'working_hours', 'is_active',
-        'is_online', 'metadata'
+        'name',
+        'slug',
+        'license_number',
+        'address',
+        'phone',
+        'email',
+        'province_id',
+        'city_id',
+        'clinic_id',
+        'latitude',
+        'longitude',
+        'working_hours',
+        'is_active',
+        'is_online',
+        'metadata',
     ];
 
     protected $casts = [
@@ -28,6 +40,21 @@ class Pharmacy extends Model
     // ============================================
     // Relationships
     // ============================================
+
+    public function province()
+    {
+        return $this->belongsTo(Province::class);
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class);
+    }
+
+    public function clinic()
+    {
+        return $this->belongsTo(Clinic::class);
+    }
 
     public function contracts()
     {
@@ -45,6 +72,29 @@ class Pharmacy extends Model
     }
 
     // ============================================
+    // Accessors
+    // ============================================
+
+    public function getFullAddressAttribute()
+    {
+        $parts = [];
+        if ($this->address) $parts[] = $this->address;
+        if ($this->city) $parts[] = $this->city->name;
+        if ($this->province) $parts[] = $this->province->name;
+        return implode('، ', $parts);
+    }
+
+    public function getDistanceAttribute($value)
+    {
+        if (!$value) return null;
+
+        if ($value < 1) {
+            return round($value * 1000) . ' متر';
+        }
+        return number_format($value, 1) . ' کیلومتر';
+    }
+
+    // ============================================
     // Scopes
     // ============================================
 
@@ -58,18 +108,8 @@ class Pharmacy extends Model
         return $query->where('is_online', true);
     }
 
-    /**
-     * Scope برای پیدا کردن داروخانه‌های نزدیک
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param float $lat عرض جغرافیایی
-     * @param float $lng طول جغرافیایی
-     * @param float $radius شعاع بر حسب کیلومتر (پیش‌فرض ۱۰ کیلومتر)
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
     public function scopeNearby($query, $lat, $lng, $radius = 10)
     {
-        // فرمول محاسبه فاصله (Haversine formula)
         return $query->selectRaw("
             *,
             (6371 * acos(
@@ -84,9 +124,6 @@ class Pharmacy extends Model
             ->orderBy('distance', 'asc');
     }
 
-    /**
-     * Scope برای پیدا کردن داروخانه‌های نزدیک با فاصله بر حسب متر
-     */
     public function scopeNearbyInMeters($query, $lat, $lng, $radiusInMeters = 10000)
     {
         $radiusInKm = $radiusInMeters / 1000;
@@ -94,66 +131,35 @@ class Pharmacy extends Model
     }
 
     // ============================================
-    // Accessors
-    // ============================================
-
-    /**
-     * دریافت فاصله به صورت فرمت‌شده
-     */
-    public function getDistanceAttribute($value)
-    {
-        if (!$value) return null;
-
-        if ($value < 1) {
-            return round($value * 1000) . ' متر';
-        }
-        return number_format($value, 1) . ' کیلومتر';
-    }
-
-    /**
-     * دریافت آدرس کامل
-     */
-    public function getFullAddressAttribute()
-    {
-        $parts = [];
-        if ($this->address) $parts[] = $this->address;
-        if ($this->latitude && $this->longitude) {
-            $parts[] = "({$this->latitude}, {$this->longitude})";
-        }
-        return implode(' - ', $parts);
-    }
-
-    // ============================================
     // Helper Methods
     // ============================================
 
-    /**
-     * محاسبه فاصله بین دو نقطه
-     */
     public static function calculateDistance($lat1, $lng1, $lat2, $lng2)
     {
-        $earthRadius = 6371; // کیلومتر
-
+        $earthRadius = 6371;
         $dLat = deg2rad($lat2 - $lat1);
         $dLng = deg2rad($lng2 - $lng1);
-
         $a = sin($dLat / 2) * sin($dLat / 2) +
             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
             sin($dLng / 2) * sin($dLng / 2);
-
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-
         return $earthRadius * $c;
     }
 
-    /**
-     * بررسی اینکه داروخانه در شعاع مشخصی قرار دارد
-     */
     public function isWithinRadius($lat, $lng, $radius = 10)
     {
         if (!$this->latitude || !$this->longitude) return false;
-
         $distance = self::calculateDistance($lat, $lng, $this->latitude, $this->longitude);
         return $distance <= $radius;
+    }
+
+    // ========== Boot ==========
+    protected static function booted()
+    {
+        static::creating(function ($pharmacy) {
+            if (empty($pharmacy->slug)) {
+                $pharmacy->slug = \Illuminate\Support\Str::slug($pharmacy->name);
+            }
+        });
     }
 }

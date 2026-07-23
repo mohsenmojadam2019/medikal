@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pharmacy;
+use App\Models\Province;
+use App\Models\City;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -17,11 +19,26 @@ class PharmacyManagementController extends Controller
     }
 
     /**
-     * لیست داروخانه‌ها
+     * لیست داروخانه‌ها (با فیلتر استان و شهر)
      */
     public function index(Request $request)
     {
-        $query = Pharmacy::query();
+        $query = Pharmacy::with(['province', 'city', 'clinic']);
+
+        // ✅ فیلتر بر اساس استان
+        if ($request->has('province_id') && $request->province_id) {
+            $query->where('province_id', $request->province_id);
+        }
+
+        // ✅ فیلتر بر اساس شهر
+        if ($request->has('city_id') && $request->city_id) {
+            $query->where('city_id', $request->city_id);
+        }
+
+        // ✅ فیلتر بر اساس کلینیک
+        if ($request->has('clinic_id') && $request->clinic_id) {
+            $query->where('clinic_id', $request->clinic_id);
+        }
 
         if ($request->has('search')) {
             $query->where('name', 'LIKE', "%{$request->search}%")
@@ -51,6 +68,9 @@ class PharmacyManagementController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'license_number' => 'required|string|unique:pharmacies,license_number',
+            'province_id' => 'nullable|exists:provinces,id',     // ✅ اضافه شد
+            'city_id' => 'nullable|exists:cities,id',           // ✅ اضافه شد
+            'clinic_id' => 'nullable|exists:clinics,id',        // ✅ اضافه شد
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
@@ -68,7 +88,7 @@ class PharmacyManagementController extends Controller
 
         try {
             $pharmacy = Pharmacy::create($request->all());
-            return $this->success($pharmacy, 'داروخانه با موفقیت ایجاد شد', 201);
+            return $this->success($pharmacy->load(['province', 'city', 'clinic']), 'داروخانه با موفقیت ایجاد شد', 201);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -80,7 +100,7 @@ class PharmacyManagementController extends Controller
     public function show($id)
     {
         try {
-            $pharmacy = Pharmacy::with(['contracts'])->findOrFail($id);
+            $pharmacy = Pharmacy::with(['contracts', 'province', 'city', 'clinic'])->findOrFail($id);
             return $this->success($pharmacy);
         } catch (\Exception $e) {
             return $this->error('داروخانه یافت نشد', 404);
@@ -101,6 +121,9 @@ class PharmacyManagementController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
             'license_number' => 'sometimes|string|unique:pharmacies,license_number,' . $id,
+            'province_id' => 'nullable|exists:provinces,id',     // ✅ اضافه شد
+            'city_id' => 'nullable|exists:cities,id',           // ✅ اضافه شد
+            'clinic_id' => 'nullable|exists:clinics,id',        // ✅ اضافه شد
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
@@ -118,7 +141,7 @@ class PharmacyManagementController extends Controller
 
         try {
             $pharmacy->update($request->all());
-            return $this->success($pharmacy->fresh(), 'داروخانه با موفقیت به‌روزرسانی شد');
+            return $this->success($pharmacy->fresh()->load(['province', 'city', 'clinic']), 'داروخانه با موفقیت به‌روزرسانی شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }

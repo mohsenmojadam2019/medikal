@@ -1,11 +1,15 @@
 <?php
 
+use App\Http\Controllers\Api\AIChatController;
+use App\Http\Controllers\Api\EmergencyController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Admin\DoctorController;
-use App\Http\Controllers\Admin\PatientController;
+use App\Http\Controllers\Admin\DoctorController as AdminDoctorController;
+use App\Http\Controllers\Api\DoctorController as ApiDoctorController;
+use App\Http\Controllers\Admin\PatientController as AdminPatientController;
+use App\Http\Controllers\Api\PatientController as ApiPatientController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InvoiceController;
@@ -19,6 +23,10 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Admin\SpecialtyController;
 use App\Http\Controllers\Admin\DrugController;
 use App\Http\Controllers\Admin\PharmacyManagementController;
+use App\Http\Controllers\Api\ClinicController;
+use App\Http\Controllers\Api\MedicalNoteController;
+use App\Http\Controllers\Api\LabController;
+use App\Http\Controllers\Api\QueueController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,10 +57,12 @@ Route::prefix('auth')->group(function () {
     Route::post('/login/email', [AuthController::class, 'loginWithEmail']);
 });
 
-// 2.2 DOCTORS
+// 2.2 DOCTORS (عمومی - API)
 Route::prefix('doctors')->group(function () {
-    Route::get('/public', [DoctorController::class, 'publicList']);
-    Route::get('/{id}/public', [DoctorController::class, 'publicShow']);
+    Route::get('/', [ApiDoctorController::class, 'index']);
+    Route::get('/nearby', [ApiDoctorController::class, 'nearby']);
+    Route::get('/by-fee', [ApiDoctorController::class, 'byFee']);
+    Route::get('/{id}', [ApiDoctorController::class, 'show']);
 });
 
 // 2.3 SPECIALTIES
@@ -61,15 +71,41 @@ Route::get('/specialties', [SpecialtyController::class, 'activeSpecialties']);
 // 2.4 APPOINTMENTS (Available Slots)
 Route::get('/appointments/doctors/{doctorId}/available-slots', [AppointmentController::class, 'availableSlots']);
 
-// ✅ 2.5 PHARMACY (عمومی)
+// 2.5 PHARMACY (عمومی)
 Route::prefix('pharmacy')->group(function () {
     Route::get('/pharmacies', [PharmacyController::class, 'index']);
-    Route::get('/pharmacies/{id}', [PharmacyController::class, 'show']);
+    Route::get('/pharmacies/{id}', [PharmacyController::class, 'showPharmacy']);
     Route::get('/pharmacies/{pharmacyId}/products', [PharmacyController::class, 'products']);
-    Route::get('/categories', [PharmacyController::class, 'categories']);
+    Route::get('/pharmacies/{pharmacyId}/categories', [PharmacyController::class, 'categories']);
     Route::get('/products/search', [PharmacyController::class, 'search']);
     Route::get('/nearby', [PharmacyController::class, 'nearby']);
     Route::get('/contracted', [PharmacyController::class, 'contracted']);
+});
+
+// 2.6 CLINICS (عمومی)
+Route::prefix('clinics')->group(function () {
+    Route::get('/', [ClinicController::class, 'index']);
+    Route::get('/settings', [ClinicController::class, 'settings']);
+    Route::get('/provinces', [ClinicController::class, 'provinces']);
+    Route::get('/provinces/{provinceId}/cities', [ClinicController::class, 'cities']);
+    Route::get('/{id}', [ClinicController::class, 'show']);
+});
+
+// 2.7 DRUGS - PUBLIC
+Route::get('/drugs/active', [DrugController::class, 'activeDrugs']);
+Route::get('/drugs/{id}', [DrugController::class, 'show']);
+
+// 2.8 LABORATORY (عمومی)
+Route::prefix('lab')->group(function () {
+    Route::get('/categories/active', [LabController::class, 'activeCategories']);
+    Route::get('/tests/active', [LabController::class, 'activeTests']);
+    Route::get('/tests/{id}', [LabController::class, 'showTest']);
+});
+
+// 2.9 PATIENTS (عمومی - محدود)
+Route::prefix('patients')->group(function () {
+    Route::get('/nearby', [ApiPatientController::class, 'nearby']);
+    Route::get('/{id}', [ApiPatientController::class, 'show']);
 });
 
 // ============================================================
@@ -77,42 +113,6 @@ Route::prefix('pharmacy')->group(function () {
 // ============================================================
 
 Route::middleware('auth:sanctum')->group(function () {
-// ============================================================
-// AiChat Routes - دکتر آنلاین
-// ============================================================
-    Route::prefix('chat')->group(function () {
-
-        // مدیریت جلسات
-        Route::post('/start', [App\Http\Controllers\Api\AiChat\ChatController::class, 'start']);
-        Route::get('/active', [App\Http\Controllers\Api\AiChat\ChatController::class, 'active']);
-        Route::post('/close', [App\Http\Controllers\Api\AiChat\ChatController::class, 'close']);
-        Route::post('/extend', [App\Http\Controllers\Api\AiChat\ChatController::class, 'extend']);
-        Route::delete('/destroy', [App\Http\Controllers\Api\AiChat\ChatController::class, 'destroy']);
-
-        // ارسال پیام و تاریخچه
-        Route::post('/send', [App\Http\Controllers\Api\AiChat\ChatController::class, 'send']);
-        Route::get('/history', [App\Http\Controllers\Api\AiChat\ChatController::class, 'history']);
-
-        // بازخورد
-        Route::post('/feedback', [App\Http\Controllers\Api\AiChat\ChatController::class, 'feedback']);
-
-        // سوالات پزشکی
-        Route::prefix('medical')->group(function () {
-            Route::post('/ask', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'ask']);
-            Route::post('/symptom-check', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'symptomCheck']);
-            Route::get('/history', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'history']);
-            Route::get('/categories', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'categories']);
-            Route::get('/stats', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'stats']);
-        });
-
-        // مدیریت فایل‌ها
-        Route::prefix('files')->group(function () {
-            Route::post('/upload', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'upload']);
-            Route::get('/list', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'list']);
-            Route::get('/download/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'download']);
-            Route::delete('/delete/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'delete']);
-        });
-    });
 
     // ============================================================
     // 3.1 AUTH
@@ -148,19 +148,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('appointments')->group(function () {
         Route::get('/my/appointments', [AppointmentController::class, 'myAppointments']);
         Route::get('/my/stats', [AppointmentController::class, 'myPatientStats']);
-        // ⚠️ این دو مسیر نیاز به بررسی دارند - ممکن است در کنترلر نباشند
-        // Route::get('/my/doctor/appointments', [AppointmentController::class, 'myDoctorAppointments']);
-        // Route::get('/my/doctor/stats', [AppointmentController::class, 'myDoctorStats']);
 
         Route::post('/', [AppointmentController::class, 'store']);
         Route::get('/{id}', [AppointmentController::class, 'show']);
-        Route::put('/{id}', [AppointmentController::class, 'update']);
         Route::post('/{id}/confirm', [AppointmentController::class, 'confirm']);
         Route::post('/{id}/cancel', [AppointmentController::class, 'cancel']);
-        Route::post('/{id}/reschedule', [AppointmentController::class, 'reschedule']);
-        Route::post('/{id}/start', [AppointmentController::class, 'start']);
-        Route::post('/{id}/complete', [AppointmentController::class, 'complete']);
-        Route::post('/{id}/no-show', [AppointmentController::class, 'noShow']);
     });
 
     // ============================================================
@@ -188,7 +180,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/my', [InvoiceController::class, 'myInvoices']);
         Route::get('/stats', [InvoiceController::class, 'stats']);
         Route::get('/{id}', [InvoiceController::class, 'show']);
-        // ✅ دریافت فاکتور بر اساس appointment_id
         Route::get('/appointment/{appointmentId}', [InvoiceController::class, 'getByAppointment']);
     });
 
@@ -261,33 +252,124 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders/{id}', [PharmacyController::class, 'show']);
         Route::post('/orders/{id}/pay', [PharmacyController::class, 'pay']);
         Route::post('/orders/{id}/cancel', [PharmacyController::class, 'cancel']);
+        Route::put('/orders/{id}', [PharmacyController::class, 'update']); // ✅ موجود است
+
+        // نسخه پزشکی
+        Route::post('/orders/{id}/prescription', [PharmacyController::class, 'uploadPrescription']);
+        Route::get('/orders/{id}/prescription-status', [PharmacyController::class, 'getPrescriptionStatus']);
 
         // نوتیفیکیشن‌ها
         Route::get('/notifications', [PharmacyController::class, 'notifications']);
         Route::post('/notifications/{id}/read', [PharmacyController::class, 'markNotificationAsRead']);
+
+        // آمار
+        Route::get('/stats', [PharmacyController::class, 'stats']);
     });
 
     // ============================================================
-    // 3.13 PATIENTS (Admin/Doctor Only)
+    // 3.13 PATIENTS
     // ============================================================
-    Route::prefix('patients')
-        ->middleware(['role:admin|super_admin|doctor'])
-        ->group(function () {
-            Route::get('/without-doctor', [PatientController::class, 'withoutDoctor']);
-            Route::get('/top', [PatientController::class, 'topPatients']);
-            Route::get('/my/patients', [PatientController::class, 'myPatients']);
-            Route::get('/', [PatientController::class, 'index']);
-            Route::post('/', [PatientController::class, 'store']);
-            Route::get('/{id}', [PatientController::class, 'show']);
-            Route::put('/{id}', [PatientController::class, 'update']);
-            Route::delete('/{id}', [PatientController::class, 'destroy']);
-            Route::post('/{id}/toggle-status', [PatientController::class, 'toggleStatus']);
-            Route::post('/{id}/verify', [PatientController::class, 'verify']);
-            Route::post('/{id}/unverify', [PatientController::class, 'unverify']);
-            Route::post('/{id}/assign-doctor', [PatientController::class, 'assignDoctor']);
-            Route::get('/{id}/medical-history', [PatientController::class, 'medicalHistory']);
-            Route::get('/{id}/statistics', [PatientController::class, 'statistics']);
+    Route::prefix('patients')->group(function () {
+        Route::get('/my', [ApiPatientController::class, 'myPatients']);
+        Route::get('/my-profile', [ApiPatientController::class, 'myProfile']);
+        Route::put('/my-profile', [ApiPatientController::class, 'updateMyProfile']);
+    });
+
+
+    // ============================================================
+    // 3.15 MEDICAL NOTES
+    // ============================================================
+    Route::prefix('medical-notes')->group(function () {
+        Route::get('/', [MedicalNoteController::class, 'index']);
+        Route::post('/', [MedicalNoteController::class, 'store']);
+        Route::get('/patient/{patientId}', [MedicalNoteController::class, 'patientNotes']);
+        Route::get('/doctor/{doctorId}', [MedicalNoteController::class, 'doctorNotes']);
+        Route::get('/summary/{patientId}', [MedicalNoteController::class, 'summary']);
+        Route::get('/{id}', [MedicalNoteController::class, 'show']);
+        Route::put('/{id}', [MedicalNoteController::class, 'update']);
+        Route::delete('/{id}', [MedicalNoteController::class, 'destroy']);
+        Route::post('/{id}/share', [MedicalNoteController::class, 'share']);
+        Route::post('/{id}/unshare', [MedicalNoteController::class, 'unshare']);
+        Route::post('/{id}/lab-request', [MedicalNoteController::class, 'addLabRequest']);
+        Route::post('/{id}/imaging-request', [MedicalNoteController::class, 'addImagingRequest']);
+        Route::post('/{id}/referral', [MedicalNoteController::class, 'addReferral']);
+        Route::get('/my', [MedicalNoteController::class, 'myNotes']);
+        Route::get('/appointment/{appointmentId}', [MedicalNoteController::class, 'appointmentNote']);
+        Route::post('/{id}/finalize', [MedicalNoteController::class, 'finalize']);
+        Route::get('/my-notes', [MedicalNoteController::class, 'myPatientNotes']);
+    });
+
+    // ============================================================
+    // 3.16 LABORATORY
+    // ============================================================
+    Route::prefix('lab')->group(function () {
+        // سفارشات
+        Route::post('/orders', [LabController::class, 'createOrder']);
+        Route::get('/my/orders', [LabController::class, 'myOrders']);
+        Route::get('/orders/{id}', [LabController::class, 'showOrder']);
+        Route::put('/orders/{id}/status', [LabController::class, 'updateOrderStatus']);
+
+        // نتایج
+        Route::post('/results', [LabController::class, 'addResult']);
+        Route::post('/results/bulk', [LabController::class, 'addResults']);
+        Route::post('/results/{id}/verify', [LabController::class, 'verifyResult']);
+        Route::delete('/results/{id}', [LabController::class, 'deleteResult']);
+
+        // آمار
+        Route::get('/stats', [LabController::class, 'stats']);
+        Route::get('/my/stats', [LabController::class, 'myStats']);
+    });
+
+    // ============================================================
+    // 3.17 AiChat Routes - دکتر آنلاین
+    // ============================================================
+    Route::prefix('v1/chat')->group(function () {
+        Route::post('/start', [App\Http\Controllers\Api\AiChat\ChatController::class, 'start']);
+        Route::get('/active', [App\Http\Controllers\Api\AiChat\ChatController::class, 'active']);
+        Route::post('/close', [App\Http\Controllers\Api\AiChat\ChatController::class, 'close']);
+        Route::post('/extend', [App\Http\Controllers\Api\AiChat\ChatController::class, 'extend']);
+        Route::delete('/destroy', [App\Http\Controllers\Api\AiChat\ChatController::class, 'destroy']);
+        Route::post('/send', [App\Http\Controllers\Api\AiChat\ChatController::class, 'send']);
+        Route::get('/history', [App\Http\Controllers\Api\AiChat\ChatController::class, 'history']);
+        Route::post('/feedback', [App\Http\Controllers\Api\AiChat\ChatController::class, 'feedback']);
+
+        Route::prefix('medical')->group(function () {
+            Route::post('/ask', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'ask']);
+            Route::post('/symptom-check', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'symptomCheck']);
+            Route::get('/history', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'history']);
+            Route::get('/categories', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'categories']);
+            Route::get('/stats', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'stats']);
         });
+
+        Route::prefix('files')->group(function () {
+            Route::post('/upload', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'upload']);
+            Route::get('/list', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'list']);
+            Route::get('/download/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'download']);
+            Route::delete('/delete/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'delete']);
+        });
+    });
+
+    // ============================================================
+    // 3.18 PHARMACY REPORTS
+    // ============================================================
+    Route::prefix('pharmacy')->group(function () {
+        Route::prefix('reports')->group(function () {
+            Route::get('/overview/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'overview']);
+            Route::get('/product-sales/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'productSales']);
+            Route::get('/inventory/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'inventory']);
+            Route::get('/financial/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'financial']);
+            Route::get('/daily/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'daily']);
+        });
+    });
+
+    // ============================================================
+    // 3.19 EMERGENCY (اورژانس - کاربر)
+    // ============================================================
+    Route::prefix('emergency')->group(function () {
+        Route::post('/request', [EmergencyController::class, 'store']);
+        Route::get('/status/{id}', [EmergencyController::class, 'status']);
+        Route::get('/history', [EmergencyController::class, 'history']);
+    });
 
 }); // End auth:sanctum
 
@@ -299,63 +381,136 @@ Route::prefix('payment')->group(function () {
     Route::post('/callback/{gateway}', [PaymentController::class, 'callback']);
 });
 
-
 // ============================================================
 // 5. PHARMACY CALLBACK (عمومی)
 // ============================================================
 Route::prefix('pharmacy')->group(function () {
     Route::get('/payment/callback', [PharmacyController::class, 'paymentCallback'])->name('pharmacy.payment.callback');
-    Route::get('/payment/callback/{gateway}', [PharmacyController::class, 'paymentCallback']); // ✅ این رو اضافه کن
+    Route::get('/payment/callback/{gateway}', [PharmacyController::class, 'paymentCallback']);
 });
 
 // ============================================================
-// 6. ADMIN ROUTES (برای مدیریت داروخانه)
+// 6. ADMIN ROUTES (برای مدیریت)
 // ============================================================
 Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
 
-    // ============================================================
-    // 6.1 DRUG MANAGEMENT
-    // ============================================================
-    Route::prefix('drugs')->group(function () {
-        Route::get('/', [DrugController::class, 'index']);
-        Route::post('/', [DrugController::class, 'store']);
-        Route::get('/{id}', [DrugController::class, 'show']);
-        Route::put('/{id}', [DrugController::class, 'update']);
-        Route::delete('/{id}', [DrugController::class, 'destroy']);
-        Route::post('/{id}/toggle', [DrugController::class, 'toggleStatus']);
-        Route::post('/{id}/increase-stock', [DrugController::class, 'increaseStock']);
-        Route::post('/{id}/decrease-stock', [DrugController::class, 'decreaseStock']);
-        Route::get('/categories', [DrugController::class, 'categories']);
-        Route::get('/active', [DrugController::class, 'activeDrugs']);
-        Route::get('/search', [DrugController::class, 'search']);
-    });
+        // ============================================================
+        // 6.1 DRUG MANAGEMENT
+        // ============================================================
+        Route::prefix('drugs')->group(function () {
+            Route::get('/', [DrugController::class, 'index']);
+            Route::post('/', [DrugController::class, 'store']);
+            Route::get('/{id}', [DrugController::class, 'show']);
+            Route::put('/{id}', [DrugController::class, 'update']);
+            Route::delete('/{id}', [DrugController::class, 'destroy']);
+            Route::post('/{id}/toggle', [DrugController::class, 'toggleStatus']);
+            Route::post('/{id}/increase-stock', [DrugController::class, 'increaseStock']);
+            Route::post('/{id}/decrease-stock', [DrugController::class, 'decreaseStock']);
+            Route::get('/categories', [DrugController::class, 'categories']);
+            Route::get('/active', [DrugController::class, 'activeDrugs']);
+            Route::get('/search', [DrugController::class, 'search']);
+            Route::get('/pharmacy/{pharmacyId}', [DrugController::class, 'getPharmacyDrugs']);
+        });
 
-    // ============================================================
-    // 6.2 PHARMACY MANAGEMENT
-    // ============================================================
-    Route::prefix('pharmacies')->group(function () {
-        Route::get('/', [PharmacyManagementController::class, 'index']);
-        Route::post('/', [PharmacyManagementController::class, 'store']);
-        Route::get('/{id}', [PharmacyManagementController::class, 'show']);
-        Route::put('/{id}', [PharmacyManagementController::class, 'update']);
-        Route::delete('/{id}', [PharmacyManagementController::class, 'destroy']);
-        Route::post('/{id}/toggle-status', [PharmacyManagementController::class, 'toggleStatus']);
-        Route::post('/{id}/toggle-online', [PharmacyManagementController::class, 'toggleOnline']);
-    });
+        // ============================================================
+        // 6.2 AI CHAT
+        // ============================================================
+        Route::prefix('ai-chat')->group(function () {
+            Route::post('/start', [AIChatController::class, 'start']);
+            Route::get('/active', [AIChatController::class, 'active']);
+            Route::post('/close', [AIChatController::class, 'close']);
+            Route::post('/extend', [AIChatController::class, 'extend']);
+            Route::delete('/destroy', [AIChatController::class, 'destroy']);
+            Route::post('/send', [AIChatController::class, 'send']);
+            Route::get('/history', [AIChatController::class, 'history']);
+            Route::post('/feedback', [AIChatController::class, 'feedback']);
+            Route::get('/providers', [AIChatController::class, 'providers']);
+        });
 
-    // ============================================================
-    // 6.3 PHARMACY ORDERS (ادمین)
-    // ============================================================
-    Route::prefix('pharmacy-orders')->group(function () {
-        Route::get('/', [PharmacyController::class, 'pharmacyOrders']);
-        Route::get('/{id}', [PharmacyController::class, 'show']);
-        Route::post('/{id}/status', [PharmacyController::class, 'updateStatus']);
-    });
+        // ============================================================
+        // 6.3 PHARMACY MANAGEMENT
+        // ============================================================
+        Route::prefix('pharmacies')->group(function () {
+            Route::get('/', [PharmacyManagementController::class, 'index']);
+            Route::post('/', [PharmacyManagementController::class, 'store']);
+            Route::get('/{id}', [PharmacyManagementController::class, 'show']);
+            Route::put('/{id}', [PharmacyManagementController::class, 'update']);
+            Route::delete('/{id}', [PharmacyManagementController::class, 'destroy']);
+            Route::post('/{id}/toggle-status', [PharmacyManagementController::class, 'toggleStatus']);
+            Route::post('/{id}/toggle-online', [PharmacyManagementController::class, 'toggleOnline']);
+        });
 
-});
+        // ============================================================
+        // 6.4 PHARMACY ORDERS (ادمین) - فقط متدهای موجود
+        // ============================================================
+        Route::prefix('pharmacy-orders')->group(function () {
+            Route::get('/', [PharmacyController::class, 'pharmacyOrders']); // ✅ موجود است
+            Route::get('/{id}', [PharmacyController::class, 'show']); // ✅ موجود است
+            Route::post('/{id}/approve-prescription', [PharmacyController::class, 'approvePrescription']); // ✅ موجود است
+            Route::post('/{id}/reject-prescription', [PharmacyController::class, 'rejectPrescription']); // ✅ موجود است
+        });
+
+        // ============================================================
+        // 6.5 DOCTORS MANAGEMENT (ادمین)
+        // ============================================================
+        Route::prefix('doctors')->group(function () {
+            Route::get('/', [AdminDoctorController::class, 'index']);
+            Route::post('/', [AdminDoctorController::class, 'store']);
+            Route::get('/{id}', [AdminDoctorController::class, 'show']);
+            Route::put('/{id}', [AdminDoctorController::class, 'update']);
+            Route::delete('/{id}', [AdminDoctorController::class, 'destroy']);
+            Route::post('/{id}/toggle-availability', [AdminDoctorController::class, 'toggleAvailability']);
+            Route::post('/{id}/verify', [AdminDoctorController::class, 'verify']);
+            Route::post('/{id}/set-fee', [AdminDoctorController::class, 'setAppointmentFee']);
+            Route::get('/{id}/fee', [AdminDoctorController::class, 'getAppointmentFee']);
+            Route::post('/{id}/set-free', [AdminDoctorController::class, 'setFree']);
+            Route::post('/{id}/set-paid', [AdminDoctorController::class, 'setPaid']);
+        });
+
+        // ============================================================
+        // 6.6 PATIENTS MANAGEMENT (ادمین)
+        // ============================================================
+        Route::prefix('patients')->group(function () {
+            Route::get('/without-doctor', [AdminPatientController::class, 'withoutDoctor']);
+            Route::get('/top', [AdminPatientController::class, 'topPatients']);
+            Route::get('/my/patients', [AdminPatientController::class, 'myPatients']);
+            Route::get('/', [AdminPatientController::class, 'index']);
+            Route::post('/', [AdminPatientController::class, 'store']);
+            Route::get('/{id}', [AdminPatientController::class, 'show']);
+            Route::put('/{id}', [AdminPatientController::class, 'update']);
+            Route::delete('/{id}', [AdminPatientController::class, 'destroy']);
+            Route::post('/{id}/toggle-status', [AdminPatientController::class, 'toggleStatus']);
+            Route::post('/{id}/verify', [AdminPatientController::class, 'verify']);
+            Route::post('/{id}/unverify', [AdminPatientController::class, 'unverify']);
+            Route::post('/{id}/assign-doctor', [AdminPatientController::class, 'assignDoctor']);
+            Route::get('/{id}/medical-history', [AdminPatientController::class, 'medicalHistory']);
+            Route::get('/{id}/statistics', [AdminPatientController::class, 'statistics']);
+            Route::get('/by-national-code', [AdminPatientController::class, 'findByNationalCode']);
+            Route::get('/by-mobile', [AdminPatientController::class, 'findByMobile']);
+        });
+
+        // ============================================================
+        // 6.7 LABORATORY MANAGEMENT (ادمین)
+        // ============================================================
+        Route::prefix('lab')->group(function () {
+            Route::get('/categories', [LabController::class, 'categories']);
+            Route::post('/categories', [LabController::class, 'storeCategory']);
+            Route::put('/categories/{id}', [LabController::class, 'updateCategory']);
+            Route::delete('/categories/{id}', [LabController::class, 'deleteCategory']);
+            Route::get('/tests', [LabController::class, 'tests']);
+            Route::post('/tests', [LabController::class, 'storeTest']);
+            Route::put('/tests/{id}', [LabController::class, 'updateTest']);
+            Route::delete('/tests/{id}', [LabController::class, 'deleteTest']);
+            Route::post('/tests/{id}/toggle', [LabController::class, 'toggleTestStatus']);
+            Route::get('/orders', [LabController::class, 'orders']);
+        });
+
+
+
+    });
 
 // ============================================================
 // 7. FALLBACK (مسیرهای پیدا نشد)
@@ -366,172 +521,4 @@ Route::fallback(function () {
         'message' => 'مسیر مورد نظر یافت نشد',
         'errors' => ['route' => 'The requested route does not exist']
     ], 404);
-});
-
-// ============================================================
-// 3.14 PHARMACY REPORTS (نیاز به احراز هویت)
-// ============================================================
-Route::middleware('auth:sanctum')->prefix('pharmacy')->group(function () {
-    Route::prefix('reports')->group(function () {
-        Route::get('/overview/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'overview']);
-        Route::get('/product-sales/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'productSales']);
-        Route::get('/inventory/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'inventory']);
-        Route::get('/financial/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'financial']);
-        Route::get('/daily/{pharmacyId}', [App\Http\Controllers\Api\PharmacyReportController::class, 'daily']);
-    });
-});
-
-// ============================================================
-// 6.4 DRUGS - PUBLIC (عمومی)
-// ============================================================
-Route::get('/drugs/active', [App\Http\Controllers\Admin\DrugController::class, 'activeDrugs']);
-
-// ============================================================
-// 3.15 MEDICAL NOTES (یادداشت‌های پزشکی)
-// ============================================================
-Route::middleware('auth:sanctum')->prefix('medical-notes')->group(function () {
-    Route::get('/', [App\Http\Controllers\Api\MedicalNoteController::class, 'index']);
-    Route::post('/', [App\Http\Controllers\Api\MedicalNoteController::class, 'store']);
-    Route::get('/patient/{patientId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'patientNotes']);
-    Route::get('/doctor/{doctorId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'doctorNotes']);
-    Route::get('/summary/{patientId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'summary']);
-    Route::get('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'show']);
-    Route::put('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'update']);
-    Route::delete('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'destroy']);
-    Route::post('/{id}/share', [App\Http\Controllers\Api\MedicalNoteController::class, 'share']);
-    Route::post('/{id}/unshare', [App\Http\Controllers\Api\MedicalNoteController::class, 'unshare']);
-    Route::post('/{id}/lab-request', [App\Http\Controllers\Api\MedicalNoteController::class, 'addLabRequest']);
-    Route::post('/{id}/imaging-request', [App\Http\Controllers\Api\MedicalNoteController::class, 'addImagingRequest']);
-    Route::post('/{id}/referral', [App\Http\Controllers\Api\MedicalNoteController::class, 'addReferral']);
-});
-
-// ============================================================
-// 3.15 MEDICAL NOTES (پزشک و بیمار)
-// ============================================================
-Route::middleware('auth:sanctum')->prefix('medical-notes')->group(function () {
-    // پزشک: مشاهده یادداشت‌های خود و بیمارانش
-    Route::get('/my', [App\Http\Controllers\Api\MedicalNoteController::class, 'myNotes']);
-    Route::get('/patient/{patientId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'patientNotes']);
-    Route::get('/appointment/{appointmentId}', [App\Http\Controllers\Api\MedicalNoteController::class, 'appointmentNote']);
-
-    // ایجاد و مدیریت
-    Route::post('/', [App\Http\Controllers\Api\MedicalNoteController::class, 'store']);
-    Route::get('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'show']);
-    Route::put('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'update']);
-    Route::delete('/{id}', [App\Http\Controllers\Api\MedicalNoteController::class, 'destroy']);
-
-    // اقدامات
-    Route::post('/{id}/share', [App\Http\Controllers\Api\MedicalNoteController::class, 'share']);
-    Route::post('/{id}/unshare', [App\Http\Controllers\Api\MedicalNoteController::class, 'unshare']);
-    Route::post('/{id}/finalize', [App\Http\Controllers\Api\MedicalNoteController::class, 'finalize']);
-
-    // بیمار: مشاهده یادداشت‌های خود
-    Route::get('/my-notes', [App\Http\Controllers\Api\MedicalNoteController::class, 'myPatientNotes']);
-});
-
-// ============================================================
-// 6.5 DOCTOR FEE MANAGEMENT (ادمین)
-// ============================================================
-Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
-    ->prefix('admin/doctors')
-    ->group(function () {
-        Route::post('/{id}/set-fee', [App\Http\Controllers\Admin\DoctorController::class, 'setAppointmentFee']);
-        Route::get('/{id}/fee', [App\Http\Controllers\Admin\DoctorController::class, 'getAppointmentFee']);
-        Route::post('/{id}/set-free', [App\Http\Controllers\Admin\DoctorController::class, 'setFree']);
-        Route::post('/{id}/set-paid', [App\Http\Controllers\Admin\DoctorController::class, 'setPaid']);
-    });
-
-// ============================================================
-// 2.7 DRUGS - دریافت یک دارو (عمومی)
-// ============================================================
-Route::get('/drugs/{id}', [App\Http\Controllers\Admin\DrugController::class, 'show']);
-
-// ============================================================
-// 5. PHARMACY CALLBACK (عمومی)
-// ============================================================
-Route::prefix('pharmacy')->group(function () {
-    Route::get('/payment/callback', [App\Http\Controllers\Api\PharmacyController::class, 'paymentCallback'])->name('pharmacy.payment.callback');
-});
-
-// ============================================================
-// 8. LABORATORY ROUTES
-// ============================================================
-
-// مسیرهای عمومی
-Route::prefix('lab')->group(function () {
-    Route::get('/categories/active', [App\Http\Controllers\Api\LabController::class, 'activeCategories']);
-    Route::get('/tests/active', [App\Http\Controllers\Api\LabController::class, 'activeTests']);
-    Route::get('/tests/{id}', [App\Http\Controllers\Api\LabController::class, 'showTest']);
-});
-
-// مسیرهای محافظت شده
-Route::middleware('auth:sanctum')->prefix('lab')->group(function () {
-    // سفارشات
-    Route::post('/orders', [App\Http\Controllers\Api\LabController::class, 'createOrder']);
-    Route::get('/my/orders', [App\Http\Controllers\Api\LabController::class, 'myOrders']);
-    Route::get('/orders/{id}', [App\Http\Controllers\Api\LabController::class, 'showOrder']);
-    Route::put('/orders/{id}/status', [App\Http\Controllers\Api\LabController::class, 'updateOrderStatus']);
-
-    // نتایج
-    Route::post('/results', [App\Http\Controllers\Api\LabController::class, 'addResult']);
-    Route::post('/results/bulk', [App\Http\Controllers\Api\LabController::class, 'addResults']);
-    Route::post('/results/{id}/verify', [App\Http\Controllers\Api\LabController::class, 'verifyResult']);
-    Route::delete('/results/{id}', [App\Http\Controllers\Api\LabController::class, 'deleteResult']);
-
-    // آمار
-    Route::get('/stats', [App\Http\Controllers\Api\LabController::class, 'stats']);
-    Route::get('/my/stats', [App\Http\Controllers\Api\LabController::class, 'myStats']);
-});
-
-// مسیرهای ادمین
-Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('lab')->group(function () {
-    Route::get('/categories', [App\Http\Controllers\Api\LabController::class, 'categories']);
-    Route::post('/categories', [App\Http\Controllers\Api\LabController::class, 'storeCategory']);
-    Route::put('/categories/{id}', [App\Http\Controllers\Api\LabController::class, 'updateCategory']);
-    Route::delete('/categories/{id}', [App\Http\Controllers\Api\LabController::class, 'deleteCategory']);
-
-    Route::get('/tests', [App\Http\Controllers\Api\LabController::class, 'tests']);
-    Route::post('/tests', [App\Http\Controllers\Api\LabController::class, 'storeTest']);
-    Route::put('/tests/{id}', [App\Http\Controllers\Api\LabController::class, 'updateTest']);
-    Route::delete('/tests/{id}', [App\Http\Controllers\Api\LabController::class, 'deleteTest']);
-    Route::post('/tests/{id}/toggle', [App\Http\Controllers\Api\LabController::class, 'toggleTestStatus']);
-
-    Route::get('/orders', [App\Http\Controllers\Api\LabController::class, 'orders']);
-});
-
-// ============================================================
-// AiChat Routes - دکتر آنلاین
-// ============================================================
-Route::prefix('v1/chat')->middleware(['auth:sanctum'])->group(function () {
-
-    // مدیریت جلسات
-    Route::post('/start', [App\Http\Controllers\Api\AiChat\ChatController::class, 'start']);
-    Route::get('/active', [App\Http\Controllers\Api\AiChat\ChatController::class, 'active']);
-    Route::post('/close', [App\Http\Controllers\Api\AiChat\ChatController::class, 'close']);
-    Route::post('/extend', [App\Http\Controllers\Api\AiChat\ChatController::class, 'extend']);
-    Route::delete('/destroy', [App\Http\Controllers\Api\AiChat\ChatController::class, 'destroy']);
-
-    // ارسال پیام و تاریخچه
-    Route::post('/send', [App\Http\Controllers\Api\AiChat\ChatController::class, 'send']);
-    Route::get('/history', [App\Http\Controllers\Api\AiChat\ChatController::class, 'history']);
-
-    // بازخورد
-    Route::post('/feedback', [App\Http\Controllers\Api\AiChat\ChatController::class, 'feedback']);
-
-    // سوالات پزشکی
-    Route::prefix('medical')->group(function () {
-        Route::post('/ask', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'ask']);
-        Route::post('/symptom-check', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'symptomCheck']);
-        Route::get('/history', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'history']);
-        Route::get('/categories', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'categories']);
-        Route::get('/stats', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'stats']);
-    });
-
-    // مدیریت فایل‌ها
-    Route::prefix('files')->group(function () {
-        Route::post('/upload', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'upload']);
-        Route::get('/list', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'list']);
-        Route::get('/download/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'download']);
-        Route::delete('/delete/{id}', [App\Http\Controllers\Api\AiChat\FileUploadController::class, 'delete']);
-    });
 });

@@ -12,6 +12,7 @@ use App\Http\Requests\Api\PharmacyOrderRequest;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class PharmacyController extends Controller
 {
@@ -63,10 +64,9 @@ class PharmacyController extends Controller
 
             // اگر پرداخت موفق بود، وضعیت رو آپدیت کن
             if ($success === 'true' || $success === '1') {
-                // ✅ آپدیت کامل - هم payment_status و هم status
                 $order->update([
                     'payment_status' => 'paid',
-                    'status' => 'paid',  // ✅ این مهمه!
+                    'status' => 'paid',
                     'payment_gateway' => $gateway,
                     'payment_authority' => $transactionId,
                     'paid_at' => now(),
@@ -78,7 +78,6 @@ class PharmacyController extends Controller
                     'new_status' => 'paid'
                 ]);
 
-                // هدایت به صفحه موفقیت
                 $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
                 return redirect()->away($frontendUrl . '/fa/pharmacy/payment/callback?success=true&order_number=' . $orderNumber);
             } else {
@@ -86,7 +85,7 @@ class PharmacyController extends Controller
 
                 $order->update([
                     'payment_status' => 'failed',
-                    'status' => 'failed',  // ✅ این رو هم آپدیت کن
+                    'status' => 'failed',
                 ]);
 
                 $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
@@ -127,7 +126,6 @@ class PharmacyController extends Controller
             ->online()
             ->paginate($perPage);
 
-        // اضافه کردن فاصله به هر آیتم
         $pharmacies->getCollection()->transform(function ($pharmacy) {
             $pharmacy->distance_text = $pharmacy->distance ?
                 ($pharmacy->distance < 1 ?
@@ -152,27 +150,32 @@ class PharmacyController extends Controller
         return $this->success($pharmacies, 'لیست داروخانه‌های طرف قرارداد');
     }
 
-
     /**
-     * جستجوی داروها
+     * ✅ جستجوی داروها (با فیلتر داروخانه)
      */
     public function search(Request $request)
     {
         $query = $request->query('q');
+        $pharmacyId = $request->query('pharmacy_id');
 
         if (empty($query)) {
             return $this->success([], 'عبارت جستجو را وارد کنید');
         }
 
-        // ✅ بدون persian_name
-        $drugs = Drug::where('is_active', true)
-            ->where(function ($q) use ($query) {
-                $q->where('generic_name', 'like', "%{$query}%")
-                    ->orWhere('name', 'like', "%{$query}%")
-                    ->orWhere('code', 'like', "%{$query}%")
-                    ->orWhere('category', 'like', "%{$query}%")
-                    ->orWhere('manufacturer', 'like', "%{$query}%");
-            })
+        $drugs = Drug::where('is_active', true);
+
+        // ✅ فیلتر بر اساس داروخانه
+        if ($pharmacyId) {
+            $drugs->where('pharmacy_id', $pharmacyId);
+        }
+
+        $drugs = $drugs->where(function ($q) use ($query) {
+            $q->where('generic_name', 'like', "%{$query}%")
+                ->orWhere('name', 'like', "%{$query}%")
+                ->orWhere('code', 'like', "%{$query}%")
+                ->orWhere('category', 'like', "%{$query}%")
+                ->orWhere('manufacturer', 'like', "%{$query}%");
+        })
             ->orderBy('generic_name')
             ->paginate($request->per_page ?? 20);
 
@@ -180,24 +183,106 @@ class PharmacyController extends Controller
     }
 
     /**
-     * لیست محصولات داروخانه
+     * ✅ لیست محصولات یک داروخانه خاص
      */
     public function products(Request $request, $pharmacyId = null)
     {
         $query = Drug::where('is_active', true);
 
+        // ✅ فیلتر بر اساس داروخانه
         if ($pharmacyId) {
-            $query->whereHas('pharmacyStock', function ($q) use ($pharmacyId) {
-                $q->where('pharmacy_id', $pharmacyId)
-                    ->where('stock', '>', 0);
+            $query->where('pharmacy_id', $pharmacyId)
+                ->where('stock', '>', 0);
+        }
+
+        // فیلتر بر اساس دسته‌بندی
+        if ($request->has('category') && $request->category) {
+            $query->where('category', $request->category);
+        }
+
+        // فیلتر بر اساس نیاز به نسخه
+        if ($request->has('requires_prescription')) {
+            $query->where('requires_prescription', $request->requires_prescription === 'true' || $request->requires_prescription === '1');
+        }
+
+        // جستجو در نام داروها
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('generic_name', 'like', "%{$search}%");
             });
         }
 
-        $drugs = $query->paginate($request->per_page ?? 20);
+        $drugs = $query->orderBy('name')
+            ->paginate($request->per_page ?? 20);
 
         return $this->success($drugs, 'لیست محصولات');
     }
 
+    /**
+     * ✅ دریافت دسته‌بندی‌های داروهای یک داروخانه
+     */
+    public function categories(Request $request)
+    {
+        $pharmacyId = $request->query('pharmacy_id');
+
+        $query = Drug::whereNotNull('category')
+            ->where('is_active', true);
+
+        // ✅ فیلتر بر اساس داروخانه
+        if ($pharmacyId) {
+            $query->where('pharmacy_id', $pharmacyId);
+        }
+
+        $categories = $query->distinct()
+            ->pluck('category')
+            ->toArray();
+
+        return $this->success($categories);
+    }
+
+    /**
+     * ✅ لیست داروخانه‌ها
+     */
+    public function index(Request $request)
+    {
+        $pharmacies = Pharmacy::active()
+            ->online()
+            ->when($request->has('search'), function ($query) use ($request) {
+                return $query->where('name', 'like', "%{$request->search}%")
+                    ->orWhere('address', 'like', "%{$request->search}%");
+            })
+            ->paginate($request->per_page ?? 20);
+
+        return $this->success($pharmacies, 'لیست داروخانه‌ها');
+    }
+
+    /**
+     * ✅ نمایش یک داروخانه با داروهایش
+     */
+    public function showPharmacy($id)
+    {
+        try {
+            $pharmacy = Pharmacy::with(['province', 'city', 'clinic'])
+                ->findOrFail($id);
+
+            // دریافت داروهای موجود
+            $drugs = Drug::where('pharmacy_id', $id)
+                ->where('is_active', true)
+                ->where('stock', '>', 0)
+                ->limit(10)
+                ->get();
+
+            return $this->success([
+                'pharmacy' => $pharmacy,
+                'drugs' => $drugs,
+                'drugs_count' => Drug::where('pharmacy_id', $id)->where('is_active', true)->count(),
+            ]);
+        } catch (\Exception $e) {
+            return $this->error('داروخانه یافت نشد', 404);
+        }
+    }
 
     /**
      * ثبت سفارش جدید
@@ -219,6 +304,26 @@ class PharmacyController extends Controller
             if (!isset($data['pharmacy_id']) || empty($data['pharmacy_id'])) {
                 $pharmacy = Pharmacy::active()->online()->first();
                 $data['pharmacy_id'] = $pharmacy?->id ?? 1;
+            }
+
+            // ✅ بررسی موجودی داروها قبل از ثبت سفارش
+            if (isset($data['items']) && is_array($data['items'])) {
+                foreach ($data['items'] as $item) {
+                    $drug = Drug::find($item['drug_id']);
+                    if (!$drug) {
+                        return $this->error("دارو با شناسه {$item['drug_id']} یافت نشد", 404);
+                    }
+
+                    // ✅ بررسی اینکه دارو متعلق به داروخانه انتخابی است
+                    if ($drug->pharmacy_id != $data['pharmacy_id']) {
+                        return $this->error("دارو {$drug->name} در داروخانه انتخابی موجود نیست", 400);
+                    }
+
+                    // ✅ بررسی موجودی کافی
+                    if ($drug->stock < $item['quantity']) {
+                        return $this->error("موجودی دارو {$drug->name} کافی نیست. موجودی: {$drug->stock}", 400);
+                    }
+                }
             }
 
             // محاسبه total_amount
@@ -278,7 +383,7 @@ class PharmacyController extends Controller
             $orderData['recipient_phone'] = $order->recipient_phone;
             $orderData['delivery_address'] = $order->delivery_address;
             $orderData['delivery_notes'] = $order->delivery_notes;
-            $orderData['payment_link'] = $paymentLink; // ✅ اضافه شد
+            $orderData['payment_link'] = $paymentLink;
 
             return $this->success($orderData, 'سفارش با موفقیت ثبت شد', 201);
 
@@ -462,7 +567,6 @@ class PharmacyController extends Controller
         }
     }
 
-
     /**
      * لغو سفارش
      */
@@ -478,22 +582,18 @@ class PharmacyController extends Controller
                 return $this->error('شما دسترسی به این سفارش ندارید', 403);
             }
 
-            // ✅ بررسی پرداخت شده بودن
             if ($order->is_paid || $order->payment_status === 'paid') {
                 return $this->error('سفارش پرداخت شده قابل لغو نیست', 400);
             }
 
-            // ✅ بررسی تحویل شده بودن
             if ($order->status === 'delivered') {
                 return $this->error('سفارش تحویل شده قابل لغو نیست', 400);
             }
 
-            // ✅ فقط سفارشات در انتظار پرداخت قابل لغو هستن
             if (!in_array($order->status, ['pending', 'payment_pending'])) {
                 return $this->error('وضعیت فعلی سفارش اجازه لغو را نمی‌دهد', 400);
             }
 
-            // ✅ آپدیت کامل
             $order->status = 'cancelled';
             $order->cancelled_at = now();
             $order->save();
@@ -641,6 +741,286 @@ class PharmacyController extends Controller
         } catch (\Exception $e) {
             Log::error('❌ Stats error: ' . $e->getMessage());
             return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    // ============================================
+    // ✅ آپلود نسخه پزشکی (کاربر)
+    // ============================================
+    public function uploadPrescription(Request $request, $id)
+    {
+        try {
+            $user = auth()->user();
+            $patient = Patient::where('user_id', $user->id)->first();
+
+            if (!$patient) {
+                return $this->error('بیمار یافت نشد', 404);
+            }
+
+            $order = PharmacyOrder::where('id', $id)
+                ->where('patient_id', $patient->id)
+                ->first();
+
+            if (!$order) {
+                return $this->error('سفارش یافت نشد', 404);
+            }
+
+            if ($order->status !== 'payment_pending') {
+                return $this->error('این سفارش قابل آپلود نسخه نیست', 400);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'prescription' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+            }
+
+            $file = $request->file('prescription');
+            $path = $file->store('prescriptions/' . $order->id, 'public');
+
+            $order->update([
+                'prescription_file' => $path,
+                'prescription_status' => 'pending',
+            ]);
+
+            $this->sendPrescriptionNotification($order, 'uploaded');
+
+            Log::info('📄 Prescription uploaded', [
+                'order_id' => $order->id,
+                'file_path' => $path,
+                'patient_id' => $patient->id,
+            ]);
+
+            return $this->success([
+                'order_id' => $order->id,
+                'prescription_file' => $path,
+                'prescription_status' => 'pending',
+                'message' => 'نسخه با موفقیت آپلود شد. در انتظار تایید ادمین...',
+            ], 'نسخه با موفقیت آپلود شد');
+
+        } catch (\Exception $e) {
+            Log::error('❌ Upload prescription error: ' . $e->getMessage());
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    // ============================================
+    // ✅ تایید نسخه (ادمین)
+    // ============================================
+    public function approvePrescription(Request $request, $id)
+    {
+        try {
+            $user = auth()->user();
+            if (!$user->isAdmin()) {
+                return $this->error('شما دسترسی به این بخش را ندارید', 403);
+            }
+
+            $order = PharmacyOrder::findOrFail($id);
+
+            if ($order->prescription_status !== 'pending') {
+                return $this->error('این سفارش در وضعیت تایید نسخه نیست', 400);
+            }
+
+            $order->update([
+                'prescription_status' => 'approved',
+                'prescription_approved_at' => now(),
+                'prescription_approved_by' => $user->id,
+                'status' => 'payment_pending',
+            ]);
+
+            $this->sendPrescriptionSms($order, 'approved');
+            $this->sendPrescriptionNotification($order, 'approved');
+
+            Log::info('✅ Prescription approved', [
+                'order_id' => $order->id,
+                'admin_id' => $user->id,
+            ]);
+
+            return $this->success([
+                'order_id' => $order->id,
+                'prescription_status' => 'approved',
+                'message' => 'نسخه با موفقیت تایید شد. کاربر می‌تواند پرداخت کند.',
+            ], 'نسخه تایید شد');
+
+        } catch (\Exception $e) {
+            Log::error('❌ Approve prescription error: ' . $e->getMessage());
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    // ============================================
+    // ✅ رد نسخه (ادمین)
+    // ============================================
+    public function rejectPrescription(Request $request, $id)
+    {
+        try {
+            $user = auth()->user();
+            if (!$user->isAdmin()) {
+                return $this->error('شما دسترسی به این بخش را ندارید', 403);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'reason' => 'required|string|max:500',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+            }
+
+            $order = PharmacyOrder::findOrFail($id);
+
+            if ($order->prescription_status !== 'pending') {
+                return $this->error('این سفارش در وضعیت تایید نسخه نیست', 400);
+            }
+
+            $order->update([
+                'prescription_status' => 'rejected',
+                'prescription_reject_reason' => $request->reason,
+                'prescription_rejected_at' => now(),
+                'status' => 'cancelled',
+            ]);
+
+            $this->sendPrescriptionSms($order, 'rejected', $request->reason);
+            $this->sendPrescriptionNotification($order, 'rejected', $request->reason);
+
+            Log::info('❌ Prescription rejected', [
+                'order_id' => $order->id,
+                'admin_id' => $user->id,
+                'reason' => $request->reason,
+            ]);
+
+            return $this->success([
+                'order_id' => $order->id,
+                'prescription_status' => 'rejected',
+                'message' => 'نسخه با موفقیت رد شد. پیامک به کاربر ارسال شد.',
+            ], 'نسخه رد شد');
+
+        } catch (\Exception $e) {
+            Log::error('❌ Reject prescription error: ' . $e->getMessage());
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    // ============================================
+    // ✅ دریافت وضعیت نسخه
+    // ============================================
+    public function getPrescriptionStatus($id)
+    {
+        try {
+            $order = PharmacyOrder::findOrFail($id);
+
+            $user = auth()->user();
+            $patient = Patient::where('user_id', $user->id)->first();
+
+            if (!$user->isAdmin() && (!$patient || $order->patient_id != $patient->id)) {
+                return $this->error('شما دسترسی به این سفارش ندارید', 403);
+            }
+
+            return $this->success([
+                'order_id' => $order->id,
+                'prescription_status' => $order->prescription_status,
+                'prescription_status_label' => $order->prescription_status_label,
+                'prescription_file' => $order->prescription_file_url,
+                'prescription_reject_reason' => $order->prescription_reject_reason,
+                'prescription_approved_at' => $order->prescription_approved_at,
+                'prescription_rejected_at' => $order->prescription_rejected_at,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Get prescription status error: ' . $e->getMessage());
+            return $this->error($e->getMessage(), 404);
+        }
+    }
+
+    // ============================================
+    // ✅ ارسال پیامک نسخه
+    // ============================================
+    private function sendPrescriptionSms(PharmacyOrder $order, string $status, ?string $reason = null): void
+    {
+        try {
+            $patient = $order->patient;
+            $phone = $patient->phone ?? $patient->user->mobile ?? null;
+
+            if (!$phone) {
+                Log::warning('No phone number found for patient', ['patient_id' => $patient->id]);
+                return;
+            }
+
+            $messages = [
+                'approved' => "✅ نسخه پزشکی سفارش {$order->order_number} تایید شد. لطفاً برای تکمیل سفارش، پرداخت را انجام دهید.\nکلینیک‌یار",
+                'rejected' => "❌ نسخه پزشکی سفارش {$order->order_number} رد شد.\nدلیل: {$reason}\nلطفاً با پشتیبانی تماس بگیرید.\nکلینیک‌یار",
+            ];
+
+            $message = $messages[$status] ?? 'وضعیت نسخه شما تغییر کرد.';
+            // app(SmsManager::class)->send($phone, $message);
+
+            Log::info('📱 Prescription SMS sent', [
+                'order_id' => $order->id,
+                'phone' => $phone,
+                'status' => $status,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Send prescription SMS error: ' . $e->getMessage());
+        }
+    }
+
+    // ============================================
+    // ✅ ارسال نوتیفیکیشن نسخه
+    // ============================================
+    private function sendPrescriptionNotification(PharmacyOrder $order, string $action, ?string $reason = null): void
+    {
+        try {
+            $titles = [
+                'uploaded' => '📄 نسخه جدید آپلود شد',
+                'approved' => '✅ نسخه تایید شد',
+                'rejected' => '❌ نسخه رد شد',
+            ];
+
+            $messages = [
+                'uploaded' => "نسخه پزشکی سفارش {$order->order_number} توسط بیمار آپلود شد. لطفاً بررسی کنید.",
+                'approved' => "نسخه پزشکی سفارش {$order->order_number} تایید شد. کاربر می‌تواند پرداخت کند.",
+                'rejected' => "نسخه پزشکی سفارش {$order->order_number} رد شد.\nدلیل: {$reason}",
+            ];
+
+            if ($action === 'uploaded') {
+                $admins = \App\Models\User::role('admin')->get();
+                foreach ($admins as $admin) {
+                    \App\Models\Notification::create([
+                        'user_id' => $admin->id,
+                        'type' => 'prescription',
+                        'title' => $titles[$action] ?? 'نسخه پزشکی',
+                        'body' => $messages[$action] ?? '',
+                        'data' => ['order_id' => $order->id],
+                        'priority' => 'high',
+                        'sent_at' => now(),
+                    ]);
+                }
+            }
+
+            if ($action === 'approved' || $action === 'rejected') {
+                \App\Models\PharmacyNotification::create([
+                    'tenant_id' => session('tenant_id'),
+                    'patient_id' => $order->patient_id,
+                    'order_id' => $order->id,
+                    'type' => 'panel',
+                    'title' => $titles[$action] ?? 'وضعیت نسخه',
+                    'message' => $messages[$action] ?? '',
+                    'data' => ['order_id' => $order->id],
+                    'is_read' => false,
+                    'sent_at' => now(),
+                ]);
+            }
+
+            Log::info('📨 Prescription notification sent', [
+                'order_id' => $order->id,
+                'action' => $action,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Send prescription notification error: ' . $e->getMessage());
         }
     }
 }

@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('drugs', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('pharmacy_id')->nullable()->constrained('pharmacies')->nullOnDelete();
+
             $table->string('name');
             $table->string('generic_name')->nullable();
             $table->string('code')->unique();

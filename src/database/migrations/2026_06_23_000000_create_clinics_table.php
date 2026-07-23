@@ -13,6 +13,8 @@ return new class extends Migration
                 $table->id();
                 $table->string('name');
                 $table->string('slug')->unique()->nullable();
+                $table->foreignId('province_id')->nullable()->constrained('provinces')->nullOnDelete();
+                $table->foreignId('city_id')->nullable()->constrained('cities')->nullOnDelete();
                 $table->text('address')->nullable();
                 $table->string('phone')->nullable();
                 $table->string('email')->nullable();

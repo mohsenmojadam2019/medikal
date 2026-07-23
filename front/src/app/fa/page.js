@@ -427,20 +427,6 @@ export default function HomePage() {
                 مشاهده همه <i className="fas fa-chevron-left" />
               </Link>
             </div>
-            <div className="offer-card">
-              <div className="offer-icon">🎁</div>
-              <div className="offer-content">
-                <h4>تخفیف ۲۰٪ برای ویزیت اول</h4>
-                <p>برای اولین نوبت خود از هر پزشک، ۲۰٪ تخفیف دریافت کنید. کد تخفیف را کپی کنید.</p>
-              </div>
-              <div className="offer-code" onClick={() => {
-                navigator.clipboard.writeText('WELCOME20').then(() => {
-                  message.success('✅ کد تخفیف کپی شد!');
-                });
-              }}>
-                WELCOME20
-              </div>
-            </div>
           </section>
 
           {/* اعتماد */}

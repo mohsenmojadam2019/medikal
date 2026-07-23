@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Drug;
+use App\Models\Pharmacy;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -13,11 +14,16 @@ class DrugController extends Controller
     use ApiResponse;
 
     /**
-     * لیست داروها
+     * لیست داروها (با فیلتر داروخانه)
      */
     public function index(Request $request)
     {
-        $query = Drug::query();
+        $query = Drug::with(['pharmacy']); // ✅ eager loading pharmacy
+
+        // ✅ فیلتر بر اساس داروخانه
+        if ($request->has('pharmacy_id') && $request->pharmacy_id) {
+            $query->where('pharmacy_id', $request->pharmacy_id);
+        }
 
         // جستجو
         if ($request->has('search')) {
@@ -64,6 +70,7 @@ class DrugController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'pharmacy_id' => 'required|exists:pharmacies,id', // ✅ الزامی شد
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'code' => 'nullable|string|unique:drugs,code',
@@ -84,7 +91,7 @@ class DrugController extends Controller
 
         try {
             $data = $request->all();
-            
+
             // اگر کد وارد نشده، خودکار تولید کن
             if (empty($data['code'])) {
                 $drug = new Drug();
@@ -93,7 +100,7 @@ class DrugController extends Controller
 
             $drug = Drug::create($data);
 
-            return $this->success($drug, 'دارو با موفقیت ایجاد شد', 201);
+            return $this->success($drug->load('pharmacy'), 'دارو با موفقیت ایجاد شد', 201);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -105,7 +112,7 @@ class DrugController extends Controller
     public function show($id)
     {
         try {
-            $drug = Drug::findOrFail($id);
+            $drug = Drug::with(['pharmacy'])->findOrFail($id);
             return $this->success($drug);
         } catch (\Exception $e) {
             return $this->error('دارو یافت نشد', 404);
@@ -124,6 +131,7 @@ class DrugController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'pharmacy_id' => 'sometimes|exists:pharmacies,id', // ✅ قابل تغییر
             'name' => 'sometimes|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'code' => 'sometimes|string|unique:drugs,code,' . $id,
@@ -144,7 +152,7 @@ class DrugController extends Controller
 
         try {
             $drug->update($request->all());
-            return $this->success($drug->fresh(), 'دارو با موفقیت بروزرسانی شد');
+            return $this->success($drug->fresh()->load('pharmacy'), 'دارو با موفقیت بروزرسانی شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -172,7 +180,7 @@ class DrugController extends Controller
         try {
             $drug = Drug::findOrFail($id);
             $drug->update(['is_active' => !$drug->is_active]);
-            return $this->success($drug->fresh(), 'وضعیت دارو با موفقیت تغییر کرد');
+            return $this->success($drug->fresh()->load('pharmacy'), 'وضعیت دارو با موفقیت تغییر کرد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -194,7 +202,7 @@ class DrugController extends Controller
         try {
             $drug = Drug::findOrFail($id);
             $drug->increaseStock($request->quantity);
-            return $this->success($drug->fresh(), 'موجودی با موفقیت افزایش یافت');
+            return $this->success($drug->fresh()->load('pharmacy'), 'موجودی با موفقیت افزایش یافت');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -216,41 +224,53 @@ class DrugController extends Controller
         try {
             $drug = Drug::findOrFail($id);
             $result = $drug->decreaseStock($request->quantity);
-            
+
             if (!$result) {
                 return $this->error('موجودی کافی نیست', 400);
             }
 
-            return $this->success($drug->fresh(), 'موجودی با موفقیت کاهش یافت');
+            return $this->success($drug->fresh()->load('pharmacy'), 'موجودی با موفقیت کاهش یافت');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
 
     /**
-     * جستجوی دارو (عمومی)
+     * جستجوی دارو (عمومی) - با فیلتر داروخانه
      */
     public function search(Request $request)
     {
         $request->validate([
             'q' => 'required|string|min:2',
+            'pharmacy_id' => 'nullable|exists:pharmacies,id', // ✅ اضافه شد
         ]);
 
-        $drugs = Drug::active()
-            ->search($request->q)
-            ->limit($request->get('limit', 20))
-            ->get(['id', 'name', 'generic_name', 'code', 'strength', 'price', 'stock']);
+        $query = Drug::active()->search($request->q);
+
+        // ✅ فیلتر بر اساس داروخانه
+        if ($request->has('pharmacy_id') && $request->pharmacy_id) {
+            $query->where('pharmacy_id', $request->pharmacy_id);
+        }
+
+        $drugs = $query->limit($request->get('limit', 20))
+            ->get(['id', 'name', 'generic_name', 'code', 'strength', 'price', 'stock', 'pharmacy_id']);
 
         return $this->success($drugs);
     }
 
     /**
-     * لیست دسته‌بندی‌ها
+     * لیست دسته‌بندی‌ها (با فیلتر داروخانه)
      */
-    public function categories()
+    public function categories(Request $request)
     {
-        $categories = Drug::distinct()
-            ->whereNotNull('category')
+        $query = Drug::whereNotNull('category');
+
+        // ✅ فیلتر بر اساس داروخانه
+        if ($request->has('pharmacy_id') && $request->pharmacy_id) {
+            $query->where('pharmacy_id', $request->pharmacy_id);
+        }
+
+        $categories = $query->distinct()
             ->pluck('category')
             ->toArray();
 
@@ -258,14 +278,62 @@ class DrugController extends Controller
     }
 
     /**
-     * لیست داروهای فعال (عمومی)
+     * لیست داروهای فعال (عمومی) - با فیلتر داروخانه
      */
     public function activeDrugs(Request $request)
     {
-        $drugs = Drug::active()
-            ->orderBy('name')
+        $query = Drug::active();
+
+        // ✅ فیلتر بر اساس داروخانه
+        if ($request->has('pharmacy_id') && $request->pharmacy_id) {
+            $query->where('pharmacy_id', $request->pharmacy_id);
+        }
+
+        $drugs = $query->orderBy('name')
             ->paginate($request->get('per_page', 20));
 
         return $this->success($drugs);
+    }
+
+    /**
+     * ✅ دریافت داروهای یک داروخانه خاص
+     */
+    public function getPharmacyDrugs($pharmacyId, Request $request)
+    {
+        try {
+            $pharmacy = Pharmacy::findOrFail($pharmacyId);
+
+            $query = Drug::where('pharmacy_id', $pharmacyId)
+                ->with(['pharmacy']);
+
+            // جستجو
+            if ($request->has('search')) {
+                $query->search($request->search);
+            }
+
+            // فیلتر بر اساس دسته‌بندی
+            if ($request->has('category')) {
+                $query->byCategory($request->category);
+            }
+
+            // فیلتر بر اساس موجودی
+            if ($request->has('in_stock')) {
+                if ($request->in_stock) {
+                    $query->where('stock', '>', 0);
+                } else {
+                    $query->where('stock', '<=', 0);
+                }
+            }
+
+            $drugs = $query->orderBy('name')
+                ->paginate($request->get('per_page', 20));
+
+            return $this->success([
+                'pharmacy' => $pharmacy,
+                'drugs' => $drugs,
+            ]);
+        } catch (\Exception $e) {
+            return $this->error('داروخانه یافت نشد', 404);
+        }
     }
 }

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Clinic;
+use App\Models\Province;
+use App\Models\City;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +20,7 @@ class ClinicController extends Controller
      */
     public function show()
     {
-        $clinic = Clinic::first();
+        $clinic = Clinic::with(['province', 'city'])->first();
 
         if (!$clinic) {
             return $this->error('کلینیک یافت نشد', 404);
@@ -40,6 +42,8 @@ class ClinicController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
+            'province_id' => 'nullable|exists:provinces,id',  // ✅ اضافه شد
+            'city_id' => 'nullable|exists:cities,id',        // ✅ اضافه شد
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
@@ -85,7 +89,7 @@ class ClinicController extends Controller
 
             $clinic->update($data);
 
-            return $this->success($clinic->fresh(), 'اطلاعات کلینیک با موفقیت بروزرسانی شد');
+            return $this->success($clinic->fresh()->load(['province', 'city']), 'اطلاعات کلینیک با موفقیت بروزرسانی شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -131,7 +135,7 @@ class ClinicController extends Controller
      */
     public function publicSettings()
     {
-        $clinic = Clinic::first();
+        $clinic = Clinic::with(['province', 'city'])->first();
 
         if (!$clinic) {
             return $this->error('کلینیک یافت نشد', 404);
@@ -153,6 +157,8 @@ class ClinicController extends Controller
             'tax_rate' => $clinic->tax_rate,
             'invoice_prefix' => $clinic->invoice_prefix,
             'appointment_prefix' => $clinic->appointment_prefix,
+            'province' => $clinic->province?->name,
+            'city' => $clinic->city?->name,
         ]);
     }
 
@@ -170,5 +176,61 @@ class ClinicController extends Controller
         $clinic->update(['is_active' => !$clinic->is_active]);
 
         return $this->success($clinic->fresh(), 'وضعیت کلینیک تغییر کرد');
+    }
+
+    /**
+     * ✅ لیست کلینیک‌ها با فیلتر استان و شهر
+     */
+    public function index(Request $request)
+    {
+        $query = Clinic::with(['province', 'city']);
+
+        if ($request->has('province_id')) {
+            $query->where('province_id', $request->province_id);
+        }
+
+        if ($request->has('city_id')) {
+            $query->where('city_id', $request->city_id);
+        }
+
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        $clinics = $query->paginate($request->get('per_page', 15));
+
+        return $this->success($clinics);
+    }
+
+    /**
+     * ✅ ایجاد کلینیک جدید
+     */
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'province_id' => 'nullable|exists:provinces,id',
+            'city_id' => 'nullable|exists:cities,id',
+            'address' => 'nullable|string',
+            'phone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'website' => 'nullable|url|max:255',
+            'timezone' => 'nullable|string',
+            'currency' => 'nullable|string|max:50',
+            'language' => 'nullable|string|max:10',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        try {
+            $clinic = Clinic::create($request->all());
+            return $this->success($clinic->load(['province', 'city']), 'کلینیک با موفقیت ایجاد شد', 201);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
     }
 }
