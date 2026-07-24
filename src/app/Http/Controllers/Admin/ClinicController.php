@@ -1,14 +1,12 @@
 <?php
+// app/Http/Controllers/Admin/ClinicController.php
 
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Clinic;
-use App\Models\Province;
-use App\Models\City;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class ClinicController extends Controller
@@ -26,6 +24,7 @@ class ClinicController extends Controller
             return $this->error('کلینیک یافت نشد', 404);
         }
 
+        // ✅ درست - فقط کلینیک رو برمی‌گردونیم، Accessorها خودشون کار می‌کنن
         return $this->success($clinic);
     }
 
@@ -42,8 +41,8 @@ class ClinicController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
-            'province_id' => 'nullable|exists:provinces,id',  // ✅ اضافه شد
-            'city_id' => 'nullable|exists:cities,id',        // ✅ اضافه شد
+            'province_id' => 'nullable|exists:provinces,id',
+            'city_id' => 'nullable|exists:cities,id',
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
@@ -58,8 +57,6 @@ class ClinicController extends Controller
             'secondary_color' => 'nullable|string|max:7',
             'theme' => 'nullable|string|max:50',
             'settings' => 'nullable|array',
-            'logo' => 'nullable|image|max:2048',
-            'favicon' => 'nullable|image|max:1024',
         ]);
 
         if ($validator->fails()) {
@@ -67,29 +64,13 @@ class ClinicController extends Controller
         }
 
         try {
-            $data = $request->except(['logo', 'favicon']);
-
-            // آپلود لوگو
-            if ($request->hasFile('logo')) {
-                if ($clinic->logo) {
-                    Storage::disk('public')->delete($clinic->logo);
-                }
-                $path = $request->file('logo')->store('clinics/logos', 'public');
-                $data['logo'] = $path;
-            }
-
-            // آپلود favicon
-            if ($request->hasFile('favicon')) {
-                if ($clinic->favicon) {
-                    Storage::disk('public')->delete($clinic->favicon);
-                }
-                $path = $request->file('favicon')->store('clinics/favicons', 'public');
-                $data['favicon'] = $path;
-            }
-
+            $data = $request->all();
             $clinic->update($data);
 
-            return $this->success($clinic->fresh()->load(['province', 'city']), 'اطلاعات کلینیک با موفقیت بروزرسانی شد');
+            return $this->success(
+                $clinic->fresh()->load(['province', 'city']),
+                'اطلاعات کلینیک با موفقیت بروزرسانی شد'
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -101,7 +82,7 @@ class ClinicController extends Controller
     public function uploadLogo(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'logo' => 'required|image|max:2048',
+            'logo' => 'required|image|mimes:jpeg,png,webp,svg|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -115,16 +96,85 @@ class ClinicController extends Controller
         }
 
         try {
-            if ($clinic->logo) {
-                Storage::disk('public')->delete($clinic->logo);
-            }
+            $clinic->uploadLogo($request->file('logo'));
 
-            $path = $request->file('logo')->store('clinics/logos', 'public');
-            $clinic->update(['logo' => $path]);
-
+            // ✅ درست - Accessorها خودشون URLها رو برمی‌گردونن
             return $this->success([
                 'logo_url' => $clinic->logo_url,
+                'logo_thumb' => $clinic->logo_thumb,
+                'logo_medium' => $clinic->logo_medium,
+                'logo_large' => $clinic->logo_large,
             ], 'لوگو با موفقیت آپلود شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * حذف لوگو
+     */
+    public function deleteLogo()
+    {
+        $clinic = Clinic::first();
+
+        if (!$clinic) {
+            return $this->error('کلینیک یافت نشد', 404);
+        }
+
+        try {
+            $clinic->deleteLogo();
+            return $this->success(null, 'لوگو با موفقیت حذف شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * آپلود favicon
+     */
+    public function uploadFavicon(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'favicon' => 'required|image|mimes:jpeg,png,webp,svg,ico|max:1024',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        $clinic = Clinic::first();
+
+        if (!$clinic) {
+            return $this->error('کلینیک یافت نشد', 404);
+        }
+
+        try {
+            $clinic->uploadFavicon($request->file('favicon'));
+
+            // ✅ درست - Accessorها خودشون URLها رو برمی‌گردونن
+            return $this->success([
+                'favicon_url' => $clinic->favicon_url,
+                'favicon_icon' => $clinic->favicon_icon,
+            ], 'فاوآیکون با موفقیت آپلود شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * حذف favicon
+     */
+    public function deleteFavicon()
+    {
+        $clinic = Clinic::first();
+
+        if (!$clinic) {
+            return $this->error('کلینیک یافت نشد', 404);
+        }
+
+        try {
+            $clinic->deleteFavicon();
+            return $this->success(null, 'فاوآیکون با موفقیت حذف شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -141,6 +191,7 @@ class ClinicController extends Controller
             return $this->error('کلینیک یافت نشد', 404);
         }
 
+        // ✅ درست - Accessorها خودشون کار می‌کنن
         return $this->success([
             'name' => $clinic->name,
             'address' => $clinic->address,
@@ -148,6 +199,9 @@ class ClinicController extends Controller
             'email' => $clinic->email,
             'website' => $clinic->website,
             'logo_url' => $clinic->logo_url,
+            'logo_thumb' => $clinic->logo_thumb,
+            'logo_medium' => $clinic->logo_medium,
+            'logo_large' => $clinic->logo_large,
             'favicon_url' => $clinic->favicon_url,
             'primary_color' => $clinic->primary_color,
             'secondary_color' => $clinic->secondary_color,
@@ -179,7 +233,7 @@ class ClinicController extends Controller
     }
 
     /**
-     * ✅ لیست کلینیک‌ها با فیلتر استان و شهر
+     * لیست کلینیک‌ها (ادمین)
      */
     public function index(Request $request)
     {
@@ -197,13 +251,18 @@ class ClinicController extends Controller
             $query->search($request->search);
         }
 
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->is_active);
+        }
+
         $clinics = $query->paginate($request->get('per_page', 15));
 
+        // ✅ درست - فقط کلینیک‌ها رو برمی‌گردونیم، Accessorها خودشون کار می‌کنن
         return $this->success($clinics);
     }
 
     /**
-     * ✅ ایجاد کلینیک جدید
+     * ایجاد کلینیک جدید
      */
     public function store(Request $request)
     {
@@ -228,7 +287,11 @@ class ClinicController extends Controller
 
         try {
             $clinic = Clinic::create($request->all());
-            return $this->success($clinic->load(['province', 'city']), 'کلینیک با موفقیت ایجاد شد', 201);
+            return $this->success(
+                $clinic->load(['province', 'city']),
+                'کلینیک با موفقیت ایجاد شد',
+                201
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }

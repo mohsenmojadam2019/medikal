@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/PharmacyController.php
 
 namespace App\Http\Controllers\Api;
 
@@ -29,9 +30,6 @@ class PharmacyController extends Controller
     // Public Methods (بدون احراز هویت)
     // ============================================
 
-    /**
-     * پرداخت callback برای داروخانه
-     */
     public function paymentCallback(Request $request)
     {
         try {
@@ -50,7 +48,6 @@ class PharmacyController extends Controller
                 'all_params' => $request->all()
             ]);
 
-            // پیدا کردن سفارش
             $order = PharmacyOrder::where('order_number', $orderNumber)->first();
 
             if (!$order) {
@@ -62,7 +59,6 @@ class PharmacyController extends Controller
                 ], 404);
             }
 
-            // اگر پرداخت موفق بود، وضعیت رو آپدیت کن
             if ($success === 'true' || $success === '1') {
                 $order->update([
                     'payment_status' => 'paid',
@@ -106,9 +102,6 @@ class PharmacyController extends Controller
     // Protected Methods (نیاز به احراز هویت)
     // ============================================
 
-    /**
-     * لیست داروخانه‌های نزدیک
-     */
     public function nearby(Request $request)
     {
         $request->validate([
@@ -132,27 +125,29 @@ class PharmacyController extends Controller
                     round($pharmacy->distance * 1000) . ' متر' :
                     number_format($pharmacy->distance, 1) . ' کیلومتر') :
                 null;
+            $pharmacy->logo_url = $pharmacy->logo_url;
+            $pharmacy->logo_thumb = $pharmacy->logo_thumb;
             return $pharmacy;
         });
 
         return $this->success($pharmacies, 'لیست داروخانه‌های نزدیک');
     }
 
-    /**
-     * لیست داروخانه‌های طرف قرارداد
-     */
     public function contracted(Request $request)
     {
         $pharmacies = Pharmacy::whereHas('contracts', function ($query) {
             $query->where('is_active', true);
         })->active()->online()->get();
 
+        $pharmacies->transform(function ($pharmacy) {
+            $pharmacy->logo_url = $pharmacy->logo_url;
+            $pharmacy->logo_thumb = $pharmacy->logo_thumb;
+            return $pharmacy;
+        });
+
         return $this->success($pharmacies, 'لیست داروخانه‌های طرف قرارداد');
     }
 
-    /**
-     * ✅ جستجوی داروها (با فیلتر داروخانه)
-     */
     public function search(Request $request)
     {
         $query = $request->query('q');
@@ -164,7 +159,6 @@ class PharmacyController extends Controller
 
         $drugs = Drug::where('is_active', true);
 
-        // ✅ فیلتر بر اساس داروخانه
         if ($pharmacyId) {
             $drugs->where('pharmacy_id', $pharmacyId);
         }
@@ -182,30 +176,23 @@ class PharmacyController extends Controller
         return $this->success($drugs, 'نتایج جستجو');
     }
 
-    /**
-     * ✅ لیست محصولات یک داروخانه خاص
-     */
     public function products(Request $request, $pharmacyId = null)
     {
         $query = Drug::where('is_active', true);
 
-        // ✅ فیلتر بر اساس داروخانه
         if ($pharmacyId) {
             $query->where('pharmacy_id', $pharmacyId)
                 ->where('stock', '>', 0);
         }
 
-        // فیلتر بر اساس دسته‌بندی
         if ($request->has('category') && $request->category) {
             $query->where('category', $request->category);
         }
 
-        // فیلتر بر اساس نیاز به نسخه
         if ($request->has('requires_prescription')) {
             $query->where('requires_prescription', $request->requires_prescription === 'true' || $request->requires_prescription === '1');
         }
 
-        // جستجو در نام داروها
         if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -220,9 +207,6 @@ class PharmacyController extends Controller
         return $this->success($drugs, 'لیست محصولات');
     }
 
-    /**
-     * ✅ دریافت دسته‌بندی‌های داروهای یک داروخانه
-     */
     public function categories(Request $request)
     {
         $pharmacyId = $request->query('pharmacy_id');
@@ -230,7 +214,6 @@ class PharmacyController extends Controller
         $query = Drug::whereNotNull('category')
             ->where('is_active', true);
 
-        // ✅ فیلتر بر اساس داروخانه
         if ($pharmacyId) {
             $query->where('pharmacy_id', $pharmacyId);
         }
@@ -242,9 +225,6 @@ class PharmacyController extends Controller
         return $this->success($categories);
     }
 
-    /**
-     * ✅ لیست داروخانه‌ها
-     */
     public function index(Request $request)
     {
         $pharmacies = Pharmacy::active()
@@ -255,19 +235,23 @@ class PharmacyController extends Controller
             })
             ->paginate($request->per_page ?? 20);
 
+        $pharmacies->getCollection()->transform(function ($pharmacy) {
+            $pharmacy->logo_url = $pharmacy->logo_url;
+            $pharmacy->logo_thumb = $pharmacy->logo_thumb;
+            $pharmacy->logo_medium = $pharmacy->logo_medium;
+            $pharmacy->logo_large = $pharmacy->logo_large;
+            return $pharmacy;
+        });
+
         return $this->success($pharmacies, 'لیست داروخانه‌ها');
     }
 
-    /**
-     * ✅ نمایش یک داروخانه با داروهایش
-     */
     public function showPharmacy($id)
     {
         try {
             $pharmacy = Pharmacy::with(['province', 'city', 'clinic'])
                 ->findOrFail($id);
 
-            // دریافت داروهای موجود
             $drugs = Drug::where('pharmacy_id', $id)
                 ->where('is_active', true)
                 ->where('stock', '>', 0)
@@ -276,6 +260,11 @@ class PharmacyController extends Controller
 
             return $this->success([
                 'pharmacy' => $pharmacy,
+                'logo_url' => $pharmacy->logo_url,
+                'logo_thumb' => $pharmacy->logo_thumb,
+                'logo_medium' => $pharmacy->logo_medium,
+                'logo_large' => $pharmacy->logo_large,
+                'images' => $pharmacy->images_urls,
                 'drugs' => $drugs,
                 'drugs_count' => Drug::where('pharmacy_id', $id)->where('is_active', true)->count(),
             ]);
@@ -284,9 +273,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * ثبت سفارش جدید
-     */
     public function store(PharmacyOrderRequest $request)
     {
         try {
@@ -300,13 +286,11 @@ class PharmacyController extends Controller
             $data = $request->validated();
             $data['patient_id'] = $patient->id;
 
-            // تنظیم pharmacy_id پیش‌فرض
             if (!isset($data['pharmacy_id']) || empty($data['pharmacy_id'])) {
                 $pharmacy = Pharmacy::active()->online()->first();
                 $data['pharmacy_id'] = $pharmacy?->id ?? 1;
             }
 
-            // ✅ بررسی موجودی داروها قبل از ثبت سفارش
             if (isset($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as $item) {
                     $drug = Drug::find($item['drug_id']);
@@ -314,19 +298,16 @@ class PharmacyController extends Controller
                         return $this->error("دارو با شناسه {$item['drug_id']} یافت نشد", 404);
                     }
 
-                    // ✅ بررسی اینکه دارو متعلق به داروخانه انتخابی است
                     if ($drug->pharmacy_id != $data['pharmacy_id']) {
                         return $this->error("دارو {$drug->name} در داروخانه انتخابی موجود نیست", 400);
                     }
 
-                    // ✅ بررسی موجودی کافی
                     if ($drug->stock < $item['quantity']) {
                         return $this->error("موجودی دارو {$drug->name} کافی نیست. موجودی: {$drug->stock}", 400);
                     }
                 }
             }
 
-            // محاسبه total_amount
             $subtotal = 0;
             if (isset($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as &$item) {
@@ -359,9 +340,6 @@ class PharmacyController extends Controller
 
             $order = $this->orderService->createOrder($data);
 
-            // ============================================================
-            // ✅ اگر روش پرداخت gateway بود، لینک پرداخت رو هم برگردون
-            // ============================================================
             $paymentLink = null;
             if ($request->payment_method === 'gateway' && !empty($request->gateway)) {
                 $gateway = $request->gateway ?? 'local';
@@ -393,9 +371,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * نمایش سفارش
-     */
     public function show($id)
     {
         try {
@@ -414,8 +389,6 @@ class PharmacyController extends Controller
             }
 
             $orderData = $this->orderService->getOrderStatus($order);
-
-            // اضافه کردن اطلاعات تحویل
             $orderData['recipient_name'] = $order->recipient_name;
             $orderData['recipient_phone'] = $order->recipient_phone;
             $orderData['delivery_address'] = $order->delivery_address;
@@ -430,9 +403,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * دریافت وضعیت سفارش
-     */
     public function status($id)
     {
         try {
@@ -465,9 +435,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * لیست سفارشات من (بیمار)
-     */
     public function myOrders(Request $request)
     {
         try {
@@ -480,7 +447,6 @@ class PharmacyController extends Controller
 
             $orders = $this->orderService->getPatientOrders($patient->id, $request->get('per_page', 15));
 
-            // اضافه کردن اطلاعات تحویل به هر سفارش
             $orders->getCollection()->transform(function ($order) {
                 $orderData = $order->toArray();
                 $orderData['recipient_name'] = $order->recipient_name;
@@ -498,9 +464,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * لیست سفارشات داروخانه (ادمین/داروخانه)
-     */
     public function pharmacyOrders(Request $request)
     {
         try {
@@ -522,9 +485,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * شروع پرداخت سفارش
-     */
     public function pay(Request $request, $identifier)
     {
         $request->validate([
@@ -532,7 +492,6 @@ class PharmacyController extends Controller
         ]);
 
         try {
-            // ✅ پیدا کردن سفارش با ID یا order_number
             $order = PharmacyOrder::where('id', $identifier)
                 ->orWhere('order_number', $identifier)
                 ->first();
@@ -567,9 +526,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * لغو سفارش
-     */
     public function cancel($id)
     {
         try {
@@ -617,9 +573,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * به‌روزرسانی سفارش
-     */
     public function update(Request $request, $id)
     {
         try {
@@ -655,9 +608,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * نوتیفیکیشن‌های من
-     */
     public function notifications(Request $request)
     {
         try {
@@ -680,9 +630,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * علامت‌گذاری نوتیفیکیشن به عنوان خوانده شده
-     */
     public function markNotificationAsRead($id)
     {
         try {
@@ -704,9 +651,6 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * دریافت آمار سفارشات
-     */
     public function stats()
     {
         try {

@@ -1,13 +1,18 @@
 <?php
+// app/Models/Clinic.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Spatie\Image\Enums\Fit;
 
-class Clinic extends Model
+class Clinic extends Model implements HasMedia
 {
-    use SoftDeletes;
+    use SoftDeletes, InteractsWithMedia;
 
     protected $fillable = [
         'tenant_id',
@@ -19,8 +24,8 @@ class Clinic extends Model
         'phone',
         'email',
         'website',
-        'logo',
-        'favicon',
+        // ❌ حذف شد - logo (از Media Library استفاده می‌شود)
+        // ❌ حذف شد - favicon (از Media Library استفاده می‌شود)
         'latitude',
         'longitude',
         'timezone',
@@ -53,48 +58,91 @@ class Clinic extends Model
         'settings' => 'array',
     ];
 
-    // ========== Relationships ==========
-    public function province()
-    {
-        return $this->belongsTo(Province::class);
-    }
+    // ========== Media Library ==========
 
-    public function city()
+    public function registerMediaCollections(): void
     {
-        return $this->belongsTo(City::class);
-    }
+        // ✅ کالکشن لوگو
+        $this->addMediaCollection('logo')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
+            ->registerMediaConversions(function (Media $media) {
+                $this->addMediaConversion('thumb')
+                    ->width(100)
+                    ->height(100)
+                    ->fit(Fit::Crop, 100, 100)
+                    ->sharpen(10)
+                    ->nonQueued();
 
-    public function doctors()
-    {
-        return $this->hasMany(Doctor::class);
-    }
+                $this->addMediaConversion('medium')
+                    ->width(300)
+                    ->height(300)
+                    ->fit(Fit::Crop, 300, 300)
+                    ->sharpen(10)
+                    ->nonQueued();
 
-    public function patients()
-    {
-        return $this->hasMany(Patient::class);
-    }
+                $this->addMediaConversion('large')
+                    ->width(600)
+                    ->height(600)
+                    ->fit(Fit::Crop, 600, 600)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
 
-    public function appointments()
-    {
-        return $this->hasMany(Appointment::class);
-    }
-
-    public function pharmacies()
-    {
-        return $this->hasMany(Pharmacy::class);
-    }
-
-    public function labTests()
-    {
-        return $this->hasMany(LabTest::class);
-    }
-
-    public function medicalImages()
-    {
-        return $this->hasMany(MedicalImage::class);
+        // ✅ کالکشن favicon
+        $this->addMediaCollection('favicon')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 'image/x-icon'])
+            ->registerMediaConversions(function (Media $media) {
+                $this->addMediaConversion('favicon')
+                    ->width(32)
+                    ->height(32)
+                    ->fit(Fit::Crop, 32, 32)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
     }
 
     // ========== Accessors ==========
+
+    // ✅ لوگو
+    public function getLogoUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('logo');
+        return $media ? $media->getUrl() : null;
+    }
+
+    public function getLogoThumbAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('logo');
+        return $media ? $media->getUrl('thumb') : null;
+    }
+
+    public function getLogoMediumAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('logo');
+        return $media ? $media->getUrl('medium') : null;
+    }
+
+    public function getLogoLargeAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('logo');
+        return $media ? $media->getUrl('large') : null;
+    }
+
+    // ✅ favicon
+    public function getFaviconUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('favicon');
+        return $media ? $media->getUrl() : null;
+    }
+
+    public function getFaviconIconAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('favicon');
+        return $media ? $media->getUrl('favicon') : null;
+    }
+
     public function getFullAddressAttribute(): string
     {
         $parts = [];
@@ -102,16 +150,6 @@ class Clinic extends Model
         if ($this->city) $parts[] = $this->city->name;
         if ($this->province) $parts[] = $this->province->name;
         return implode('، ', $parts);
-    }
-
-    public function getLogoUrlAttribute(): ?string
-    {
-        return $this->logo ? asset('storage/' . $this->logo) : null;
-    }
-
-    public function getFaviconUrlAttribute(): ?string
-    {
-        return $this->favicon ? asset('storage/' . $this->favicon) : null;
     }
 
     public function getStatusLabelAttribute(): string
@@ -135,6 +173,7 @@ class Clinic extends Model
     }
 
     // ========== Scopes ==========
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -173,6 +212,7 @@ class Clinic extends Model
     }
 
     // ========== Methods ==========
+
     public function generateSlug(): string
     {
         $slug = \Illuminate\Support\Str::slug($this->name);
@@ -217,13 +257,60 @@ class Clinic extends Model
         return $secret;
     }
 
+    /**
+     * آپلود لوگو
+     */
+    public function uploadLogo($file): self
+    {
+        $this->clearMediaCollection('logo');
+        $this->addMedia($file)
+            ->toMediaCollection('logo');
+        return $this;
+    }
+
+    /**
+     * حذف لوگو
+     */
+    public function deleteLogo(): self
+    {
+        $this->clearMediaCollection('logo');
+        return $this;
+    }
+
+    /**
+     * آپلود favicon
+     */
+    public function uploadFavicon($file): self
+    {
+        $this->clearMediaCollection('favicon');
+        $this->addMedia($file)
+            ->toMediaCollection('favicon');
+        return $this;
+    }
+
+    /**
+     * حذف favicon
+     */
+    public function deleteFavicon(): self
+    {
+        $this->clearMediaCollection('favicon');
+        return $this;
+    }
+
     // ========== Boot ==========
+
     protected static function booted()
     {
         static::creating(function ($clinic) {
             if (empty($clinic->slug)) {
                 $clinic->slug = $clinic->generateSlug();
             }
+        });
+
+        // حذف فایل‌های مدیا هنگام حذف کلینیک
+        static::deleting(function ($clinic) {
+            $clinic->clearMediaCollection('logo');
+            $clinic->clearMediaCollection('favicon');
         });
     }
 }

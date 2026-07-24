@@ -1,13 +1,18 @@
 <?php
+// app/Models/Pharmacy.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Spatie\Image\Enums\Fit;
 
-class Pharmacy extends Model
+class Pharmacy extends Model implements HasMedia
 {
-    use SoftDeletes;
+    use SoftDeletes, InteractsWithMedia;
 
     protected $fillable = [
         'tenant_id',
@@ -36,6 +41,130 @@ class Pharmacy extends Model
         'latitude' => 'float',
         'longitude' => 'float',
     ];
+
+    // ============================================
+    // Media Library
+    // ============================================
+
+    public function registerMediaCollections(): void
+    {
+        // ✅ کالکشن لوگو داروخانه
+        $this->addMediaCollection('pharmacy_logo')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
+            ->registerMediaConversions(function (Media $media) {
+                $this->addMediaConversion('logo_thumb')
+                    ->width(100)
+                    ->height(100)
+                    ->fit(Fit::Crop, 100, 100)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('logo_medium')
+                    ->width(200)
+                    ->height(200)
+                    ->fit(Fit::Crop, 200, 200)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('logo_large')
+                    ->width(400)
+                    ->height(400)
+                    ->fit(Fit::Crop, 400, 400)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
+
+        // ✅ کالکشن تصاویر گالری داروخانه
+        $this->addMediaCollection('pharmacy_images')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+            ->registerMediaConversions(function (Media $media) {
+                $this->addMediaConversion('thumb')
+                    ->width(150)
+                    ->height(150)
+                    ->fit(Fit::Crop, 150, 150)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('medium')
+                    ->width(400)
+                    ->height(300)
+                    ->fit(Fit::Crop, 400, 300)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('large')
+                    ->width(800)
+                    ->height(600)
+                    ->fit(Fit::Crop, 800, 600)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
+    }
+
+    // ============================================
+    // Accessors - Images
+    // ============================================
+
+    // ✅ لوگو
+    public function getLogoUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('pharmacy_logo');
+        return $media ? $media->getUrl() : null;
+    }
+
+    public function getLogoThumbAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('pharmacy_logo');
+        return $media ? $media->getUrl('logo_thumb') : null;
+    }
+
+    public function getLogoMediumAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('pharmacy_logo');
+        return $media ? $media->getUrl('logo_medium') : null;
+    }
+
+    public function getLogoLargeAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('pharmacy_logo');
+        return $media ? $media->getUrl('logo_large') : null;
+    }
+
+    // ✅ گالری تصاویر
+    public function getImagesAttribute()
+    {
+        return $this->getMedia('pharmacy_images');
+    }
+
+    public function getImagesUrlsAttribute(): array
+    {
+        return $this->getMedia('pharmacy_images')->map(function ($media) {
+            return [
+                'id' => $media->id,
+                'url' => $media->getUrl(),
+                'thumb' => $media->getUrl('thumb'),
+                'medium' => $media->getUrl('medium'),
+                'large' => $media->getUrl('large'),
+                'name' => $media->file_name,
+                'size' => $media->size,
+                'mime_type' => $media->mime_type,
+                'created_at' => $media->created_at->toDateTimeString(),
+            ];
+        })->toArray();
+    }
+
+    public function getFirstImageUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('pharmacy_images');
+        return $media ? $media->getUrl() : null;
+    }
+
+    public function getFirstImageThumbAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('pharmacy_images');
+        return $media ? $media->getUrl('thumb') : null;
+    }
 
     // ============================================
     // Relationships
@@ -153,6 +282,58 @@ class Pharmacy extends Model
         return $distance <= $radius;
     }
 
+    /**
+     * آپلود لوگو
+     */
+    public function uploadLogo($file): self
+    {
+        $this->clearMediaCollection('pharmacy_logo');
+        $this->addMedia($file)
+            ->toMediaCollection('pharmacy_logo');
+        return $this;
+    }
+
+    /**
+     * حذف لوگو
+     */
+    public function deleteLogo(): self
+    {
+        $this->clearMediaCollection('pharmacy_logo');
+        return $this;
+    }
+
+    /**
+     * آپلود تصویر به گالری
+     */
+    public function uploadImage($file): self
+    {
+        $this->addMedia($file)
+            ->toMediaCollection('pharmacy_images');
+        return $this;
+    }
+
+    /**
+     * حذف یک تصویر از گالری
+     */
+    public function deleteImage($mediaId): bool
+    {
+        $media = $this->getMedia('pharmacy_images')->where('id', $mediaId)->first();
+        if ($media) {
+            $media->delete();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * حذف تمام تصاویر گالری
+     */
+    public function clearImages(): self
+    {
+        $this->clearMediaCollection('pharmacy_images');
+        return $this;
+    }
+
     // ========== Boot ==========
     protected static function booted()
     {
@@ -160,6 +341,11 @@ class Pharmacy extends Model
             if (empty($pharmacy->slug)) {
                 $pharmacy->slug = \Illuminate\Support\Str::slug($pharmacy->name);
             }
+        });
+
+        static::deleting(function ($pharmacy) {
+            $pharmacy->clearMediaCollection('pharmacy_logo');
+            $pharmacy->clearMediaCollection('pharmacy_images');
         });
     }
 }

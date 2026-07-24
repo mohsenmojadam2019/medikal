@@ -20,7 +20,6 @@ class PharmaciesSeeder extends Seeder
         $isfahanCity = City::where('name', 'اصفهان')->where('province_id', $isfahan?->id)->first();
 
         $pharmacies = [
-            // ✅ داروخانه دکتر وب (متصل به کلینیک دکتر وب)
             [
                 'name' => 'داروخانه دکتر وب',
                 'license_number' => 'PH-001',
@@ -35,7 +34,6 @@ class PharmaciesSeeder extends Seeder
                 'is_active' => true,
                 'is_online' => true,
             ],
-            // ✅ داروخانه سلامت (متصل به کلینیک سلامت پارس)
             [
                 'name' => 'داروخانه سلامت پارس',
                 'license_number' => 'PH-002',
@@ -50,7 +48,6 @@ class PharmaciesSeeder extends Seeder
                 'is_active' => true,
                 'is_online' => true,
             ],
-            // ✅ داروخانه مهرگان (متصل به کلینیک مهرگان)
             [
                 'name' => 'داروخانه مهرگان',
                 'license_number' => 'PH-003',
@@ -65,7 +62,6 @@ class PharmaciesSeeder extends Seeder
                 'is_active' => true,
                 'is_online' => true,
             ],
-            // ✅ داروخانه امید (متصل به کلینیک امید)
             [
                 'name' => 'داروخانه امید',
                 'license_number' => 'PH-004',
@@ -80,7 +76,6 @@ class PharmaciesSeeder extends Seeder
                 'is_active' => true,
                 'is_online' => true,
             ],
-            // ✅ داروخانه نور (متصل به کلینیک نور)
             [
                 'name' => 'داروخانه نور',
                 'license_number' => 'PH-005',
@@ -95,7 +90,6 @@ class PharmaciesSeeder extends Seeder
                 'is_active' => true,
                 'is_online' => true,
             ],
-            // ✅ داروخانه آتیه (متصل به کلینیک آتیه)
             [
                 'name' => 'داروخانه آتیه',
                 'license_number' => 'PH-006',
@@ -116,10 +110,16 @@ class PharmaciesSeeder extends Seeder
             $clinic = $clinics[$data['clinic_slug']] ?? null;
             unset($data['clinic_slug']);
 
-            Pharmacy::updateOrCreate(
+            $pharmacy = Pharmacy::updateOrCreate(
                 ['license_number' => $data['license_number']],
                 array_merge($data, ['clinic_id' => $clinic?->id])
             );
+
+            $logoPath = public_path('images/pharmacies/' . $pharmacy->slug . '/logo.png');
+            if (file_exists($logoPath)) {
+                $pharmacy->uploadLogo($logoPath);
+                $this->command->info("✅ لوگو برای {$pharmacy->name} آپلود شد");
+            }
         }
 
         $this->command->info('✅ ۶ داروخانه با موفقیت ایجاد شدند.');

@@ -7,8 +7,6 @@ use App\Models\Doctor;
 use App\Models\User;
 use App\Models\Clinic;
 use App\Models\Specialty;
-use App\Models\Province;
-use App\Models\City;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -18,8 +16,6 @@ class DoctorsSeeder extends Seeder
     {
         $clinics = Clinic::all()->keyBy('slug');
         $specialties = Specialty::all()->keyBy('slug');
-        $tehran = Province::where('name', 'تهران')->first();
-        $tehranCity = City::where('name', 'تهران')->where('province_id', $tehran?->id)->first();
 
         $doctors = [
             // ✅ پزشکان کلینیک دکتر وب (۳ نفر)
@@ -116,6 +112,38 @@ class DoctorsSeeder extends Seeder
                 'is_available' => true,
                 'is_verified' => true,
             ],
+            // ✅ پزشکان کلینیک نور (۱ نفر)
+            [
+                'name' => 'دکتر احمد رضایی',
+                'mobile' => '09123456787',
+                'email' => 'ahmad@noor.com',
+                'clinic_slug' => 'noor',
+                'specialty_slug' => 'cheshm',
+                'license_number' => '123462',
+                'experience_years' => 9,
+                'consultation_fee' => 140000,
+                'appointment_fee_type' => 'paid',
+                'appointment_fee_amount' => 140000,
+                'bio' => 'متخصص چشم با ۹ سال سابقه',
+                'is_available' => true,
+                'is_verified' => true,
+            ],
+            // ✅ پزشکان کلینیک آتیه (۱ نفر)
+            [
+                'name' => 'دکتر مریم حسینی',
+                'mobile' => '09123456788',
+                'email' => 'maryam@atiyeh.com',
+                'clinic_slug' => 'atiyeh',
+                'specialty_slug' => 'poust',
+                'license_number' => '123463',
+                'experience_years' => 7,
+                'consultation_fee' => 130000,
+                'appointment_fee_type' => 'paid',
+                'appointment_fee_amount' => 130000,
+                'bio' => 'متخصص پوست با ۷ سال سابقه',
+                'is_available' => true,
+                'is_verified' => true,
+            ],
         ];
 
         foreach ($doctors as $doctorData) {
@@ -133,17 +161,15 @@ class DoctorsSeeder extends Seeder
             // پیدا کردن کلینیک
             $clinic = $clinics[$doctorData['clinic_slug']] ?? null;
 
-            // ایجاد پزشک
+            // ✅ ایجاد پزشک - بدون اطلاعات کلینیک تکراری
             Doctor::updateOrCreate(
                 ['user_id' => $user->id],
                 [
                     'clinic_id' => $clinic?->id,
                     'specialty_id' => $specialties[$doctorData['specialty_slug']]?->id,
                     'license_number' => $doctorData['license_number'],
-                    'clinic_name' => $clinic?->name,
-                    'clinic_address' => $clinic?->address,
-                    'province_id' => $tehran?->id,
-                    'city_id' => $tehranCity?->id,
+                    'province_id' => $clinic?->province_id,
+                    'city_id' => $clinic?->city_id,
                     'experience_years' => $doctorData['experience_years'],
                     'consultation_fee' => $doctorData['consultation_fee'],
                     'appointment_fee_type' => $doctorData['appointment_fee_type'],
@@ -157,6 +183,7 @@ class DoctorsSeeder extends Seeder
             );
         }
 
-        $this->command->info('✅ ۶ پزشک با موفقیت ایجاد شدند.');
+        $this->command->info('✅ پزشکان با موفقیت ایجاد شدند.');
+        $this->command->info('📊 تعداد پزشکان: ' . count($doctors));
     }
 }

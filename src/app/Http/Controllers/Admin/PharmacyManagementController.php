@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Admin/PharmacyManagementController.php
 
 namespace App\Http\Controllers\Admin;
 
@@ -25,17 +26,14 @@ class PharmacyManagementController extends Controller
     {
         $query = Pharmacy::with(['province', 'city', 'clinic']);
 
-        // ✅ فیلتر بر اساس استان
         if ($request->has('province_id') && $request->province_id) {
             $query->where('province_id', $request->province_id);
         }
 
-        // ✅ فیلتر بر اساس شهر
         if ($request->has('city_id') && $request->city_id) {
             $query->where('city_id', $request->city_id);
         }
 
-        // ✅ فیلتر بر اساس کلینیک
         if ($request->has('clinic_id') && $request->clinic_id) {
             $query->where('clinic_id', $request->clinic_id);
         }
@@ -57,6 +55,14 @@ class PharmacyManagementController extends Controller
         $pharmacies = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
+        $pharmacies->getCollection()->transform(function ($pharmacy) {
+            $pharmacy->logo_url = $pharmacy->logo_url;
+            $pharmacy->logo_thumb = $pharmacy->logo_thumb;
+            $pharmacy->logo_medium = $pharmacy->logo_medium;
+            $pharmacy->logo_large = $pharmacy->logo_large;
+            return $pharmacy;
+        });
+
         return $this->success($pharmacies);
     }
 
@@ -68,9 +74,9 @@ class PharmacyManagementController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'license_number' => 'required|string|unique:pharmacies,license_number',
-            'province_id' => 'nullable|exists:provinces,id',     // ✅ اضافه شد
-            'city_id' => 'nullable|exists:cities,id',           // ✅ اضافه شد
-            'clinic_id' => 'nullable|exists:clinics,id',        // ✅ اضافه شد
+            'province_id' => 'nullable|exists:provinces,id',
+            'city_id' => 'nullable|exists:cities,id',
+            'clinic_id' => 'nullable|exists:clinics,id',
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
@@ -88,7 +94,22 @@ class PharmacyManagementController extends Controller
 
         try {
             $pharmacy = Pharmacy::create($request->all());
-            return $this->success($pharmacy->load(['province', 'city', 'clinic']), 'داروخانه با موفقیت ایجاد شد', 201);
+
+            if ($request->hasFile('logo')) {
+                $pharmacy->uploadLogo($request->file('logo'));
+            }
+
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $pharmacy->uploadImage($image);
+                }
+            }
+
+            return $this->success(
+                $pharmacy->load(['province', 'city', 'clinic']),
+                'داروخانه با موفقیت ایجاد شد',
+                201
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -100,7 +121,15 @@ class PharmacyManagementController extends Controller
     public function show($id)
     {
         try {
-            $pharmacy = Pharmacy::with(['contracts', 'province', 'city', 'clinic'])->findOrFail($id);
+            $pharmacy = Pharmacy::with(['contracts', 'province', 'city', 'clinic'])
+                ->findOrFail($id);
+
+            $pharmacy->logo_url = $pharmacy->logo_url;
+            $pharmacy->logo_thumb = $pharmacy->logo_thumb;
+            $pharmacy->logo_medium = $pharmacy->logo_medium;
+            $pharmacy->logo_large = $pharmacy->logo_large;
+            $pharmacy->images_urls = $pharmacy->images_urls;
+
             return $this->success($pharmacy);
         } catch (\Exception $e) {
             return $this->error('داروخانه یافت نشد', 404);
@@ -121,9 +150,9 @@ class PharmacyManagementController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
             'license_number' => 'sometimes|string|unique:pharmacies,license_number,' . $id,
-            'province_id' => 'nullable|exists:provinces,id',     // ✅ اضافه شد
-            'city_id' => 'nullable|exists:cities,id',           // ✅ اضافه شد
-            'clinic_id' => 'nullable|exists:clinics,id',        // ✅ اضافه شد
+            'province_id' => 'nullable|exists:provinces,id',
+            'city_id' => 'nullable|exists:cities,id',
+            'clinic_id' => 'nullable|exists:clinics,id',
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
@@ -141,7 +170,21 @@ class PharmacyManagementController extends Controller
 
         try {
             $pharmacy->update($request->all());
-            return $this->success($pharmacy->fresh()->load(['province', 'city', 'clinic']), 'داروخانه با موفقیت به‌روزرسانی شد');
+
+            if ($request->hasFile('logo')) {
+                $pharmacy->uploadLogo($request->file('logo'));
+            }
+
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $pharmacy->uploadImage($image);
+                }
+            }
+
+            return $this->success(
+                $pharmacy->fresh()->load(['province', 'city', 'clinic']),
+                'داروخانه با موفقیت به‌روزرسانی شد'
+            );
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
@@ -186,6 +229,138 @@ class PharmacyManagementController extends Controller
             return $this->success($pharmacy->fresh(), 'وضعیت فروش آنلاین با موفقیت تغییر کرد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    // ============================================
+    // ✅ مدیریت تصاویر داروخانه
+    // ============================================
+
+    /**
+     * آپلود لوگو داروخانه
+     */
+    public function uploadLogo(Request $request, $id)
+    {
+        try {
+            $pharmacy = Pharmacy::findOrFail($id);
+        } catch (\Exception $e) {
+            return $this->error('داروخانه یافت نشد', 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'logo' => 'required|image|mimes:jpeg,png,webp,svg|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        try {
+            $pharmacy->uploadLogo($request->file('logo'));
+
+            return $this->success([
+                'logo_url' => $pharmacy->logo_url,
+                'logo_thumb' => $pharmacy->logo_thumb,
+                'logo_medium' => $pharmacy->logo_medium,
+                'logo_large' => $pharmacy->logo_large,
+            ], 'لوگو با موفقیت آپلود شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * حذف لوگو داروخانه
+     */
+    public function deleteLogo($id)
+    {
+        try {
+            $pharmacy = Pharmacy::findOrFail($id);
+        } catch (\Exception $e) {
+            return $this->error('داروخانه یافت نشد', 404);
+        }
+
+        try {
+            $pharmacy->deleteLogo();
+            return $this->success(null, 'لوگو با موفقیت حذف شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * آپلود تصویر به گالری داروخانه
+     */
+    public function uploadImage(Request $request, $id)
+    {
+        try {
+            $pharmacy = Pharmacy::findOrFail($id);
+        } catch (\Exception $e) {
+            return $this->error('داروخانه یافت نشد', 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'image' => 'required|image|mimes:jpeg,png,webp|max:5120',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        try {
+            $pharmacy->uploadImage($request->file('image'));
+
+            $media = $pharmacy->getMedia('pharmacy_images')->last();
+
+            return $this->success([
+                'id' => $media->id,
+                'url' => $media->getUrl(),
+                'thumb' => $media->getUrl('thumb'),
+                'medium' => $media->getUrl('medium'),
+                'large' => $media->getUrl('large'),
+                'name' => $media->file_name,
+                'size' => $media->size,
+            ], 'تصویر با موفقیت آپلود شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * حذف تصویر از گالری داروخانه
+     */
+    public function deleteImage($id, $mediaId)
+    {
+        try {
+            $pharmacy = Pharmacy::findOrFail($id);
+        } catch (\Exception $e) {
+            return $this->error('داروخانه یافت نشد', 404);
+        }
+
+        try {
+            $result = $pharmacy->deleteImage($mediaId);
+            if (!$result) {
+                return $this->error('تصویر یافت نشد', 404);
+            }
+            return $this->success(null, 'تصویر با موفقیت حذف شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * دریافت تصاویر گالری داروخانه
+     */
+    public function getImages($id)
+    {
+        try {
+            $pharmacy = Pharmacy::findOrFail($id);
+            return $this->success([
+                'images' => $pharmacy->images_urls,
+                'count' => count($pharmacy->images_urls),
+            ]);
+        } catch (\Exception $e) {
+            return $this->error('داروخانه یافت نشد', 404);
         }
     }
 }
