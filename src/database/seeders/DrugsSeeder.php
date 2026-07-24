@@ -14,6 +14,9 @@ class DrugsSeeder extends Seeder
         // دریافت تمام داروخانه‌ها
         $pharmacies = Pharmacy::all()->keyBy('name');
 
+        // ✅ دریافت tenant_id پیش‌فرض
+        $tenantId = \App\Models\Tenant::first()?->id ?? 1;
+
         $drugs = [
             // ============================================================
             // ✅ داروهای داروخانه دکتر وب
@@ -88,7 +91,7 @@ class DrugsSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'pharmacy_name' => 'داروخانه سلامت پارس',
+                'pharmacy_name' => 'داروخانه سلامت پار스',
                 'name' => 'آتنولول ۵۰ میلی‌گرم',
                 'generic_name' => 'آتنولول',
                 'category' => 'قلب و عروق',
@@ -252,9 +255,11 @@ class DrugsSeeder extends Seeder
             $pharmacy = $pharmacies[$data['pharmacy_name']] ?? null;
             unset($data['pharmacy_name']);
 
+            // ✅ تنظیم pharmacy_id و tenant_id
             if ($pharmacy) {
                 $data['pharmacy_id'] = $pharmacy->id;
             }
+            $data['tenant_id'] = $tenantId;
 
             Drug::updateOrCreate(
                 [

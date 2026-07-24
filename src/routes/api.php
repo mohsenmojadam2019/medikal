@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AIChatController;
 use App\Http\Controllers\Api\EmergencyController;
+use App\Http\Controllers\Api\WaitingController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Api\AuthController;
@@ -45,7 +46,29 @@ Route::get('/ping', function () {
         'version' => '1.0.0'
     ]);
 });
+// ============================================================
+// Waiting List (صف انتظار)
+// ============================================================
+Route::middleware('auth:sanctum')->prefix('waiting')->group(function () {
+    // بیمار: دریافت وضعیت صف خودش
+    Route::get('/status/{appointmentId}', [WaitingController::class, 'getStatus']);
 
+    // بیمار: افزودن به صف (وقتی به مطب رسید)
+    Route::post('/add', [WaitingController::class, 'addToQueue']);
+});
+
+// مسیرهای عمومی (بدون احراز هویت برای نمایش در تلویزیون)
+Route::prefix('waiting')->group(function () {
+    // دریافت لیست صف برای نمایش در تلویزیون
+    Route::get('/queue/{doctorId}', [WaitingController::class, 'getQueue']);
+});
+
+// مسیرهای منشی (با نقش receptionist)
+Route::middleware(['auth:sanctum', 'role:receptionist|admin'])->prefix('waiting')->group(function () {
+    Route::post('/call-next/{doctorId}', [WaitingController::class, 'callNext']);
+    Route::post('/complete/{waitingId}', [WaitingController::class, 'complete']);
+    Route::delete('/cancel/{waitingId}', [WaitingController::class, 'cancel']);
+});
 // ============================================================
 // 2. PUBLIC ROUTES (بدون احراز هویت)
 // ============================================================

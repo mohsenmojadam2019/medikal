@@ -9,7 +9,7 @@ use App\Models\City;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 
-class ClinicsSeeder extends Seeder
+class ClinicSeeder extends Seeder
 {
     public function run(): void
     {

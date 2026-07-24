@@ -1,4 +1,5 @@
 <?php
+// database/seeders/DatabaseSeeder.php
 
 namespace Database\Seeders;
 
@@ -10,6 +11,15 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('🚀 شروع سیدر کامل...');
+
+        // ============================================================
+        // ۰. Tenant (مستاجر) - اولویت اول
+        // ============================================================
+        if (Schema::hasTable('tenants') && \App\Models\Tenant::count() === 0) {
+            $this->call(TenantSeeder::class);
+        } else {
+            $this->command->info('⏭️ Tenant‌ها قبلاً وجود دارند.');
+        }
 
         // ============================================================
         // ۱. داده‌های پایه
@@ -101,24 +111,85 @@ class DatabaseSeeder extends Seeder
             $this->command->info('⏭️ آزمایشگاه‌ها قبلاً وجود دارند.');
         }
 
+        // ============================================================
+        // ۹. اورژانس
+        // ============================================================
 
-// ============================================================
-// ۹. اورژانس
-// ============================================================
-        if (Schema::hasTable('emergency_patients') && \App\Models\Emergency\EmergencyPatient::count() === 0) {
-            $this->call(EmergencySeeder::class);
+
+        // ============================================================
+        // ۱۰. زبان‌ها و ترجمه‌ها
+        // ============================================================
+        if (Schema::hasTable('languages') && \App\Models\Language::count() === 0) {
+            $this->call(LanguageSeeder::class);
         } else {
-            $this->command->info('⏭️ درخواست‌های اورژانس قبلاً وجود دارند.');
+            $this->command->info('⏭️ زبان‌ها قبلاً وجود دارند.');
         }
 
+        // ============================================================
+        // ۱۱. فرم‌های دیجیتال
+        // ============================================================
+        if (Schema::hasTable('digital_forms') && \App\Models\DigitalForm::count() === 0) {
+            $this->call(FormSeeder::class);
+        } else {
+            $this->command->info('⏭️ فرم‌های دیجیتال قبلاً وجود دارند.');
+        }
 
+        // ============================================================
+        // ۱۲. پلن‌های اشتراک
+        // ============================================================
+        if (Schema::hasTable('subscription_plans') && \App\Models\SubscriptionPlan::count() === 0) {
+            $this->call(SubscriptionPlanSeeder::class);
+        } else {
+            $this->command->info('⏭️ پلن‌های اشتراک قبلاً وجود دارند.');
+        }
+
+        // ============================================================
+        // ۱۳. بخش‌های بیمارستان
+        // ============================================================
+//        if (Schema::hasTable('wards') && \App\Models\Ward::count() === 0) {
+//            $this->call(HospitalSeeder::class);
+//        } else {
+//            $this->command->info('⏭️ بخش‌های بیمارستان قبلاً وجود دارند.');
+//        }
+
+        // ============================================================
+        // ۱۴. نوبت‌های تست (اختیاری)
+        // ============================================================
+        // اگر می‌خواهید نوبت‌های تست ایجاد شود، این بخش را فعال کنید
+        // if (\App\Models\Appointment::count() === 0) {
+        //     $this->call(DoctorAppointmentSeeder::class);
+        // } else {
+        //     $this->command->info('⏭️ نوبت‌های تست قبلاً وجود دارند.');
+        // }
+
+        // ============================================================
+        // ۱۵. گزارش‌های BI (اختیاری)
+        // ============================================================
+//        if (Schema::hasTable('bi_reports') && \App\Models\BI\BIReport::count() === 0) {
+//            $this->call(\Database\Seeders\BI\BISeeder::class);
+//        } else {
+//            $this->command->info('⏭️ گزارش‌های BI قبلاً وجود دارند.');
+//        }
+
+        $this->command->info('');
         $this->command->info('✅ سیدر کامل با موفقیت انجام شد!');
-        $this->command->info('📊 خلاصه:');
+        $this->command->info('📊 خلاصه داده‌های ایجاد شده:');
+        $this->command->info('   🏢 Tenant‌ها: ' . \App\Models\Tenant::count());
         $this->command->info('   🏥 کلینیک‌ها: ' . \App\Models\Clinic::count());
         $this->command->info('   👨‍⚕️ پزشکان: ' . \App\Models\Doctor::count());
+        $this->command->info('   👤 بیماران: ' . \App\Models\Patient::count());
         $this->command->info('   💊 داروخانه‌ها: ' . \App\Models\Pharmacy::count());
+        $this->command->info('   💊 داروها: ' . \App\Models\Drug::count());
         $this->command->info('   📷 مراکز تصویربرداری: ' . \App\Models\PACS\MedicalImage::count());
         $this->command->info('   🧪 آزمایشگاه‌ها: ' . \App\Models\LabTest::count());
-        $this->command->info('   💊 داروها: ' . \App\Models\Drug::count());
+        $this->command->info('   🌐 زبان‌ها: ' . \App\Models\Language::count());
+        $this->command->info('   📋 فرم‌های دیجیتال: ' . \App\Models\DigitalForm::count());
+        $this->command->info('   💳 پلن‌های اشتراک: ' . \App\Models\SubscriptionPlan::count());
+        $this->command->info('');
+        $this->command->info('🔑 اطلاعات ورود ادمین:');
+        $this->command->info('   📱 موبایل: 09123456789');
+        $this->command->info('   🔑 رمز عبور: 12345678');
+        $this->command->info('');
+        $this->command->info('🎉 همه چیز با موفقیت انجام شد!');
     }
 }
