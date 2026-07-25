@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import {
     Card, Row, Col, Typography, Spin, Tag, Button,
-    Descriptions, Image, Space, Carousel
+    Descriptions, Image, Space, Carousel, Divider
 } from 'antd';
 import {
     EnvironmentOutlined, PhoneOutlined, MailOutlined,
@@ -44,112 +45,174 @@ export default function PharmacyDetailPage({ params }) {
     };
 
     if (loading) return <><Header /><LoadingSpinner /><Footer /></>;
+
     if (!pharmacy) {
         return (
             <>
                 <Header />
                 <div style={{ textAlign: 'center', padding: 60 }}>
-                    <Title level={3}>{t('pharmacy.notFound')}</Title>
-                    <Button onClick={() => router.push(`/${locale}/pharmacy`)}>{t('pharmacy.backToList')}</Button>
-                </div>
-                <Footer />
-            </>
-        );
-    }
+                    <Title level={3}>داروخانه یافت نشد</Title>
+                    <Button onClick={() => router.push(`/${locale}/pharmacy`)}>
+بازگشت به لیست
+</Button>
+</div>
+<Footer />
+</>
+);
+}
 
-    return (
-        <>
-            <Header />
-            <main style={{ minHeight: 'calc(100vh - 200px)', background: '#f8fafc', padding: '24px 20px' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                    <Breadcrumb items={[
-                        { title: t('pharmacy.title'), href: `/${locale}/pharmacy` },
-                        { title: pharmacy.name }
-                    ]} />
-                    <Button icon={<LeftOutlined />} onClick={() => router.back()} style={{ marginBottom: 16 }}>{t('common.back')}</Button>
+return (
+    <>
+        <main style={{ minHeight: 'calc(100vh - 200px)', background: '#f8fafc', padding: '24px 20px' }}>
+            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <Breadcrumb items={[
+                    { title: t('pharmacy.title') || 'داروخانه', href: `/${locale}/pharmacy` },
+                    { title: pharmacy.name }
+                ]} />
 
-                    <Row gutter={[24, 24]}>
-                        <Col xs={24} md={10}>
-                            <Card style={{ borderRadius: 16, overflow: 'hidden' }}>
-                                {pharmacy.images_urls?.length > 0 ? (
-                                    <Carousel autoplay>
-                                        {pharmacy.images_urls.map((img, index) => (
-                                            <div key={index} style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5' }}>
-                                                <Image src={img.url} alt={pharmacy.name} style={{ maxHeight: 280, objectFit: 'contain' }} preview={false} />
-                                            </div>
-                                        ))}
-                                    </Carousel>
-                                ) : (
-                                    <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff' }}>
-                                        <ShopOutlined style={{ fontSize: 80, color: '#2563eb' }} />
-                                    </div>
-                                )}
-                            </Card>
-                        </Col>
+                <Button
+                    icon={<LeftOutlined />}
+                    onClick={() => router.back()}
+                    style={{ marginBottom: 16 }}
+                >
+                    {t('common.back') || 'بازگشت'}
+                </Button>
 
-                        <Col xs={24} md={14}>
-                            <Card style={{ borderRadius: 16 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-                                    {pharmacy.logo_url && (
-                                        <Image src={pharmacy.logo_url} alt={pharmacy.name} width={80} height={80} style={{ borderRadius: '50%', objectFit: 'cover' }} preview={false} />
-                                    )}
-                                    <div>
-                                        <Title level={2} style={{ marginBottom: 4 }}>{pharmacy.name}</Title>
-                                        <Space>
-                                            <Tag color={pharmacy.is_online ? 'success' : 'default'}>{pharmacy.is_online ? t('pharmacy.online') : t('pharmacy.offline')}</Tag>
-                                            {pharmacy.clinic && <Tag color="blue">{pharmacy.clinic.name}</Tag>}
-                                        </Space>
-                                    </div>
+                <Row gutter={[24, 24]}>
+                    <Col xs={24} md={10}>
+                        <Card style={{ borderRadius: 16, overflow: 'hidden' }}>
+                            {pharmacy.images_urls?.length > 0 ? (
+                                <Carousel autoplay>
+                                    {pharmacy.images_urls.map((img, index) => (
+                                        <div
+                                            key={index}
+                                            style={{
+                                                height: 300,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                background: '#f0f2f5'
+                                            }}
+                                        >
+                                            <Image
+                                                src={img.url}
+                                                alt={pharmacy.name}
+                                                style={{ maxHeight: 280, objectFit: 'contain' }}
+                                                preview={false}
+                                            />
+                                        </div>
+                                    ))}
+                                </Carousel>
+                            ) : (
+                                <div style={{
+                                    height: 300,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: '#e0e7ff'
+                                }}>
+                                    <ShopOutlined style={{ fontSize: 80, color: '#2563eb' }} />
                                 </div>
+                            )}
+                        </Card>
+                    </Col>
 
-                                <Descriptions column={1} bordered size="small">
-                                    <Descriptions.Item label={t('pharmacy.address')}>
-                                        <EnvironmentOutlined /> {pharmacy.full_address || pharmacy.address}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label={t('pharmacy.province')}>
-                                        {pharmacy.province?.name || '—'}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label={t('pharmacy.city')}>
-                                        {pharmacy.city?.name || '—'}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label={t('pharmacy.clinic')}>
-                                        {pharmacy.clinic ? (
-                                            <Space><ShopOutlined /><span>{pharmacy.clinic.name}</span></Space>
-                                        ) : '—'}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label={t('pharmacy.phone')}>
-                                        <PhoneOutlined /> {pharmacy.phone || '—'}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label={t('pharmacy.email')}>
-                                        <MailOutlined /> {pharmacy.email || '—'}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label={t('pharmacy.license')}>
-                                        {pharmacy.license_number || '—'}
-                                    </Descriptions.Item>
-                                    {pharmacy.working_hours && (
-                                        <Descriptions.Item label={t('pharmacy.workingHours')}>
-                                            <ClockCircleOutlined /> {pharmacy.working_hours}
-                                        </Descriptions.Item>
-                                    )}
-                                </Descriptions>
+                    <Col xs={24} md={14}>
+                        <Card style={{ borderRadius: 16 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+                                {pharmacy.logo_url && (
+                                    <Image
+                                        src={pharmacy.logo_url}
+                                        alt={pharmacy.name}
+                                        width={80}
+                                        height={80}
+                                        style={{ borderRadius: '50%', objectFit: 'cover' }}
+                                        preview={false}
+                                    />
+                                )}
+                                <div>
+                                    <Title level={2} style={{ marginBottom: 4 }}>{pharmacy.name}</Title>
+                                    <Space>
+                                        <Tag color={pharmacy.is_online ? 'success' : 'default'}>
+                                            {pharmacy.is_online ? (t('pharmacy.online') || 'آنلاین') : (t('pharmacy.offline') || 'آفلاین')}
+                                        </Tag>
+                                        {pharmacy.clinic && <Tag color="blue">{pharmacy.clinic.name}</Tag>}
+                                    </Space>
+                                </div>
+                            </div>
 
-                                <Divider />
+                            <Descriptions column={1} bordered size="small">
+                                <Descriptions.Item label={t('pharmacy.address') || 'آدرس'}>
+                                    <EnvironmentOutlined /> {pharmacy.full_address || pharmacy.address || '—'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label={t('pharmacy.province') || 'استان'}>
+                                    {pharmacy.province?.name || '—'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label={t('pharmacy.city') || 'شهر'}>
+                                    {pharmacy.city?.name || '—'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label={t('pharmacy.clinic') || 'کلینیک'}>
+                                    {pharmacy.clinic ? (
+                                        <Space><ShopOutlined /><span>{pharmacy.clinic.name}</span></Space>
+                                    ) : '—'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label={t('pharmacy.phone') || 'تلفن'}>
+                                    <PhoneOutlined /> {pharmacy.phone || '—'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label={t('pharmacy.email') || 'ایمیل'}>
+                                    <MailOutlined /> {pharmacy.email || '—'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label={t('pharmacy.license') || 'شماره پروانه'}>
+                                    {pharmacy.license_number || '—'}
+                                </Descriptions.Item>
+                                {pharmacy.working_hours && (
+                                    <Descriptions.Item label={t('pharmacy.workingHours') || 'ساعات کاری'}>
+                                        <ClockCircleOutlined /> {typeof pharmacy.working_hours === 'object'
+                                        ? JSON.stringify(pharmacy.working_hours)
+                                        : pharmacy.working_hours}
+                                    </Descriptions.Item>
+                                )}
+                            </Descriptions>
 
-                                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                                    <Button type="primary" icon={<PhoneOutlined />} href={`tel:${pharmacy.phone}`}>{t('pharmacy.call')}</Button>
-                                    <Button icon={<EnvironmentOutlined />} onClick={() => {
+                            <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                <Button
+                                    type="primary"
+                                    icon={<PhoneOutlined />}
+                                    href={`tel:${pharmacy.phone}`}
+                                    disabled={!pharmacy.phone}
+                                >
+                                    {t('pharmacy.call') || 'تماس'}
+                                </Button>
+                                <Button
+                                    icon={<EnvironmentOutlined />}
+                                    onClick={() => {
                                         if (pharmacy.latitude && pharmacy.longitude) {
                                             window.open(`https://www.google.com/maps?q=${pharmacy.latitude},${pharmacy.longitude}`);
                                         }
-                                    }}>{t('pharmacy.viewOnMap')}</Button>
-                                    <Button onClick={() => router.push(`/${locale}/pharmacy/drugs?pharmacy_id=${pharmacy.id}`)}>{t('pharmacy.viewDrugs')}</Button>
-                                </div>
-                            </Card>
-                        </Col>
-                    </Row>
-                </div>
-            </main>
-            <Footer />
-        </>
-    );
+                                    }}
+                                    disabled={!pharmacy.latitude || !pharmacy.longitude}
+                                >
+                                    {t('pharmacy.viewOnMap') || 'مشاهده در نقشه'}
+                                </Button>
+                                <Button
+                                    onClick={() => router.push(`/${locale}/pharmacy/drugs?pharmacy_id=${pharmacy.id}`)}
+                                >
+                                    {t('pharmacy.viewDrugs') || 'مشاهده داروها'}
+                                </Button>
+                                <Button
+                                    type="primary"
+                                    ghost
+                                    onClick={() => router.push(`/${locale}/pharmacy/order?pharmacy_id=${pharmacy.id}`)}
+                                    disabled={!pharmacy.is_online}
+                                >
+                                    {t('pharmacy.order') || 'سفارش دارو'}
+                                </Button>
+                            </div>
+                        </Card>
+                    </Col>
+                </Row>
+            </div>
+        </main>
+    </>
+);
 }
