@@ -46,29 +46,25 @@ Route::get('/ping', function () {
         'version' => '1.0.0'
     ]);
 });
+
 // ============================================================
 // Waiting List (صف انتظار)
 // ============================================================
 Route::middleware('auth:sanctum')->prefix('waiting')->group(function () {
-    // بیمار: دریافت وضعیت صف خودش
     Route::get('/status/{appointmentId}', [WaitingController::class, 'getStatus']);
-
-    // بیمار: افزودن به صف (وقتی به مطب رسید)
     Route::post('/add', [WaitingController::class, 'addToQueue']);
 });
 
-// مسیرهای عمومی (بدون احراز هویت برای نمایش در تلویزیون)
 Route::prefix('waiting')->group(function () {
-    // دریافت لیست صف برای نمایش در تلویزیون
     Route::get('/queue/{doctorId}', [WaitingController::class, 'getQueue']);
 });
 
-// مسیرهای منشی (با نقش receptionist)
 Route::middleware(['auth:sanctum', 'role:receptionist|admin'])->prefix('waiting')->group(function () {
     Route::post('/call-next/{doctorId}', [WaitingController::class, 'callNext']);
     Route::post('/complete/{waitingId}', [WaitingController::class, 'complete']);
     Route::delete('/cancel/{waitingId}', [WaitingController::class, 'cancel']);
 });
+
 // ============================================================
 // 2. PUBLIC ROUTES (بدون احراز هویت)
 // ============================================================
@@ -134,7 +130,6 @@ Route::prefix('patients')->group(function () {
 // ============================================================
 // 3. PROTECTED ROUTES (نیاز به احراز هویت)
 // ============================================================
-
 Route::middleware('auth:sanctum')->group(function () {
 
     // ============================================================
@@ -171,7 +166,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('appointments')->group(function () {
         Route::get('/my/appointments', [AppointmentController::class, 'myAppointments']);
         Route::get('/my/stats', [AppointmentController::class, 'myPatientStats']);
-
         Route::post('/', [AppointmentController::class, 'store']);
         Route::get('/{id}', [AppointmentController::class, 'show']);
         Route::post('/{id}/confirm', [AppointmentController::class, 'confirm']);
@@ -275,11 +269,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders/{id}', [PharmacyController::class, 'show']);
         Route::post('/orders/{id}/pay', [PharmacyController::class, 'pay']);
         Route::post('/orders/{id}/cancel', [PharmacyController::class, 'cancel']);
-        Route::put('/orders/{id}', [PharmacyController::class, 'update']); // ✅ موجود است
+        Route::put('/orders/{id}', [PharmacyController::class, 'update']);
 
         // نسخه پزشکی
         Route::post('/orders/{id}/prescription', [PharmacyController::class, 'uploadPrescription']);
         Route::get('/orders/{id}/prescription-status', [PharmacyController::class, 'getPrescriptionStatus']);
+
+        // ✅ درخواست دارو با نسخه پزشکی (کاربر)
+        Route::post('/prescription-request', [PharmacyController::class, 'prescriptionRequest']);
+
+        // ✅ تایید/رد درخواست نسخه (ادمین)
+        Route::middleware(['role:admin|super_admin'])->group(function () {
+            Route::post('/prescription-request/{id}/approve', [PharmacyController::class, 'approvePrescriptionRequest']);
+            Route::post('/prescription-request/{id}/reject', [PharmacyController::class, 'rejectPrescriptionRequest']);
+        });
 
         // نوتیفیکیشن‌ها
         Route::get('/notifications', [PharmacyController::class, 'notifications']);
@@ -297,7 +300,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/my-profile', [ApiPatientController::class, 'myProfile']);
         Route::put('/my-profile', [ApiPatientController::class, 'updateMyProfile']);
     });
-
 
     // ============================================================
     // 3.15 MEDICAL NOTES
@@ -326,19 +328,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // 3.16 LABORATORY
     // ============================================================
     Route::prefix('lab')->group(function () {
-        // سفارشات
         Route::post('/orders', [LabController::class, 'createOrder']);
         Route::get('/my/orders', [LabController::class, 'myOrders']);
         Route::get('/orders/{id}', [LabController::class, 'showOrder']);
         Route::put('/orders/{id}/status', [LabController::class, 'updateOrderStatus']);
-
-        // نتایج
         Route::post('/results', [LabController::class, 'addResult']);
         Route::post('/results/bulk', [LabController::class, 'addResults']);
         Route::post('/results/{id}/verify', [LabController::class, 'verifyResult']);
         Route::delete('/results/{id}', [LabController::class, 'deleteResult']);
-
-        // آمار
         Route::get('/stats', [LabController::class, 'stats']);
         Route::get('/my/stats', [LabController::class, 'myStats']);
     });
@@ -470,10 +467,10 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
         // 6.4 PHARMACY ORDERS (ادمین) - فقط متدهای موجود
         // ============================================================
         Route::prefix('pharmacy-orders')->group(function () {
-            Route::get('/', [PharmacyController::class, 'pharmacyOrders']); // ✅ موجود است
-            Route::get('/{id}', [PharmacyController::class, 'show']); // ✅ موجود است
-            Route::post('/{id}/approve-prescription', [PharmacyController::class, 'approvePrescription']); // ✅ موجود است
-            Route::post('/{id}/reject-prescription', [PharmacyController::class, 'rejectPrescription']); // ✅ موجود است
+            Route::get('/', [PharmacyController::class, 'pharmacyOrders']);
+            Route::get('/{id}', [PharmacyController::class, 'show']);
+            Route::post('/{id}/approve-prescription', [PharmacyController::class, 'approvePrescription']);
+            Route::post('/{id}/reject-prescription', [PharmacyController::class, 'rejectPrescription']);
         });
 
         // ============================================================
@@ -530,8 +527,6 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
             Route::post('/tests/{id}/toggle', [LabController::class, 'toggleTestStatus']);
             Route::get('/orders', [LabController::class, 'orders']);
         });
-
-
 
     });
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Card, Form, Input, Button, Typography, Spin,
   App, Select, Space, Divider, Alert, Row, Col,
-  Upload, Avatar
+  Upload, Avatar, message
 } from 'antd';
 import {
   UserOutlined, PhoneOutlined, MailOutlined,
@@ -13,38 +13,50 @@ import {
   ArrowLeftOutlined, UploadOutlined,
   SafetyOutlined
 } from '@ant-design/icons';
-import { useLanguage } from '@/lib/context/LanguageContext';
 import Breadcrumb from '@/components/shared/Breadcrumb';
+import Header from '@/components/front/Header/Header';
+import Footer from '@/components/front/Footer/Footer';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 export default function EditProfilePage() {
   const router = useRouter();
-  const { t, locale } = useLanguage();
   const { message: appMessage } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState(null);
+  const [patient, setPatient] = useState(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
-  const getToken = () => localStorage.getItem('token');
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
+    }
+    return null;
+  };
 
   useEffect(() => {
     const token = getToken();
     if (!token) {
-      router.push(`/${locale}/login`);
+      router.push('/fa/login');
       return;
     }
     fetchProfile();
   }, []);
 
   const fetchProfile = async () => {
+    setLoading(true);
     try {
       const token = getToken();
+      if (!token) {
+        router.push('/fa/login');
+        return;
+      }
 
+      // دریافت اطلاعات کاربر
       const userRes = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -52,27 +64,36 @@ export default function EditProfilePage() {
         },
       });
       const userData = await userRes.json();
-
       if (userData.success) {
         setUser(userData.data);
       }
 
-      const patientRes = await fetch(`${API_URL}/api/patients/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const patientData = await patientRes.json();
+      // دریافت اطلاعات بیمار
+      try {
+        const patientRes = await fetch(`${API_URL}/api/patients/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const patientData = await patientRes.json();
+        if (patientData.success && patientData.data) {
+          setPatient(patientData.data);
 
-      form.setFieldsValue({
-        name: userData?.data?.name || '',
-        email: userData?.data?.email || '',
-        national_code: patientData?.data?.national_code || '',
-        address: patientData?.data?.address || '',
-        insurance_type: patientData?.data?.insurance_type || '',
-        insurance_number: patientData?.data?.insurance_number || '',
-      });
+          form.setFieldsValue({
+            name: userData.data?.name || '',
+            mobile: userData.data?.mobile || '',
+            email: userData.data?.email || '',
+            national_code: patientData.data?.national_code || '',
+            address: patientData.data?.address || '',
+            insurance_type: patientData.data?.insurance_type || '',
+            insurance_number: patientData.data?.insurance_number || '',
+          });
+        }
+      } catch (patientError) {
+        console.log('اطلاعات بیمار یافت نشد:', patientError);
+        setPatient(null);
+      }
 
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -86,28 +107,14 @@ export default function EditProfilePage() {
     setSubmitting(true);
     try {
       const token = getToken();
-
-      // فقط نام و ایمیل قابل تغییر هستن (موبایل غیرفعال)
-      const userRes = await fetch(`${API_URL}/api/profile`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: values.name,
-          email: values.email,
-        }),
-      });
-      const userData = await userRes.json();
-
-      if (!userData.success) {
-        appMessage.error(userData.message || 'خطا در به‌روزرسانی اطلاعات کاربر');
-        setSubmitting(false);
+      if (!token) {
+        appMessage.warning('لطفاً وارد شوید');
+        router.push('/fa/login');
         return;
       }
 
-      const patientRes = await fetch(`${API_URL}/api/patients/update`, {
+      // ✅ فقط فیلدهای patients
+      const res = await fetch(`${API_URL}/api/patients/my-profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -116,17 +123,18 @@ export default function EditProfilePage() {
         body: JSON.stringify({
           national_code: values.national_code,
           address: values.address,
-          insurance_type: values.insurance_type,
-          insurance_number: values.insurance_number,
+          insurance_type: values.insurance_type || '',
+          insurance_number: values.insurance_number || '',
         }),
       });
-      const patientData = await patientRes.json();
 
-      if (patientData.success) {
+      const data = await res.json();
+
+      if (data.success) {
         appMessage.success('اطلاعات با موفقیت به‌روزرسانی شد');
-        setTimeout(() => router.push(`/${locale}/profile`), 1500);
+        setTimeout(() => router.push('/fa/profile'), 1500);
       } else {
-        appMessage.error(patientData.message || 'خطا در به‌روزرسانی اطلاعات');
+        appMessage.error(data.message || 'خطا در به‌روزرسانی اطلاعات');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -140,6 +148,11 @@ export default function EditProfilePage() {
     setAvatarLoading(true);
     try {
       const token = getToken();
+      if (!token) {
+        appMessage.warning('لطفاً وارد شوید');
+        return false;
+      }
+
       const formData = new FormData();
       formData.append('avatar', file);
 
@@ -168,208 +181,216 @@ export default function EditProfilePage() {
 
   if (loading) {
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
-          <Spin size="large" />
-        </div>
+        <>
+          <Header />
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
+            <Spin size="large" />
+          </div>
+          <Footer />
+        </>
     );
   }
 
   return (
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '24px 20px' }}>
-        <Breadcrumb
-            items={[
-              { title: 'خانه', href: `/${locale}` },
-              { title: 'پروفایل', href: `/${locale}/profile` },
-              { title: 'ویرایش پروفایل' },
-            ]}
-        />
+      <>
+        <Header />
+        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '24px 20px', minHeight: 'calc(100vh - 200px)' }}>
+          <Breadcrumb
+              items={[
+                { title: 'خانه', href: '/fa' },
+                { title: 'پروفایل', href: '/fa/profile' },
+                { title: 'ویرایش پروفایل' },
+              ]}
+          />
 
-        <Card style={{ borderRadius: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <Title level={2} style={{ marginBottom: 0 }}>
-              ✏️ ویرایش پروفایل
-            </Title>
-            <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={() => router.push(`/${locale}/profile`)}
-            >
-              بازگشت
-            </Button>
-          </div>
-
-          <Divider />
-
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <Avatar
-                size={100}
-                src={user?.avatar}
-                style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
-                icon={<UserOutlined />}
-            />
-            <div style={{ marginTop: '8px' }}>
-              <Upload
-                  showUploadList={false}
-                  beforeUpload={handleAvatarUpload}
-                  accept="image/*"
+          <Card style={{ borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <Title level={2} style={{ marginBottom: 0 }}>
+                ✏️ ویرایش پروفایل
+              </Title>
+              <Button
+                  icon={<ArrowLeftOutlined />}
+                  onClick={() => router.push('/fa/profile')}
               >
-                <Button
-                    icon={<UploadOutlined />}
-                    loading={avatarLoading}
-                >
-                  تغییر عکس
-                </Button>
-              </Upload>
+                بازگشت
+              </Button>
             </div>
-          </div>
 
-          <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleSubmit}
-          >
-            <Row gutter={[16, 16]}>
-              <Col xs={24}>
-                <Form.Item
-                    name="name"
-                    label="نام و نام خانوادگی"
-                    rules={[{ required: true, message: 'لطفاً نام خود را وارد کنید' }]}
+            <Divider />
+
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <Avatar
+                  size={100}
+                  src={user?.avatar_url}
+                  style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+                  icon={<UserOutlined />}
+              />
+              <div style={{ marginTop: '8px' }}>
+                <Upload
+                    showUploadList={false}
+                    beforeUpload={handleAvatarUpload}
+                    accept="image/*"
                 >
-                  <Input
-                      prefix={<UserOutlined />}
-                      placeholder="نام و نام خانوادگی"
-                      size="large"
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item
-                    name="mobile"
-                    label="شماره موبایل"
-                >
-                  <Input
-                      prefix={<PhoneOutlined />}
-                      placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                      size="large"
-                      disabled
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item
-                    name="email"
-                    label="ایمیل"
-                    rules={[
-                      { type: 'email', message: 'ایمیل معتبر نیست' }
-                    ]}
-                >
-                  <Input
-                      prefix={<MailOutlined />}
-                      placeholder="example@email.com"
-                      size="large"
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24}>
-                <Form.Item
-                    name="national_code"
-                    label="کد ملی"
-                    rules={[
-                      { required: true, message: 'لطفاً کد ملی را وارد کنید' },
-                      { pattern: /^[0-9]{10}$/, message: 'کد ملی باید ۱۰ رقم باشد' }
-                    ]}
-                >
-                  <Input
-                      prefix={<IdcardOutlined />}
-                      placeholder="۱۲۳۴۵۶۷۸۹۰"
-                      size="large"
-                      maxLength={10}
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24}>
-                <Form.Item
-                    name="address"
-                    label="آدرس"
-                    rules={[{ required: true, message: 'لطفاً آدرس خود را وارد کنید' }]}
-                >
-                  <Input.TextArea
-                      placeholder="آدرس کامل خود را وارد کنید..."
-                      rows={3}
-                      size="large"
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item
-                    name="insurance_type"
-                    label="نوع بیمه"
-                >
-                  <Select
-                      placeholder="انتخاب نوع بیمه"
-                      size="large"
-                      allowClear
-                  >
-                    <Option value="tamin_ejtemaei">تامین اجتماعی</Option>
-                    <Option value="tamin_tekamili">بیمه تکمیلی</Option>
-                    <Option value="asal">بیمه آسایش</Option>
-                    <Option value="iran">بیمه ایران</Option>
-                    <Option value="dana">بیمه دانا</Option>
-                    <Option value="saman">بیمه سامان</Option>
-                    <Option value="other">سایر</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item
-                    name="insurance_number"
-                    label="شماره بیمه"
-                >
-                  <Input
-                      prefix={<SafetyOutlined />}
-                      placeholder="شماره بیمه خود را وارد کنید"
-                      size="large"
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24}>
-                <Alert
-                    message="تکمیل اطلاعات"
-                    description="تکمیل اطلاعات زیر برای ثبت سفارش داروخانه الزامی است: نام، کد ملی و آدرس"
-                    type="info"
-                    showIcon
-                    style={{ marginBottom: '16px' }}
-                />
-              </Col>
-
-              <Col xs={24}>
-                <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
                   <Button
-                      size="large"
-                      onClick={() => router.push(`/${locale}/profile`)}
+                      icon={<UploadOutlined />}
+                      loading={avatarLoading}
                   >
-                    انصراف
+                    تغییر عکس
                   </Button>
-                  <Button
-                      type="primary"
-                      size="large"
-                      htmlType="submit"
-                      loading={submitting}
-                      icon={<SaveOutlined />}
+                </Upload>
+              </div>
+            </div>
+
+            <Form
+                form={form}
+                layout="vertical"
+                onFinish={handleSubmit}
+            >
+              <Row gutter={[16, 16]}>
+                <Col xs={24}>
+                  <Form.Item
+                      name="name"
+                      label="نام و نام خانوادگی"
+                      rules={[{ required: true, message: 'لطفاً نام خود را وارد کنید' }]}
                   >
-                    ذخیره اطلاعات
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-      </div>
+                    <Input
+                        prefix={<UserOutlined />}
+                        placeholder="نام و نام خانوادگی"
+                        size="large"
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item
+                      name="mobile"
+                      label="شماره موبایل"
+                  >
+                    <Input
+                        prefix={<PhoneOutlined />}
+                        placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                        size="large"
+                        disabled
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item
+                      name="email"
+                      label="ایمیل"
+                      rules={[
+                        { type: 'email', message: 'ایمیل معتبر نیست' }
+                      ]}
+                  >
+                    <Input
+                        prefix={<MailOutlined />}
+                        placeholder="example@email.com"
+                        size="large"
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24}>
+                  <Form.Item
+                      name="national_code"
+                      label="کد ملی"
+                      rules={[
+                        { required: true, message: 'لطفاً کد ملی را وارد کنید' },
+                        { pattern: /^[0-9]{10}$/, message: 'کد ملی باید ۱۰ رقم باشد' }
+                      ]}
+                  >
+                    <Input
+                        prefix={<IdcardOutlined />}
+                        placeholder="۱۲۳۴۵۶۷۸۹۰"
+                        size="large"
+                        maxLength={10}
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24}>
+                  <Form.Item
+                      name="address"
+                      label="آدرس"
+                      rules={[{ required: true, message: 'لطفاً آدرس خود را وارد کنید' }]}
+                  >
+                    <Input.TextArea
+                        placeholder="آدرس کامل خود را وارد کنید..."
+                        rows={3}
+                        size="large"
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item
+                      name="insurance_type"
+                      label="نوع بیمه"
+                  >
+                    <Select
+                        placeholder="انتخاب نوع بیمه"
+                        size="large"
+                        allowClear
+                    >
+                      <Option value="tamin_ejtemaei">تامین اجتماعی</Option>
+                      <Option value="tamin_tekamili">بیمه تکمیلی</Option>
+                      <Option value="asal">بیمه آسایش</Option>
+                      <Option value="iran">بیمه ایران</Option>
+                      <Option value="dana">بیمه دانا</Option>
+                      <Option value="saman">بیمه سامان</Option>
+                      <Option value="other">سایر</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item
+                      name="insurance_number"
+                      label="شماره بیمه"
+                  >
+                    <Input
+                        prefix={<SafetyOutlined />}
+                        placeholder="شماره بیمه خود را وارد کنید"
+                        size="large"
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24}>
+                  <Alert
+                      message="تکمیل اطلاعات"
+                      description="تکمیل اطلاعات زیر برای ثبت سفارش داروخانه الزامی است: نام، کد ملی و آدرس"
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: '16px' }}
+                  />
+                </Col>
+
+                <Col xs={24}>
+                  <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+                    <Button
+                        size="large"
+                        onClick={() => router.push('/fa/profile')}
+                    >
+                      انصراف
+                    </Button>
+                    <Button
+                        type="primary"
+                        size="large"
+                        htmlType="submit"
+                        loading={submitting}
+                        icon={<SaveOutlined />}
+                    >
+                      ذخیره اطلاعات
+                    </Button>
+                  </Space>
+                </Col>
+              </Row>
+            </Form>
+          </Card>
+        </div>
+        <Footer />
+      </>
   );
 }

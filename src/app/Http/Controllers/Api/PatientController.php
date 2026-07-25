@@ -28,12 +28,10 @@ class PatientController extends Controller
         $filters = $request->all();
         $filters['is_active'] = true;
 
-        // فیلتر بر اساس استان
         if ($request->has('province_id') && $request->province_id) {
             $filters['province_id'] = $request->province_id;
         }
 
-        // فیلتر بر اساس شهر
         if ($request->has('city_id') && $request->city_id) {
             $filters['city_id'] = $request->city_id;
         }
@@ -103,13 +101,32 @@ class PatientController extends Controller
     public function myProfile(Request $request)
     {
         $user = auth()->user();
-        $patient = $this->patientService->getCurrentPatient($user->id);
 
-        if (!$patient) {
-            return $this->error('بیمار یافت نشد', 404);
+        if (!$user) {
+            return $this->error('کاربر یافت نشد', 404);
         }
 
-        return $this->success($patient->load(['user', 'doctor', 'province', 'city']));
+        // ✅ دریافت بیمار با رابطه user
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            // اگر بیمار وجود نداشت، یک آبجکت خالی با user برگردون
+            return $this->success([
+                'user' => $user,
+                'id' => null,
+                'national_code' => '',
+                'phone' => $user->mobile ?? '',
+                'address' => '',
+                'insurance_type' => '',
+                'insurance_number' => '',
+                'full_name' => $user->name ?? '',
+            ]);
+        }
+
+        // ✅ بارگذاری رابطه user
+        $patient->load(['user']);
+
+        return $this->success($patient);
     }
 
     /**
@@ -120,14 +137,11 @@ class PatientController extends Controller
         $user = auth()->user();
 
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'full_name' => 'nullable|string|max:255',
             'national_code' => 'nullable|string|size:10',
             'phone' => 'nullable|string|max:15',
             'address' => 'nullable|string|max:500',
             'province_id' => 'nullable|exists:provinces,id',
             'city_id' => 'nullable|exists:cities,id',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
             'insurance_type' => 'nullable|string|max:50',
             'insurance_number' => 'nullable|string|max:50',
         ]);
@@ -137,9 +151,35 @@ class PatientController extends Controller
         }
 
         try {
-            $patient = $this->patientService->updateCurrentPatient($user->id, $request->all());
+            // پیدا کردن یا ایجاد بیمار
+            $patient = Patient::where('user_id', $user->id)->first();
+
+            if (!$patient) {
+                // اگر بیمار وجود نداشت، ایجاد کن
+                $patient = Patient::create([
+                    'user_id' => $user->id,
+                    'is_active' => true,
+                ]);
+            }
+
+            // ✅ فقط فیلدهایی که در جدول patients وجود دارند
+            $patient->update([
+                'national_code' => $request->national_code,
+                'phone' => $request->phone ?? $user->mobile,
+                'address' => $request->address,
+                'province_id' => $request->province_id,
+                'city_id' => $request->city_id,
+                'insurance_type' => $request->insurance_type,
+                'insurance_number' => $request->insurance_number,
+            ]);
+
+            // ✅ آپدیت نام کاربر
+            if ($request->has('full_name')) {
+                $user->update(['name' => $request->full_name]);
+            }
+
             return $this->success(
-                $patient->load(['user', 'doctor', 'province', 'city']),
+                $patient->load(['user']),
                 'پروفایل با موفقیت به‌روزرسانی شد'
             );
         } catch (\Exception $e) {

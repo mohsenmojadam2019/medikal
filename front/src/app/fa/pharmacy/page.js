@@ -11,10 +11,8 @@ import {
   PhoneOutlined, ShopOutlined
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
-import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
-import Breadcrumb from '@/components/shared/Breadcrumb';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
@@ -22,7 +20,6 @@ const { Option } = Select;
 
 export default function PharmacyPage() {
   const router = useRouter();
-  const { t, locale } = useLanguage();
   const { message: appMessage } = App.useApp();
 
   const [pharmacies, setPharmacies] = useState([]);
@@ -64,17 +61,16 @@ export default function PharmacyPage() {
         setPharmacies(pharmaciesData);
         setTotalItems(data.data.total || pharmaciesData.length || 0);
       } else {
-        appMessage.error(data.message || t('pharmacy.errorFetching'));
+        appMessage.error(data.message || 'خطا در دریافت اطلاعات');
       }
     } catch (error) {
       console.error('Error fetching pharmacies:', error);
-      appMessage.error(t('pharmacy.serverError'));
+      appMessage.error('خطا در ارتباط با سرور');
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, selectedProvince, selectedCity, selectedClinic, isOnline, currentPage, pageSize, appMessage, t]);
+  }, [searchTerm, selectedProvince, selectedCity, selectedClinic, isOnline, currentPage, pageSize, appMessage]);
 
-  // دریافت داده‌های فیلتر
   const fetchFilterData = useCallback(async () => {
     try {
       const [provincesRes, clinicsRes] = await Promise.all([
@@ -131,11 +127,18 @@ export default function PharmacyPage() {
         <Header />
         <main style={{ minHeight: 'calc(100vh - 200px)', background: '#f8fafc', padding: '24px 20px' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <Breadcrumb />
+
+            {/* مسیر راهنما - دستی بدون Breadcrumb */}
+            <div style={{ marginBottom: 8 }}>
+              <Text type="secondary">
+                <a href="/fa" style={{ color: '#2563eb' }}>خانه</a>
+                <span> / داروخانه</span>
+              </Text>
+            </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <Title level={2}>🏥 {t('pharmacy.title')}</Title>
-              <Text type="secondary">{t('pharmacy.subtitle')}</Text>
+              <Title level={2}>🏥 داروخانه</Title>
+              <Text type="secondary">خرید آنلاین دارو با نسخه الکترونیک</Text>
             </div>
 
             {/* فیلترها */}
@@ -143,7 +146,7 @@ export default function PharmacyPage() {
               <Row gutter={[16, 16]}>
                 <Col xs={24} md={6}>
                   <Input
-                      placeholder={t('pharmacy.searchPharmacies')}
+                      placeholder="جستجوی داروخانه..."
                       prefix={<SearchOutlined />}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -153,61 +156,61 @@ export default function PharmacyPage() {
                 </Col>
                 <Col xs={12} md={4}>
                   <Select
-                      placeholder={t('pharmacy.selectProvince')}
+                      placeholder="انتخاب استان"
                       style={{ width: '100%' }}
                       value={selectedProvince}
                       onChange={handleProvinceChange}
                       allowClear
                   >
-                    <Option value="all">{t('pharmacy.allProvinces')}</Option>
+                    <Option value="all">همه استان‌ها</Option>
                     {provinces.map(p => <Option key={p.id} value={p.id}>{p.name}</Option>)}
                   </Select>
                 </Col>
                 <Col xs={12} md={4}>
                   <Select
-                      placeholder={t('pharmacy.selectCity')}
+                      placeholder="انتخاب شهر"
                       style={{ width: '100%' }}
                       value={selectedCity}
                       onChange={setSelectedCity}
                       disabled={selectedProvince === 'all'}
                       allowClear
                   >
-                    <Option value="all">{t('pharmacy.allCities')}</Option>
+                    <Option value="all">همه شهرها</Option>
                     {cities.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
                   </Select>
                 </Col>
                 <Col xs={12} md={4}>
                   <Select
-                      placeholder={t('pharmacy.selectClinic')}
+                      placeholder="انتخاب کلینیک"
                       style={{ width: '100%' }}
                       value={selectedClinic}
                       onChange={setSelectedClinic}
                       allowClear
                   >
-                    <Option value="all">{t('pharmacy.allClinics')}</Option>
+                    <Option value="all">همه کلینیک‌ها</Option>
                     {clinics.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
                   </Select>
                 </Col>
                 <Col xs={12} md={4}>
                   <Select
-                      placeholder={t('pharmacy.status')}
+                      placeholder="وضعیت"
                       style={{ width: '100%' }}
                       value={isOnline}
                       onChange={setIsOnline}
                   >
-                    <Option value="all">{t('pharmacy.allStatus')}</Option>
-                    <Option value="true">{t('pharmacy.online')}</Option>
-                    <Option value="false">{t('pharmacy.offline')}</Option>
+                    <Option value="all">همه وضعیت‌ها</Option>
+                    <Option value="true">آنلاین</Option>
+                    <Option value="false">آفلاین</Option>
                   </Select>
                 </Col>
                 <Col xs={24} md={2}>
-                  <Button type="primary" block onClick={handleSearch}>{t('common.search')}</Button>
+                  <Button type="primary" block onClick={handleSearch}>جستجو</Button>
                 </Col>
               </Row>
             </Card>
 
             <div style={{ marginBottom: '16px' }}>
-              <Text type="secondary">{totalItems} {t('pharmacy.pharmaciesFound')}</Text>
+              <Text type="secondary">{totalItems} داروخانه یافت شد</Text>
             </div>
 
             {pharmacies.length > 0 ? (
@@ -218,7 +221,7 @@ export default function PharmacyPage() {
                           <Card
                               hoverable
                               style={{ borderRadius: '12px', height: '100%' }}
-                              onClick={() => router.push(`/${locale}/pharmacy/${pharmacy.id}`)}
+                              onClick={() => router.push(`/fa/pharmacy/${pharmacy.id}`)}
                               cover={
                                 <div style={{
                                   height: 140,
@@ -256,8 +259,8 @@ export default function PharmacyPage() {
                             )}
                             <div><Text type="secondary" style={{ fontSize: '12px' }}><PhoneOutlined /> {pharmacy.phone || '—'}</Text></div>
                             <div style={{ marginTop: 8 }}>
-                              <Tag color={pharmacy.is_online ? 'success' : 'default'}>{pharmacy.is_online ? t('pharmacy.online') : t('pharmacy.offline')}</Tag>
-                              <Tag color="green">{t('pharmacy.active')}</Tag>
+                              <Tag color={pharmacy.is_online ? 'success' : 'default'}>{pharmacy.is_online ? 'آنلاین' : 'آفلاین'}</Tag>
+                              <Tag color="green">فعال</Tag>
                             </div>
                           </Card>
                         </Col>
@@ -275,7 +278,7 @@ export default function PharmacyPage() {
                   </div>
                 </>
             ) : (
-                <Empty description={t('pharmacy.noPharmacies')}>
+                <Empty description="هیچ داروخانه‌ای یافت نشد">
                   <Button type="primary" onClick={() => {
                     setSearchTerm('');
                     setSelectedProvince('all');
@@ -284,7 +287,7 @@ export default function PharmacyPage() {
                     setIsOnline('all');
                     setCurrentPage(1);
                     fetchPharmacies();
-                  }}>{t('pharmacy.resetFilters')}</Button>
+                  }}>بازنشانی فیلترها</Button>
                 </Empty>
             )}
           </div>

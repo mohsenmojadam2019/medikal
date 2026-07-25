@@ -31,7 +31,6 @@ class PharmacyOrderService
 
         $orderNumber = $prefix . '-' . $date . '-' . $random;
 
-        // اطمینان از منحصر به فرد بودن
         while (PharmacyOrder::where('order_number', $orderNumber)->exists()) {
             $random = rand(1000, 9999);
             $orderNumber = $prefix . '-' . $date . '-' . $random;
@@ -48,24 +47,15 @@ class PharmacyOrderService
         try {
             DB::beginTransaction();
 
-            // تنظیم pharmacy_id اگر وجود نداشت
             if (!isset($data['pharmacy_id']) || empty($data['pharmacy_id'])) {
                 $pharmacy = Pharmacy::active()->online()->first();
-                if ($pharmacy) {
-                    $data['pharmacy_id'] = $pharmacy->id;
-                } else {
-                    $data['pharmacy_id'] = 1;
-                }
+                $data['pharmacy_id'] = $pharmacy?->id ?? 1;
             }
 
-            // تولید شماره سفارش
             $data['order_number'] = $this->generateOrderNumber();
-
-            // تنظیم status پیش‌فرض
             $data['status'] = 'payment_pending';
             $data['payment_status'] = 'pending';
 
-            // اطمینان از وجود اطلاعات تحویل
             if (!isset($data['recipient_name']) || empty($data['recipient_name'])) {
                 $data['recipient_name'] = auth()->user()->name ?? 'نامشخص';
             }
@@ -73,7 +63,6 @@ class PharmacyOrderService
                 $data['recipient_phone'] = auth()->user()->mobile ?? 'نامشخص';
             }
 
-            // محاسبه قیمت‌ها
             $subtotal = 0;
             if (isset($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as &$item) {
@@ -98,10 +87,8 @@ class PharmacyOrderService
                 'total_amount' => $data['total_amount']
             ]);
 
-            // ایجاد سفارش
             $order = PharmacyOrder::create($data);
 
-            // ایجاد آیتم‌های سفارش
             if (isset($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as $item) {
                     $orderItem = $order->items()->create([
@@ -113,7 +100,6 @@ class PharmacyOrderService
                         'is_available' => true,
                     ]);
 
-                    // کاهش موجودی دارو
                     $drug = Drug::find($item['drug_id']);
                     if ($drug) {
                         $drug->decrement('stock', $item['quantity']);
@@ -130,7 +116,6 @@ class PharmacyOrderService
 
             DB::commit();
 
-            // ارسال نوتیفیکیشن
             $this->sendOrderNotification($order);
 
             Log::info('✅ Order created successfully', [
@@ -166,12 +151,7 @@ class PharmacyOrderService
                 throw new \Exception('مبلغ سفارش صفر است');
             }
 
-            // ============================================================
-            // ✅ تولید لینک پرداخت تست (local)
-            // ============================================================
             $transactionId = 'LOCAL_' . $order->id . '_' . time();
-
-            // ✅ ساخت لینک پرداخت با پارامترهای درست
             $baseUrl = config('app.url', 'http://localhost:8210');
             $callbackUrl = $baseUrl . '/api/pharmacy/payment/callback';
 
@@ -189,7 +169,6 @@ class PharmacyOrderService
                 'payment_link' => $paymentLink
             ]);
 
-            // ✅ ذخیره لینک در دیتابیس
             $order->update([
                 'payment_gateway' => 'local',
                 'payment_authority' => $transactionId,
@@ -215,6 +194,7 @@ class PharmacyOrderService
             throw $e;
         }
     }
+
     /**
      * تایید پرداخت
      */
@@ -253,14 +233,12 @@ class PharmacyOrderService
                 ];
             }
 
-            // ✅ آپدیت کامل
             $order->update([
                 'payment_status' => 'paid',
-                'status' => 'paid',  // ✅ این مهمه!
+                'status' => 'paid',
                 'paid_at' => now(),
             ]);
 
-            // ارسال نوتیفیکیشن پرداخت
             $this->sendPaymentNotification($order, $transactionId);
 
             return [

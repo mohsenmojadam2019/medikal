@@ -42,7 +42,12 @@ class User extends Authenticatable implements HasMedia
         'is_super_admin' => 'boolean',
         'metadata' => 'array',
     ];
+// app/Models/User.php
 
+    public function patient()
+    {
+        return $this->hasOne(Patient::class);
+    }
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('avatar')
