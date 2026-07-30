@@ -23,7 +23,6 @@ class Doctor extends Model implements HasMedia
         'city_id',
         'specialty_id',
         'license_number',
-        // ❌ حذف شد - profile_image (از Media Library استفاده می‌شود)
         'latitude',
         'longitude',
         'bio',
@@ -119,9 +118,10 @@ class Doctor extends Model implements HasMedia
         return $media ? $media->getUrl('large') : null;
     }
 
+    // ✅ اصلاح شده: استفاده از full_name
     public function getFullNameAttribute(): string
     {
-        return $this->user?->name ?? $this->name ?? 'پزشک';
+        return $this->user?->full_name ?? $this->name ?? 'پزشک';
     }
 
     public function getFullAddressAttribute(): string
@@ -206,7 +206,7 @@ class Doctor extends Model implements HasMedia
         return $query->where(function ($q) use ($term) {
             $q->where('license_number', 'LIKE', "%{$term}%")
                 ->orWhereHas('user', function ($q2) use ($term) {
-                    $q2->where('name', 'LIKE', "%{$term}%")
+                    $q2->where('full_name', 'LIKE', "%{$term}%")
                         ->orWhere('mobile', 'LIKE', "%{$term}%");
                 })
                 ->orWhereHas('clinic', function ($q2) use ($term) {
@@ -239,6 +239,53 @@ class Doctor extends Model implements HasMedia
         ", [$lat, $lng, $lat])
             ->having('distance', '<', $radius)
             ->orderBy('distance', 'asc');
+    }
+
+    // ========== Relationships ==========
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function specialty()
+    {
+        return $this->belongsTo(Specialty::class);
+    }
+
+    public function clinic()
+    {
+        return $this->belongsTo(Clinic::class);
+    }
+
+    public function province()
+    {
+        return $this->belongsTo(Province::class);
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class);
+    }
+
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
+
+    public function patients()
+    {
+        return $this->hasMany(Patient::class);
+    }
+
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    public function schedules()
+    {
+        return $this->hasMany(DoctorSchedule::class);
     }
 
     // ========== Methods ==========
