@@ -1,33 +1,156 @@
-/* ===== فونت وزیرمتن ===== */
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
 
-* {
+/* ===== فونت بی‌یکان ===== */
+@font-face {
+  font-family: "BYekan";
+  src: url("/BYekan/BYekan+.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "BYekan";
+  src: url("/BYekan/BYekan+%20Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+}
+
+/* ===== متغیرهای اصلی ===== */
+:root {
+  --font-primary: "BYekan", Tahoma, Arial, sans-serif;
+  --background: #f0f2f5;
+  --foreground: #172033;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --border-color: #e8e8f0;
+  --card-background: #ffffff;
+}
+
+/* ===== تنظیمات عمومی ===== */
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-body {
-  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #f0f2f5;
+html {
   direction: rtl;
+  min-height: 100%;
+  font-family: var(--font-primary);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+body {
+  min-height: 100vh;
+  font-family: var(--font-primary);
+  font-weight: 400;
+  background: var(--background);
+  color: var(--foreground);
+  direction: rtl;
+  overflow-x: hidden;
+}
+
+/* ===== اعمال فونت روی تمام عناصر ===== */
+body,
+button,
+input,
+textarea,
+select,
+option,
+label,
+table,
+thead,
+tbody,
+tfoot,
+tr,
+th,
+td,
+a,
+p,
+span,
+div,
+nav,
+section,
+article,
+header,
+footer,
+main,
+aside,
+ul,
+ol,
+li,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-primary) !important;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong,
+b {
+  font-weight: 700;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+input::placeholder,
+textarea::placeholder {
+  font-family: var(--font-primary) !important;
+}
+
+/* ===== اسکرول بار ===== */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #c1c7cd;
   border-radius: 8px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #a8b0b8;
 }
 
+/* ===== وضعیت بارگذاری ===== */
 .loading-state {
   display: flex;
   align-items: center;
@@ -37,6 +160,7 @@ body {
   color: #64748b;
 }
 
+/* ===== وضعیت خطا ===== */
 .error-state {
   display: flex;
   align-items: center;
@@ -46,99 +170,385 @@ body {
   color: #ef4444;
 }
 
+/* ===== فونت Ant Design ===== */
+.ant-app,
+.ant-layout,
+.ant-layout-header,
+.ant-layout-content,
+.ant-layout-footer,
+.ant-layout-sider,
+.ant-menu,
+.ant-menu-item,
+.ant-menu-submenu,
+.ant-menu-title-content,
+.ant-btn,
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-input-number-input,
+.ant-input-password,
+.ant-select,
+.ant-select-selector,
+.ant-select-selection-item,
+.ant-select-selection-placeholder,
+.ant-select-item,
+.ant-picker,
+.ant-picker-input,
+.ant-picker-dropdown,
+.ant-table,
+.ant-table-wrapper,
+.ant-table-cell,
+.ant-form,
+.ant-form-item,
+.ant-form-item-label,
+.ant-form-item-explain,
+.ant-modal,
+.ant-modal-content,
+.ant-modal-title,
+.ant-modal-confirm-title,
+.ant-modal-confirm-content,
+.ant-drawer,
+.ant-drawer-content,
+.ant-drawer-title,
+.ant-card,
+.ant-card-head,
+.ant-card-head-title,
+.ant-card-body,
+.ant-tabs,
+.ant-tabs-tab,
+.ant-dropdown,
+.ant-dropdown-menu,
+.ant-dropdown-menu-item,
+.ant-tooltip,
+.ant-tooltip-inner,
+.ant-popover,
+.ant-popover-inner,
+.ant-notification,
+.ant-notification-notice,
+.ant-message,
+.ant-message-notice,
+.ant-alert,
+.ant-tag,
+.ant-badge,
+.ant-pagination,
+.ant-pagination-item,
+.ant-empty,
+.ant-list,
+.ant-statistic,
+.ant-statistic-title,
+.ant-statistic-content,
+.ant-typography,
+.ant-descriptions,
+.ant-descriptions-item,
+.ant-checkbox-wrapper,
+.ant-radio-wrapper,
+.ant-switch,
+.ant-upload,
+.ant-result,
+.ant-breadcrumb {
+  font-family: var(--font-primary) !important;
+}
+
+/* ===== Layout ===== */
 .ant-layout {
-  background: #f0f2f5 !important;
+  min-height: 100vh;
+  background: var(--background) !important;
+}
+
+.ant-layout-content {
+  background: var(--background) !important;
 }
 
 .ant-layout-sider {
-  background: #ffffff !important;
-  border-left: 1px solid #e8e8f0 !important;
+  background: var(--card-background) !important;
+  border-left: 1px solid var(--border-color) !important;
 }
 
+/* ===== Menu ===== */
 .ant-menu {
   background: transparent !important;
+  border-inline-end: none !important;
+}
+
+.ant-menu-item,
+.ant-menu-submenu-title {
+  border-radius: 8px !important;
+  margin-inline: 8px !important;
+  width: calc(100% - 16px) !important;
 }
 
 .ant-menu-item-selected {
   background: #dbeafe !important;
-  color: #2563eb !important;
+  color: var(--primary) !important;
+  font-weight: 700 !important;
+}
+
+.ant-menu-item-selected::after {
+  display: none !important;
 }
 
 .ant-menu-item-selected .ant-menu-item-icon {
-  color: #2563eb !important;
+  color: var(--primary) !important;
 }
 
-.ant-menu-item:hover {
-  color: #2563eb !important;
+.ant-menu-item:hover,
+.ant-menu-submenu-title:hover {
+  color: var(--primary) !important;
+  background: #eff6ff !important;
 }
 
-.ant-menu-item .ant-menu-item-icon {
+.ant-menu-item .ant-menu-item-icon,
+.ant-menu-submenu-title .ant-menu-item-icon {
   font-size: 16px !important;
 }
 
+/* ===== Card ===== */
 .ant-card {
+  background: var(--card-background) !important;
   border-radius: 12px !important;
-  border-color: #e8e8f0 !important;
+  border-color: var(--border-color) !important;
+}
+
+.ant-card-head {
+  border-bottom-color: var(--border-color) !important;
+}
+
+.ant-card-head-title {
+  font-weight: 700 !important;
+}
+
+.ant-card-hoverable {
+  transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease !important;
 }
 
 .ant-card-hoverable:hover {
-  box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ===== Button ===== */
+.ant-btn {
+  min-height: 36px;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
 }
 
 .ant-btn-primary {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  background: linear-gradient(
+          135deg,
+          var(--primary) 0%,
+          var(--primary-dark) 100%
+  ) !important;
   border: none !important;
+  box-shadow: none !important;
 }
 
-.ant-btn-primary:hover {
-  opacity: 0.9 !important;
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  color: #ffffff !important;
+  opacity: 0.92 !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(37,99,235,0.35) !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35) !important;
+}
+
+.ant-btn-primary:active {
+  transform: translateY(0);
+}
+
+.ant-btn-dangerous {
+  font-weight: 600 !important;
+}
+
+/* ===== Table ===== */
+.ant-table-wrapper {
+  overflow: hidden;
+  border-radius: 12px !important;
 }
 
 .ant-table {
   border-radius: 12px !important;
 }
 
-.ant-table-thead > tr > th {
-  background: #f8fafc !important;
-  font-weight: 600 !important;
+.ant-table-container {
+  border-radius: 12px !important;
 }
 
+.ant-table-thead > tr > th {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom-color: #f1f5f9 !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #f8fafc !important;
+}
+
+/* ===== Badge ===== */
 .ant-badge-status-text {
   font-weight: 500 !important;
 }
 
+/* ===== Modal ===== */
 .ant-modal-content {
   border-radius: 12px !important;
 }
 
+.ant-modal-header {
+  border-radius: 12px 12px 0 0 !important;
+}
+
+.ant-modal-title {
+  font-weight: 700 !important;
+}
+
+/* ===== Drawer ===== */
+.ant-drawer-content {
+  border-radius: 12px 0 0 12px;
+}
+
+.ant-drawer-title {
+  font-weight: 700 !important;
+}
+
+/* ===== Form ===== */
 .ant-form-item-label > label {
+  color: #334155 !important;
   font-weight: 600 !important;
 }
 
-.ant-input-affix-wrapper {
+.ant-form-item-explain-error {
+  font-size: 12px;
+}
+
+/* ===== Input ===== */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-picker {
+  min-height: 38px;
   border-radius: 8px !important;
 }
 
-.ant-input {
-  border-radius: 8px !important;
+.ant-input:hover,
+.ant-input-affix-wrapper:hover,
+.ant-input-number:hover,
+.ant-picker:hover {
+  border-color: #60a5fa !important;
 }
 
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper-focused,
+.ant-input-number-focused,
+.ant-picker-focused {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
+}
+
+/* ===== Select ===== */
 .ant-select-selector {
+  min-height: 38px !important;
   border-radius: 8px !important;
 }
 
+.ant-select-single .ant-select-selector {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ant-select-focused .ant-select-selector {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
+}
+
+/* ===== Dropdown ===== */
+.ant-dropdown-menu {
+  padding: 6px !important;
+  border-radius: 10px !important;
+}
+
+.ant-dropdown-menu-item {
+  border-radius: 7px !important;
+}
+
+/* ===== Pagination ===== */
 .ant-pagination {
   margin-top: 16px !important;
 }
 
+.ant-pagination-item {
+  border-radius: 7px !important;
+}
+
+.ant-pagination-item-active {
+  border-color: var(--primary) !important;
+}
+
+.ant-pagination-item-active a {
+  color: var(--primary) !important;
+}
+
+/* ===== Tag ===== */
+.ant-tag {
+  padding: 2px 8px;
+  border-radius: 6px !important;
+  font-weight: 500;
+}
+
+/* ===== Alert ===== */
+.ant-alert {
+  border-radius: 10px !important;
+}
+
+/* ===== Tooltip ===== */
+.ant-tooltip-inner {
+  border-radius: 7px !important;
+}
+
+/* ===== Message ===== */
+.ant-message-notice-content {
+  border-radius: 10px !important;
+}
+
+/* ===== Typography ===== */
+.ant-typography {
+  color: inherit;
+}
+
+.ant-typography-secondary {
+  color: #64748b !important;
+}
+
+/* ===== موبایل ===== */
 @media (max-width: 768px) {
   .ant-layout-sider {
     position: fixed !important;
-    right: 0 !important;
     top: 0 !important;
+    right: 0 !important;
     bottom: 0 !important;
-    z-index: 100 !important;
+    z-index: 1000 !important;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .ant-card-body {
+    padding: 16px !important;
+  }
+
+  .ant-modal {
+    max-width: calc(100vw - 24px) !important;
+    margin: 12px auto !important;
   }
 }
