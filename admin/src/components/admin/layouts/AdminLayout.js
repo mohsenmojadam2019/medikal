@@ -1,59 +1,101 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from 'antd';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Loading from '../common/Loading';
+import '@/styles/admin-layout.css';
 
 const { Content } = Layout;
 
 export default function AdminLayout({ children }) {
-  const { loading } = useAuth();
-  const { direction } = useLanguage();
-  const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+    const pathname = usePathname();
+    const { loading } = useAuth();
+    const { direction } = useLanguage();
 
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) {
-        setCollapsed(true);
-      }
+    const [collapsed, setCollapsed] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(max-width: 991px)');
+
+        const handleScreenChange = (event) => {
+            const mobile = event.matches;
+
+            setIsMobile(mobile);
+            setCollapsed(mobile);
+        };
+
+        handleScreenChange(mediaQuery);
+        mediaQuery.addEventListener('change', handleScreenChange);
+        setMounted(true);
+
+        return () => {
+            mediaQuery.removeEventListener('change', handleScreenChange);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (isMobile) {
+            setCollapsed(true);
+        }
+    }, [pathname, isMobile]);
+
+    const handleToggleSidebar = () => {
+        setCollapsed((current) => !current);
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
-  if (loading) {
-    return <Loading fullScreen />;
-  }
+    const handleCloseMobileSidebar = () => {
+        if (isMobile) {
+            setCollapsed(true);
+        }
+    };
 
-  return (
-    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-      <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
-      <Layout
-        style={{
-          marginRight: collapsed ? 80 : 280,
-          transition: 'all 0.2s',
-          background: '#f0f2f5',
-        }}
-      >
-        <Header collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
-        <Content
-          style={{
-            padding: 24,
-            minHeight: 'calc(100vh - 72px)',
-            background: '#f0f2f5',
-          }}
+    if (loading || !mounted) {
+        return <Loading fullScreen />;
+    }
+
+    return (
+        <Layout
+            dir={direction || 'rtl'}
+            className={[
+                'admin-shell',
+                collapsed ? 'admin-shell-collapsed' : 'admin-shell-expanded',
+                isMobile ? 'admin-shell-mobile' : 'admin-shell-desktop',
+            ].join(' ')}
         >
-          {children}
-        </Content>
-      </Layout>
-    </Layout>
-  );
+            <Sidebar
+                collapsed={collapsed}
+                onCollapse={setCollapsed}
+            />
+
+            {isMobile && !collapsed && (
+                <button
+                    type="button"
+                    aria-label="بستن منو"
+                    className="admin-sidebar-backdrop"
+                    onClick={handleCloseMobileSidebar}
+                />
+            )}
+
+            <Layout className="admin-main-layout">
+                <Header
+                    collapsed={collapsed}
+                    isMobile={isMobile}
+                    onToggle={handleToggleSidebar}
+                />
+
+                <Content className="admin-main-content">
+                    <main className="admin-content-container">
+                        {children}
+                    </main>
+                </Content>
+            </Layout>
+        </Layout>
+    );
 }
