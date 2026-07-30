@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\PrescriptionController;
 use App\Http\Controllers\Admin\RatingController;
 use App\Http\Controllers\Admin\ReferralController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Api\BI\BIController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminAuthController;
@@ -50,7 +51,7 @@ use App\Http\Controllers\Admin\PACSController as AdminPACSController;
 | Admin Routes
 |--------------------------------------------------------------------------
 | نسخه: 2.0.0
-| تاریخ: 2026-07-30
+| تاریخ: 2026-07-31
 |--------------------------------------------------------------------------
 */
 
@@ -366,7 +367,20 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.18 مدیریت سئو
+    // 3.18 ✅ مدیریت زمان‌بندی پزشکان
+    // ==========================================
+    Route::prefix('schedules')->controller(ScheduleController::class)->group(function () {
+        Route::get('/doctors/{doctorId}/weekly', 'weekly');
+        Route::post('/doctors/{doctorId}/weekly', 'setWeekly');
+        Route::get('/doctors/{doctorId}/day', 'day');
+        Route::get('/doctors/{doctorId}/special', 'special');
+        Route::post('/doctors/{doctorId}/special', 'setSpecial');
+        Route::delete('/special/{scheduleId}', 'deleteSpecial');
+        Route::post('/doctors/{doctorId}/copy-previous-week', 'copyPreviousWeek');
+    });
+
+    // ==========================================
+    // 3.19 مدیریت سئو
     // ==========================================
     Route::prefix('seo')->group(function () {
         Route::get('/', [SeoController::class, 'index']);
@@ -378,7 +392,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.19 مدیریت اعلان‌ها
+    // 3.20 مدیریت اعلان‌ها
     // ==========================================
     Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
         Route::get('/', 'index');
@@ -403,7 +417,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.20 مدیریت وبلاگ
+    // 3.21 مدیریت وبلاگ
     // ==========================================
     Route::prefix('blog')->controller(BlogController::class)->group(function () {
         Route::get('/posts', 'posts');
@@ -429,7 +443,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.21 مدیریت کیف پول
+    // 3.22 مدیریت کیف پول
     // ==========================================
     Route::prefix('wallet')->controller(WalletController::class)->group(function () {
         Route::get('/', 'index');
@@ -441,7 +455,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.22 مدیریت گزارشات
+    // 3.23 مدیریت گزارشات
     // ==========================================
     Route::prefix('reports')->controller(ReportController::class)->group(function () {
         Route::get('/types', 'types');
@@ -452,7 +466,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.23 مدیریت پرداخت‌ها
+    // 3.24 مدیریت پرداخت‌ها
     // ==========================================
     Route::prefix('payments')->controller(PaymentController::class)->group(function () {
         Route::get('/', 'index');
@@ -463,7 +477,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.24 مدیریت وب‌هوک
+    // 3.25 مدیریت وب‌هوک
     // ==========================================
     Route::prefix('webhook')->controller(WebhookController::class)->group(function () {
         Route::get('/status', 'status');
@@ -475,7 +489,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.25 مدیریت یادآوری‌ها
+    // 3.26 مدیریت یادآوری‌ها
     // ==========================================
     Route::prefix('reminders')->controller(ReminderController::class)->group(function () {
         Route::get('/', 'index');
@@ -490,7 +504,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.26 مدیریت فاکتورها
+    // 3.27 مدیریت فاکتورها
     // ==========================================
     Route::prefix('invoices')->group(function () {
         Route::get('/', [InvoiceController::class, 'index']);
@@ -504,7 +518,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.27 مدیریت نظرات
+    // 3.28 مدیریت نظرات
     // ==========================================
     Route::prefix('ratings')->group(function () {
         Route::get('/', [RatingController::class, 'index']);
@@ -517,7 +531,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.28 مدیریت ارجاعات
+    // 3.29 مدیریت ارجاعات
     // ==========================================
     Route::prefix('referrals')->group(function () {
         Route::get('/', [ReferralController::class, 'index']);
@@ -532,7 +546,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.29 مدیریت یادداشت‌های پزشکی
+    // 3.30 مدیریت یادداشت‌های پزشکی
     // ==========================================
     Route::prefix('medical-notes')->controller(MedicalNoteController::class)->group(function () {
         Route::get('/', 'index');
@@ -549,7 +563,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.30 مدیریت اورژانس
+    // 3.31 مدیریت اورژانس
     // ==========================================
     Route::prefix('emergency')->controller(EmergencyController::class)->group(function () {
         Route::get('/', 'index');
@@ -567,7 +581,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.31 مدیریت بیمه
+    // 3.32 مدیریت بیمه
     // ==========================================
     Route::prefix('insurance')->group(function () {
         Route::get('/', [InsuranceController::class, 'index']);
@@ -590,7 +604,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.32 مدیریت واکسیناسیون
+    // 3.33 مدیریت واکسیناسیون
     // ==========================================
     Route::prefix('vaccination')->group(function () {
         Route::get('/', [VaccinationController::class, 'index']);
@@ -610,7 +624,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.33 مدیریت نظرسنجی
+    // 3.34 مدیریت نظرسنجی
     // ==========================================
     Route::prefix('survey')->group(function () {
         Route::get('/', [SurveyController::class, 'index']);
@@ -628,7 +642,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.34 مدیریت سیستم
+    // 3.35 مدیریت سیستم
     // ==========================================
     Route::prefix('system')->group(function () {
         Route::get('/info', [SystemController::class, 'info']);
@@ -640,7 +654,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.35 هوش تجاری (BI)
+    // 3.36 هوش تجاری (BI)
     // ==========================================
     Route::prefix('bi')->group(function () {
         Route::get('/predict/appointments', [BIController::class, 'predictAppointments']);
@@ -671,7 +685,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->group(function ()
     });
 
     // ==========================================
-    // 3.36 AiChat مدیریت
+    // 3.37 AiChat مدیریت
     // ==========================================
     Route::prefix('ai')->group(function () {
         Route::get('/prompts', [AIChatAdminController::class, 'prompts']);

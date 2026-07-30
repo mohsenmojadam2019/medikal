@@ -1,64 +1,72 @@
 import client from '../client';
 
+const BASE_PATH = '/api/admin/schedules';
+
 export const schedulesService = {
-  // ===== دریافت زمان‌بندی هفتگی پزشک =====
+  getByDoctor: async (doctorId) => {
+    return client.get(
+      `${BASE_PATH}/doctors/${doctorId}/weekly`
+    );
+  },
+
   getWeekly: async (doctorId) => {
-    return client.get(`/api/schedules/doctors/${doctorId}/weekly`);
+    return client.get(
+      `${BASE_PATH}/doctors/${doctorId}/weekly`
+    );
   },
 
-  // ===== دریافت زمان‌بندی یک روز خاص =====
-  getDaySchedule: async (doctorId, date) => {
-    return client.get(`/api/schedules/doctors/${doctorId}/day`, { params: { date } });
+  save: async (data) => {
+    const { doctor_id, schedules = [] } = data;
+
+    return client.post(
+      `${BASE_PATH}/doctors/${doctor_id}/weekly`,
+      { schedules }
+    );
   },
 
-  // ===== دریافت زمان‌های ویژه =====
-  getSpecialSchedules: async (doctorId) => {
-    return client.get(`/api/schedules/doctors/${doctorId}/special`);
-  },
-
-  // ===== تنظیم زمان‌بندی هفتگی =====
   setWeekly: async (doctorId, data) => {
-    return client.post(`/api/schedules/doctors/${doctorId}/weekly`, data);
+    const schedules = Array.isArray(data)
+      ? data
+      : data?.schedules || [];
+
+    return client.post(
+      `${BASE_PATH}/doctors/${doctorId}/weekly`,
+      { schedules }
+    );
   },
 
-  // ===== تنظیم زمان ویژه =====
+  getDaySchedule: async (doctorId, date) => {
+    return client.get(
+      `${BASE_PATH}/doctors/${doctorId}/day`,
+      {
+        params: { date },
+      }
+    );
+  },
+
+  getSpecialSchedules: async (doctorId) => {
+    return client.get(
+      `${BASE_PATH}/doctors/${doctorId}/special`
+    );
+  },
+
   setSpecial: async (doctorId, data) => {
-    return client.post(`/api/schedules/doctors/${doctorId}/special`, data);
+    return client.post(
+      `${BASE_PATH}/doctors/${doctorId}/special`,
+      data
+    );
   },
 
-  // ===== حذف زمان ویژه =====
   deleteSpecial: async (scheduleId) => {
-    return client.delete(`/api/schedules/special/${scheduleId}`);
+    return client.delete(
+      `${BASE_PATH}/special/${scheduleId}`
+    );
   },
 
-  // ===== کپی از هفته قبل =====
   copyFromPreviousWeek: async (doctorId) => {
-    return client.post(`/api/schedules/doctors/${doctorId}/copy-previous-week`);
-  },
-
-  // ===== ایجاد زمان‌بندی جدید =====
-  create: async (data) => {
-    return client.post('/api/admin/schedules', data);
-  },
-
-  // ===== مشاهده زمان‌بندی =====
-  getById: async (id) => {
-    return client.get(`/api/admin/schedules/${id}`);
-  },
-
-  // ===== ویرایش زمان‌بندی =====
-  update: async (id, data) => {
-    return client.put(`/api/admin/schedules/${id}`, data);
-  },
-
-  // ===== حذف زمان‌بندی =====
-  delete: async (id) => {
-    return client.delete(`/api/admin/schedules/${id}`);
-  },
-
-  // ===== تغییر وضعیت =====
-  toggleStatus: async (id, isActive) => {
-    return client.post(`/api/admin/schedules/${id}/toggle-status`, { is_active: isActive });
+    return client.post(
+      `${BASE_PATH}/doctors/${doctorId}/copy-previous-week`
+    );
   },
 };
 
