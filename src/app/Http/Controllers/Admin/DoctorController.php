@@ -1,14 +1,11 @@
 <?php
-// app/Http/Controllers/Admin/DoctorController.php
 
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\Doctor\DoctorService;
-use App\Http\Requests\Admin\StoreDoctorRequest;
-use App\Http\Requests\Admin\UpdateDoctorRequest;
-use App\Traits\ApiResponse;
 use App\Models\Doctor;
+use App\Models\Specialty;
+use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,128 +13,105 @@ class DoctorController extends Controller
 {
     use ApiResponse;
 
-    protected DoctorService $doctorService;
-
-    public function __construct(DoctorService $doctorService)
-    {
-        $this->doctorService = $doctorService;
-    }
-
     /**
-     * لیست پزشکان (ادمین)
+     * لیست پزشکان با فیلتر و صفحه‌بندی
      */
     public function index(Request $request)
     {
-        $query = Doctor::with([
-            'user',
-            'specialty',
-            'clinic',
-            'province',
-            'city'
-        ]);
+        $query = Doctor::with(['user', 'specialty', 'clinic']);
 
-        // فیلتر بر اساس کلینیک
-        if ($request->has('clinic_id') && $request->clinic_id) {
-            $query->where('clinic_id', $request->clinic_id);
-        }
+        // ✅ جستجو - اصلاح شده
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
 
-        // فیلتر بر اساس استان
-        if ($request->has('province_id') && $request->province_id) {
-            $query->where('province_id', $request->province_id);
-        }
-
-        // فیلتر بر اساس شهر
-        if ($request->has('city_id') && $request->city_id) {
-            $query->where('city_id', $request->city_id);
-        }
-
-        // فیلتر بر اساس تخصص
-        if ($request->has('specialty_id') && $request->specialty_id) {
-            $query->where('specialty_id', $request->specialty_id);
-        }
-
-        // فیلتر بر اساس وضعیت
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->is_active);
-        }
-
-        if ($request->has('is_available')) {
-            $query->where('is_available', $request->is_available);
-        }
-
-        if ($request->has('is_verified')) {
-            $query->where('is_verified', $request->is_verified);
-        }
-
-        // فیلتر بر اساس هزینه
-        if ($request->has('fee_type') && $request->fee_type !== 'all') {
-            $query->where('appointment_fee_type', $request->fee_type);
-        }
-
-        // جستجو
-        if ($request->has('search')) {
-            $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('clinic_name', 'LIKE', "%{$search}%")
-                    ->orWhere('license_number', 'LIKE', "%{$search}%")
-                    ->orWhereHas('user', function ($q2) use ($search) {
-                        $q2->where('name', 'LIKE', "%{$search}%")
-                            ->orWhere('mobile', 'LIKE', "%{$search}%");
+                $q->where('license_number', 'LIKE', "%{$search}%")
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery
+                            ->where('full_name', 'LIKE', "%{$search}%")
+                            ->orWhere('name', 'LIKE', "%{$search}%")
+                            ->orWhere('mobile', 'LIKE', "%{$search}%")
+                            ->orWhere('email', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('clinic', function ($clinicQuery) use ($search) {
+                        $clinicQuery->where('name', 'LIKE', "%{$search}%");
                     });
             });
         }
 
-        $doctors = $query->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 15));
+        // فیلتر بر اساس تخصص
+        if ($request->filled('specialty_id')) {
+            $query->where('specialty_id', $request->specialty_id);
+        }
 
-        // اضافه کردن اطلاعات هزینه
-        $doctors->getCollection()->transform(function ($doctor) {
-            $doctor->fee_label = $doctor->appointment_fee_label;
-            $doctor->fee_value = $doctor->getFeeForAppointment();
-            $doctor->is_free = $doctor->isFreeAppointment();
-            return $doctor;
-        });
+        // فیلتر بر اساس وضعیت
+        if ($request->has('is_available') && $request->is_available !== null) {
+            $query->where('is_available', filter_var($request->is_available, FILTER_VALIDATE_BOOLEAN));
+        }
+
+        // فیلتر بر اساس تایید
+        if ($request->has('is_verified') && $request->is_verified !== null) {
+            $query->where('is_verified', filter_var($request->is_verified, FILTER_VALIDATE_BOOLEAN));
+        }
+
+        // فیلتر بر اساس کلینیک
+        if ($request->filled('clinic_id')) {
+            $query->where('clinic_id', $request->clinic_id);
+        }
+
+        // مرتب‌سازی
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $allowedSorts = ['id', 'created_at', 'consultation_fee', 'experience_years', 'is_available'];
+
+        if (in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $doctors = $query->paginate($request->get('per_page', 15));
 
         return $this->success($doctors);
     }
 
     /**
-     * ایجاد پزشک جدید (ادمین)
+     * ایجاد پزشک جدید
      */
-    public function store(StoreDoctorRequest $request)
+    public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'specialty_id' => 'nullable|exists:specialties,id',
+            'clinic_id' => 'nullable|exists:clinics,id',
+            'license_number' => 'required|string|unique:doctors,license_number',
+            'consultation_fee' => 'nullable|numeric|min:0',
+            'is_available' => 'nullable|boolean',
+            'is_verified' => 'nullable|boolean',
+            'bio' => 'nullable|string',
+            'experience_years' => 'nullable|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
         try {
-            $doctor = $this->doctorService->create($request->validated());
-            return $this->success(
-                $doctor->load(['user', 'specialty', 'clinic', 'province', 'city']),
-                'پزشک با موفقیت ایجاد شد',
-                201
-            );
+            $doctor = Doctor::create($request->all());
+            return $this->success($doctor->load(['user', 'specialty']), 'پزشک با موفقیت ایجاد شد', 201);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
 
     /**
-     * نمایش پزشک (ادمین)
+     * نمایش یک پزشک
      */
     public function show($id)
     {
         try {
-            $doctor = Doctor::with([
-                'user',
-                'specialty',
-                'clinic',
-                'province',
-                'city',
-                'primaryAddress',
-                'schedules'
-            ])->findOrFail($id);
-
-            $doctor->fee_label = $doctor->appointment_fee_label;
-            $doctor->fee_value = $doctor->getFeeForAppointment();
-            $doctor->is_free = $doctor->isFreeAppointment();
-
+            $doctor = Doctor::with(['user', 'specialty', 'clinic', 'province', 'city'])
+                ->findOrFail($id);
             return $this->success($doctor);
         } catch (\Exception $e) {
             return $this->error('پزشک یافت نشد', 404);
@@ -145,65 +119,9 @@ class DoctorController extends Controller
     }
 
     /**
-     * به‌روزرسانی پزشک (ادمین)
+     * به‌روزرسانی پزشک
      */
-    public function update(UpdateDoctorRequest $request, $id)
-    {
-        try {
-            $doctor = Doctor::with(['user', 'specialty', 'clinic', 'province', 'city'])->findOrFail($id);
-            $doctor = $this->doctorService->update($doctor, $request->validated());
-            return $this->success($doctor->load(['user', 'specialty', 'clinic', 'province', 'city']), 'پزشک با موفقیت به‌روزرسانی شد');
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 400);
-        }
-    }
-
-    /**
-     * حذف پزشک (ادمین)
-     */
-    public function destroy($id)
-    {
-        try {
-            $doctor = Doctor::findOrFail($id);
-            $this->doctorService->delete($doctor);
-            return $this->success(null, 'پزشک با موفقیت حذف شد');
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 400);
-        }
-    }
-
-    /**
-     * تغییر وضعیت پزشک (ادمین)
-     */
-    public function toggleAvailability($id)
-    {
-        try {
-            $doctor = Doctor::findOrFail($id);
-            $doctor = $this->doctorService->toggleAvailability($doctor);
-            return $this->success($doctor, 'وضعیت پزشک با موفقیت تغییر کرد');
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 400);
-        }
-    }
-
-    /**
-     * تایید پزشک (ادمین)
-     */
-    public function verify($id)
-    {
-        try {
-            $doctor = Doctor::findOrFail($id);
-            $doctor = $this->doctorService->verify($doctor);
-            return $this->success($doctor, 'پزشک با موفقیت تایید شد');
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 400);
-        }
-    }
-
-    /**
-     * تنظیم هزینه نوبت پزشک (ادمین)
-     */
-    public function setAppointmentFee(Request $request, $id)
+    public function update(Request $request, $id)
     {
         try {
             $doctor = Doctor::findOrFail($id);
@@ -212,8 +130,15 @@ class DoctorController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'fee_type' => 'required|in:free,paid',
-            'fee_amount' => 'required_if:fee_type,paid|nullable|numeric|min:0',
+            'user_id' => 'sometimes|exists:users,id',
+            'specialty_id' => 'nullable|exists:specialties,id',
+            'clinic_id' => 'nullable|exists:clinics,id',
+            'license_number' => 'sometimes|string|unique:doctors,license_number,' . $id,
+            'consultation_fee' => 'nullable|numeric|min:0',
+            'is_available' => 'nullable|boolean',
+            'is_verified' => 'nullable|boolean',
+            'bio' => 'nullable|string',
+            'experience_years' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -221,47 +146,101 @@ class DoctorController extends Controller
         }
 
         try {
-            $doctor->appointment_fee_type = $request->fee_type;
-
-            if ($request->fee_type === 'paid') {
-                $doctor->appointment_fee_amount = $request->fee_amount;
-            } else {
-                $doctor->appointment_fee_amount = null;
-            }
-
-            $doctor->save();
-
-            return $this->success([
-                'doctor_id' => $doctor->id,
-                'doctor_name' => $doctor->full_name,
-                'fee_type' => $doctor->appointment_fee_type,
-                'fee_amount' => $doctor->appointment_fee_amount,
-                'fee_label' => $doctor->appointment_fee_label,
-                'fee_value' => $doctor->getFeeForAppointment(),
-                'is_free' => $doctor->isFreeAppointment(),
-            ], 'هزینه نوبت با موفقیت تنظیم شد');
+            $doctor->update($request->all());
+            return $this->success($doctor->fresh()->load(['user', 'specialty']), 'پزشک با موفقیت به‌روزرسانی شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
 
     /**
-     * دریافت اطلاعات هزینه نوبت پزشک (ادمین)
+     * حذف پزشک
+     */
+    public function destroy($id)
+    {
+        try {
+            $doctor = Doctor::findOrFail($id);
+            $doctor->delete();
+            return $this->success(null, 'پزشک با موفقیت حذف شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * تغییر وضعیت در دسترس بودن
+     */
+    public function toggleAvailability($id)
+    {
+        try {
+            $doctor = Doctor::findOrFail($id);
+            $doctor->toggleAvailability();
+            return $this->success($doctor->fresh(), 'وضعیت در دسترس بودن با موفقیت تغییر کرد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * تایید پزشک
+     */
+    public function verify($id)
+    {
+        try {
+            $doctor = Doctor::findOrFail($id);
+            $doctor->verify();
+            return $this->success($doctor->fresh(), 'پزشک با موفقیت تایید شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * لغو تایید پزشک
+     */
+    public function unverify($id)
+    {
+        try {
+            $doctor = Doctor::findOrFail($id);
+            $doctor->unverify();
+            return $this->success($doctor->fresh(), 'تایید پزشک با موفقیت لغو شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * تنظیم هزینه ویزیت
+     */
+    public function setAppointmentFee(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'fee' => 'required|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        try {
+            $doctor = Doctor::findOrFail($id);
+            $doctor->update(['consultation_fee' => $request->fee]);
+            return $this->success($doctor->fresh(), 'هزینه ویزیت با موفقیت تنظیم شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * دریافت هزینه ویزیت
      */
     public function getAppointmentFee($id)
     {
         try {
             $doctor = Doctor::findOrFail($id);
-
             return $this->success([
-                'doctor_id' => $doctor->id,
-                'doctor_name' => $doctor->full_name,
-                'fee_type' => $doctor->appointment_fee_type,
-                'fee_amount' => $doctor->appointment_fee_amount,
-                'fee_label' => $doctor->appointment_fee_label,
-                'is_free' => $doctor->isFreeAppointment(),
-                'fee_value' => $doctor->getFeeForAppointment(),
-                'is_editable' => $doctor->is_fee_editable_by_admin,
+                'consultation_fee' => $doctor->consultation_fee,
+                'fee_label' => $doctor->fee_label,
             ]);
         } catch (\Exception $e) {
             return $this->error('پزشک یافت نشد', 404);
@@ -269,31 +248,24 @@ class DoctorController extends Controller
     }
 
     /**
-     * تنظیم پزشک به صورت رایگان (میانبر - ادمین)
+     * تنظیم رایگان بودن ویزیت
      */
     public function setFree($id)
     {
         try {
             $doctor = Doctor::findOrFail($id);
-            $doctor->appointment_fee_type = 'free';
-            $doctor->appointment_fee_amount = null;
-            $doctor->save();
-
-            return $this->success([
-                'doctor_id' => $doctor->id,
-                'doctor_name' => $doctor->full_name,
-                'fee_type' => 'free',
-                'fee_label' => 'رایگان',
-                'fee_value' => 0,
-                'is_free' => true,
-            ], 'هزینه نوبت به صورت رایگان تنظیم شد');
+            $doctor->update([
+                'appointment_fee_type' => 'free',
+                'appointment_fee_amount' => 0,
+            ]);
+            return $this->success($doctor->fresh(), 'ویزیت پزشک رایگان شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
     }
 
     /**
-     * تنظیم پزشک به صورت پولی (میانبر - ادمین)
+     * تنظیم پولی بودن ویزیت
      */
     public function setPaid(Request $request, $id)
     {
@@ -307,19 +279,120 @@ class DoctorController extends Controller
 
         try {
             $doctor = Doctor::findOrFail($id);
-            $doctor->appointment_fee_type = 'paid';
-            $doctor->appointment_fee_amount = $request->amount;
-            $doctor->save();
+            $doctor->update([
+                'appointment_fee_type' => 'paid',
+                'appointment_fee_amount' => $request->amount,
+            ]);
+            return $this->success($doctor->fresh(), 'ویزیت پزشک پولی شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * آپلود عکس پروفایل
+     */
+    public function uploadProfileImage(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'image' => 'required|image|mimes:jpeg,png,webp|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        try {
+            $doctor = Doctor::findOrFail($id);
+            $doctor->clearMediaCollection('profile_image');
+            $doctor->addMedia($request->file('image'))->toMediaCollection('profile_image');
 
             return $this->success([
-                'doctor_id' => $doctor->id,
-                'doctor_name' => $doctor->full_name,
-                'fee_type' => 'paid',
-                'fee_amount' => $request->amount,
-                'fee_label' => number_format($request->amount) . ' تومان',
-                'fee_value' => $request->amount,
-                'is_free' => false,
-            ], 'هزینه نوبت به صورت پولی تنظیم شد');
+                'profile_image' => $doctor->profile_image_url,
+                'profile_image_thumb' => $doctor->profile_image_thumb,
+                'profile_image_medium' => $doctor->profile_image_medium,
+                'profile_image_large' => $doctor->profile_image_large,
+            ], 'عکس پروفایل با موفقیت آپلود شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * حذف عکس پروفایل
+     */
+    public function deleteProfileImage($id)
+    {
+        try {
+            $doctor = Doctor::findOrFail($id);
+            $doctor->clearMediaCollection('profile_image');
+            return $this->success(null, 'عکس پروفایل با موفقیت حذف شد');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * دریافت عکس پروفایل
+     */
+    public function getProfileImage($id)
+    {
+        try {
+            $doctor = Doctor::findOrFail($id);
+            return $this->success([
+                'profile_image' => $doctor->profile_image_url,
+                'profile_image_thumb' => $doctor->profile_image_thumb,
+                'profile_image_medium' => $doctor->profile_image_medium,
+                'profile_image_large' => $doctor->profile_image_large,
+            ]);
+        } catch (\Exception $e) {
+            return $this->error('پزشک یافت نشد', 404);
+        }
+    }
+
+    /**
+     * آمار پزشک
+     */
+    public function stats($id)
+    {
+        try {
+            $doctor = Doctor::findOrFail($id);
+            $stats = [
+                'total_appointments' => $doctor->appointments()->count(),
+                'total_patients' => $doctor->patients()->count(),
+                'total_prescriptions' => $doctor->prescriptions()->count(),
+                'rating' => $doctor->rating,
+                'total_reviews' => $doctor->total_reviews,
+                'is_available' => $doctor->is_available,
+                'is_verified' => $doctor->is_verified,
+            ];
+            return $this->success($stats);
+        } catch (\Exception $e) {
+            return $this->error('پزشک یافت نشد', 404);
+        }
+    }
+
+    /**
+     * بروزرسانی موقعیت مکانی
+     */
+    public function updateLocation(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('خطا در اعتبارسنجی', 422, $validator->errors());
+        }
+
+        try {
+            $doctor = Doctor::findOrFail($id);
+            $doctor->update([
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+            ]);
+            return $this->success($doctor->fresh(), 'موقعیت مکانی با موفقیت به‌روزرسانی شد');
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }
