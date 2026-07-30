@@ -31,7 +31,7 @@ export default function HomePage() {
   const { t, locale } = useLanguage();
   const [specialties, setSpecialties] = useState([]);
   const [doctors, setDoctors] = useState([]);
-  const [drugs, setDrugs] = useState([]);
+  const [products, setProducts] = useState([]);
   const [stats, setStats] = useState({
     doctors: 0,
     appointments: 0,
@@ -114,20 +114,20 @@ export default function HomePage() {
     }
   };
 
-  const fetchDrugs = async () => {
+  const fetchProducts = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/drugs/active`, {
+      const res = await fetch(`${API_URL}/api/products/active`, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
       const data = await res.json();
       if (data.success) {
-        const drugsData = data.data?.data || data.data || [];
-        setDrugs(drugsData.slice(0, 6));
+        const productsData = data.data?.data || data.data || [];
+        setProducts(productsData.slice(0, 6));
       }
     } catch (error) {
-      console.error('Error fetching drugs:', error);
+      console.error('Error fetching products:', error);
     }
   };
 
@@ -152,7 +152,7 @@ export default function HomePage() {
     Promise.all([
       fetchSpecialties(),
       fetchTopDoctors(),
-      fetchDrugs(),
+      fetchProducts(),
       fetchStats(),
     ]).finally(() => setLoading(false));
   }, []);
@@ -162,7 +162,7 @@ export default function HomePage() {
     router.push(`/${locale}/appointments/new?doctorId=${doctorId}`);
   };
 
-  const handleAddToCart = (drug) => {
+  const handleAddToCart = (product) => {
     const token = localStorage.getItem('token');
     if (!token) {
       router.push(`/${locale}/login`);
@@ -171,21 +171,21 @@ export default function HomePage() {
 
     let cart = JSON.parse(localStorage.getItem('pharmacyCart') || '[]');
 
-    const existing = cart.find(item => item.id === drug.id);
+    const existing = cart.find(item => item.id === product.id);
     if (existing) {
       existing.quantity += 1;
     } else {
       cart.push({
-        id: drug.id,
-        name: drug.generic_name || drug.name || 'دارو',
-        price: parseFloat(drug.price) || 0,
+        id: product.id,
+        name: product.generic_name || product.name || 'دارو',
+        price: parseFloat(product.price) || 0,
         quantity: 1,
-        stock: drug.stock || 0,
+        stock: product.stock || 0,
       });
     }
 
     localStorage.setItem('pharmacyCart', JSON.stringify(cart));
-    message.success(`${drug.generic_name || drug.name || 'دارو'} به سبد خرید اضافه شد`);
+    message.success(`${product.generic_name || product.name || 'دارو'} به سبد خرید اضافه شد`);
     router.push(`/${locale}/pharmacy`);
   };
 
@@ -364,37 +364,37 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {drugs.length > 0 ? (
+            {products.length > 0 ? (
                 <div className="pharmacy-scroll-wrapper">
                   <div className="pharmacy-scroll-container">
-                    {drugs.map((drug) => (
-                        <div key={drug.id} className="pharmacy-card">
+                    {products.map((product) => (
+                        <div key={product.id} className="pharmacy-card">
                           <div className="pharmacy-card-inner">
                             <div className="pharmacy-card-icon">💊</div>
                             <div className="pharmacy-card-info">
-                              <h4>{drug.generic_name || drug.name || 'بدون نام'}</h4>
-                              <Tag color="blue">{drug.category || 'عمومی'}</Tag>
-                              {drug.requires_prescription && (
+                              <h4>{product.generic_name || product.name || 'بدون نام'}</h4>
+                              <Tag color="blue">{product.category || 'عمومی'}</Tag>
+                              {product.requires_prescription && (
                                   <Tag color="orange" className="prescription-tag">نیاز به نسخه</Tag>
                               )}
                               <div className="pharmacy-stock">
-                                موجودی: <span className={drug.stock < 30 ? 'low-stock' : ''}>{drug.stock || 0}</span>
+                                موجودی: <span className={product.stock < 30 ? 'low-stock' : ''}>{product.stock || 0}</span>
                               </div>
                               <div className="pharmacy-price">
-                                {parseFloat(drug.price).toLocaleString() || 0} <small>تومان</small>
+                                {parseFloat(product.price).toLocaleString() || 0} <small>تومان</small>
                               </div>
                             </div>
                             <div className="pharmacy-card-actions">
                               <Button
                                   type="primary"
-                                  disabled={drug.stock === 0}
-                                  onClick={() => handleAddToCart(drug)}
+                                  disabled={product.stock === 0}
+                                  onClick={() => handleAddToCart(product)}
                                   block
                                   size="small"
                               >
                                 سفارش
                               </Button>
-                              {drug.requires_prescription && (
+                              {product.requires_prescription && (
                                   <Button
                                       type="default"
                                       onClick={() => router.push(`/${locale}/pharmacy`)}

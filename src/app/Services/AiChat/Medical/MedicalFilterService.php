@@ -16,7 +16,7 @@ class MedicalFilterService
     private array $emergencyKeywords;
     private array $symptomPatterns;
     private array $diseasePatterns;
-    private array $drugPatterns;
+    private array $productPatterns;
 
     public function __construct(
         private ConfigManager $configManager
@@ -25,7 +25,7 @@ class MedicalFilterService
         $this->emergencyKeywords = $this->loadEmergencyKeywords();
         $this->symptomPatterns = $this->loadSymptomPatterns();
         $this->diseasePatterns = $this->loadDiseasePatterns();
-        $this->drugPatterns = $this->loadDrugPatterns();
+        $this->productPatterns = $this->loadProductPatterns();
     }
 
     /**
@@ -35,14 +35,14 @@ class MedicalFilterService
     {
         $question = trim($question);
         $lowerQuestion = mb_strtolower($question);
-        
+
         // ۱. تشخیص اورژانسی بودن
         $isEmergency = $this->isEmergency($question);
-        
+
         if ($isEmergency) {
             $symptoms = $this->extractSymptoms($question);
             $actions = $this->getEmergencyActions($question);
-            
+
             return new FilterResult(
                 isMedical: true,
                 isEmergency: true,
@@ -57,7 +57,7 @@ class MedicalFilterService
 
         // ۲. تشخیص پزشکی بودن سوال
         $isMedical = $this->isMedical($question);
-        
+
         if (!$isMedical) {
             return new FilterResult(
                 isMedical: false,
@@ -73,13 +73,13 @@ class MedicalFilterService
 
         // ۳. دسته‌بندی سوال
         $category = $this->classify($question);
-        
+
         // ۴. استخراج علائم
         $symptoms = $this->extractSymptoms($question);
-        
+
         // ۵. تشخیص شدت
         $severity = $this->detectSeverity($question, $symptoms);
-        
+
         // ۶. پیشنهاد اقدامات
         $actions = $this->suggestActions($category, $symptoms, $severity);
 
@@ -104,7 +104,7 @@ class MedicalFilterService
     public function isEmergency(string $question): bool
     {
         $lowerQuestion = mb_strtolower($question);
-        
+
         foreach ($this->emergencyKeywords as $keyword) {
             if (mb_strpos($lowerQuestion, mb_strtolower($keyword)) !== false) {
                 return true;
@@ -138,7 +138,7 @@ class MedicalFilterService
         $score = [
             MedicalCategory::SYMPTOM->value => 0,
             MedicalCategory::DISEASE->value => 0,
-            MedicalCategory::DRUG->value => 0,
+            MedicalCategory::Product->value => 0,
             MedicalCategory::NUTRITION->value => 0,
             MedicalCategory::PSYCHOLOGY->value => 0,
             MedicalCategory::GENERAL->value => 0,
@@ -157,9 +157,9 @@ class MedicalFilterService
             }
         }
 
-        foreach ($this->drugPatterns as $pattern) {
+        foreach ($this->productPatterns as $pattern) {
             if (preg_match('/' . $pattern . '/u', $lowerQuestion)) {
-                $score[MedicalCategory::DRUG->value] += 2;
+                $score[MedicalCategory::Product->value] += 2;
             }
         }
 
@@ -176,7 +176,7 @@ class MedicalFilterService
         // انتخاب دسته‌بندی با بیشترین امتیاز
         arsort($score);
         $topCategory = array_key_first($score);
-        
+
         // اگر همه امتیازها صفر بودند، GENERAL را برمی‌گردانیم
         if ($score[$topCategory] === 0) {
             return MedicalCategory::GENERAL;
@@ -239,7 +239,7 @@ class MedicalFilterService
     private function detectSeverity(string $question, array $symptoms): SeverityLevel
     {
         $lowerQuestion = mb_strtolower($question);
-        
+
         // کلمات شدید
         $urgentWords = ['شدید', 'غیرقابل تحمل', 'ناتوان کننده', 'مداوم', 'پیشرونده'];
         $emergencyWords = ['ناگهانی', 'وحشتناک', 'بحرانی', 'تهدیدکننده', 'مرگبار'];
@@ -292,7 +292,7 @@ class MedicalFilterService
                 $actions[] = 'علائم خود را دقیقاً یادداشت کنید';
                 $actions[] = 'تغییرات علائم را پیگیری کنید';
                 break;
-            case MedicalCategory::DRUG:
+            case MedicalCategory::Product:
                 $actions[] = 'داروها را فقط با نسخه پزشک مصرف کنید';
                 $actions[] = 'عوارض جانبی را جدی بگیرید';
                 break;
@@ -317,7 +317,7 @@ class MedicalFilterService
     public function isMedical(string $question): bool
     {
         $lowerQuestion = mb_strtolower($question);
-        
+
         // بررسی کلمات کلیدی پزشکی
         foreach ($this->medicalKeywords as $keyword) {
             if (mb_strpos($lowerQuestion, mb_strtolower($keyword)) !== false) {
@@ -426,7 +426,7 @@ class MedicalFilterService
     /**
      * بارگذاری الگوهای دارو
      */
-    private function loadDrugPatterns(): array
+    private function loadProductPatterns(): array
     {
         return [
             '\b(دارو|قرص|شربت|پماد|آمپول|کپسول|قطره|شیاف|اسپری|چسب)\b',
@@ -441,30 +441,30 @@ class MedicalFilterService
     private function getEmergencyActions(string $question): array
     {
         $actions = ['تماس با اورژانس 115'];
-        
+
         $lowerQuestion = mb_strtolower($question);
-        
+
         // تشخیص نوع اورژانس برای اقدامات خاص
         if (preg_match('/\b(قلب|سینه|تنفس|نفس)\b/u', $lowerQuestion)) {
             $actions[] = 'دراز بکشید و حرکات اضافی انجام ندهید';
             $actions[] = 'اگر داروی قلبی دارید، مصرف کنید (با صلاحدید پزشک)';
         }
-        
+
         if (preg_match('/\b(خونریزی|زخم|بریدگی|ضربه)\b/u', $lowerQuestion)) {
             $actions[] = 'با پارچه تمیز روی زخم فشار دهید';
             $actions[] = 'زخم را بالاتر از سطح قلب قرار دهید';
         }
-        
+
         if (preg_match('/\b(سوختگی|آتش|گرما)\b/u', $lowerQuestion)) {
             $actions[] = 'محل سوختگی را با آب سرد خنک کنید (نه یخ)';
             $actions[] = 'روی سوختگی پماد یا کرم نزنید';
         }
-        
+
         if (preg_match('/\b(مسمومیت|سم|شیمیایی)\b/u', $lowerQuestion)) {
             $actions[] = 'در صورت امکان ماده مسموم‌کننده را شناسایی کنید';
             $actions[] = 'استفراغ را تحریک نکنید مگر اینکه پزشک بگوید';
         }
-        
+
         return $actions;
     }
 
@@ -474,24 +474,24 @@ class MedicalFilterService
     private function calculateConfidence(string $question, MedicalCategory $category, array $symptoms): float
     {
         $confidence = 0.5;
-        
+
         // افزایش اطمینان بر اساس دسته‌بندی دقیق
         if ($category !== MedicalCategory::GENERAL) {
             $confidence += 0.2;
         }
-        
+
         // افزایش اطمینان در صورت تشخیص علائم
         $symptomCount = count($symptoms);
         if ($symptomCount > 0) {
             $confidence += min($symptomCount * 0.05, 0.25);
         }
-        
+
         // افزایش اطمینان در صورت طولانی بودن سوال
         $questionLength = mb_strlen($question);
         if ($questionLength > 50) {
             $confidence += 0.05;
         }
-        
+
         return min(max($confidence, 0), 1);
     }
 

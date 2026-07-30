@@ -267,7 +267,7 @@ export default function PharmacyCheckoutPage() {
 
             const orderData = {
                 items: cart.map(item => ({
-                    drug_id: item.id,
+                    product_id: item.id,
                     quantity: item.quantity,
                     price: item.price,
                     name: item.name,
@@ -355,7 +355,7 @@ export default function PharmacyCheckoutPage() {
 
             const orderData = {
                 items: cart.map(item => ({
-                    drug_id: item.id,
+                    product_id: item.id,
                     quantity: item.quantity,
                     price: item.price,
                     name: item.name,

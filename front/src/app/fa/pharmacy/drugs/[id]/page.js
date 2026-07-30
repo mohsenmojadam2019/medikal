@@ -26,7 +26,7 @@ export default function PharmacyPage() {
   const { t, locale } = useLanguage();
   const { message: appMessage } = App.useApp();
 
-  const [drugs, setDrugs] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -47,7 +47,7 @@ export default function PharmacyPage() {
     return null;
   };
 
-  const fetchDrugs = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const token = getToken();
@@ -60,7 +60,7 @@ export default function PharmacyPage() {
       params.append('page', currentPage);
       params.append('per_page', pageSize);
 
-      const res = await fetch(`${API_URL}/api/drugs/active?${params}`, {
+      const res = await fetch(`${API_URL}/api/products/active?${params}`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
@@ -69,17 +69,17 @@ export default function PharmacyPage() {
 
       const data = await res.json();
       if (data.success) {
-        const drugsData = data.data.data || data.data || [];
-        setDrugs(drugsData);
+        const productsData = data.data.data || data.data || [];
+        setProducts(productsData);
         setTotalItems(data.data.total || data.data.length || 0);
 
-        const uniqueCategories = [...new Set(drugsData.map(d => d.category).filter(Boolean))];
+        const uniqueCategories = [...new Set(productsData.map(d => d.category).filter(Boolean))];
         setCategories(uniqueCategories);
       } else {
-        appMessage.error(data.message || t('pharmacy.errorFetchingDrugs'));
+        appMessage.error(data.message || t('pharmacy.errorFetchingProducts'));
       }
     } catch (error) {
-      console.error('Error fetching drugs:', error);
+      console.error('Error fetching products:', error);
       appMessage.error(t('pharmacy.serverError'));
     } finally {
       setLoading(false);
@@ -88,11 +88,11 @@ export default function PharmacyPage() {
 
   // ✅ بارگذاری اولیه - بدون نیاز به لاگین
   useEffect(() => {
-    fetchDrugs();
+    fetchProducts();
     const savedCart = JSON.parse(localStorage.getItem('pharmacyCart') || '[]');
     console.log('🛒 Loaded cart:', savedCart);
     setCart(savedCart);
-  }, [fetchDrugs]);
+  }, [fetchProducts]);
 
   // ✅ ذخیره سبد خرید در localStorage
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function PharmacyPage() {
   }, [cart]);
 
   // ✅ افزودن به سبد - نیاز به لاگین
-  const addToCart = (drug) => {
+  const addToCart = (product) => {
     const token = getToken();
     if (!token) {
       appMessage.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
@@ -109,31 +109,31 @@ export default function PharmacyPage() {
       return;
     }
 
-    const existing = cart.find(item => item.id === drug.id);
+    const existing = cart.find(item => item.id === product.id);
     let newCart;
     if (existing) {
       newCart = cart.map(item =>
-          item.id === drug.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
       );
     } else {
       newCart = [...cart, {
-        ...drug,
+        ...product,
         quantity: 1,
-        price: drug.final_price || drug.price
+        price: product.final_price || product.price
       }];
     }
     setCart(newCart);
-    appMessage.success(`${drug.name} ${t('pharmacy.addedToCart')}`);
+    appMessage.success(`${product.name} ${t('pharmacy.addedToCart')}`);
   };
 
-  const removeFromCart = (drugId) => {
-    const newCart = cart.filter(item => item.id !== drugId);
+  const removeFromCart = (productId) => {
+    const newCart = cart.filter(item => item.id !== productId);
     setCart(newCart);
   };
 
-  const updateQuantity = (drugId, change) => {
+  const updateQuantity = (productId, change) => {
     const newCart = cart.map(item =>
-        item.id === drugId
+        item.id === productId
             ? { ...item, quantity: Math.max(1, item.quantity + change) }
             : item
     );
@@ -150,7 +150,7 @@ export default function PharmacyPage() {
 
   const handleSearch = () => {
     setCurrentPage(1);
-    fetchDrugs();
+    fetchProducts();
   };
 
 // ✅ رفتن به صفحه تسویه حساب - نیاز به لاگین
@@ -313,11 +313,11 @@ export default function PharmacyPage() {
               </Text>
             </div>
 
-            {drugs.length > 0 ? (
+            {products.length > 0 ? (
                 <>
                   <Row gutter={[16, 16]}>
-                    {drugs.map((drug) => (
-                        <Col xs={24} sm={12} md={8} lg={6} key={drug.id}>
+                    {products.map((product) => (
+                        <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
                           <Card
                               hoverable
                               style={{
@@ -340,7 +340,7 @@ export default function PharmacyPage() {
                                   position: 'relative',
                                 }}>
                                   <MedicineBoxOutlined style={{ fontSize: 56, color: '#2563eb' }} />
-                                  {drug.requires_prescription && (
+                                  {product.requires_prescription && (
                                       <Tag
                                           color="orange"
                                           style={{
@@ -353,7 +353,7 @@ export default function PharmacyPage() {
                                         {t('pharmacy.requiresPrescription')}
                                       </Tag>
                                   )}
-                                  {drug.stock === 0 && (
+                                  {product.stock === 0 && (
                                       <Tag
                                           color="red"
                                           style={{
@@ -373,46 +373,46 @@ export default function PharmacyPage() {
                                     type="primary"
                                     size="small"
                                     icon={<ShoppingCartOutlined />}
-                                    onClick={() => addToCart(drug)}
-                                    disabled={drug.stock === 0}
+                                    onClick={() => addToCart(product)}
+                                    disabled={product.stock === 0}
                                     block
                                     style={{ borderRadius: '8px' }}
                                 >
-                                  {drug.stock > 0 ? t('pharmacy.addToCart') : t('pharmacy.outOfStock')}
+                                  {product.stock > 0 ? t('pharmacy.addToCart') : t('pharmacy.outOfStock')}
                                 </Button>,
                                 <Button
                                     type="text"
                                     size="small"
                                     icon={<EyeOutlined />}
-                                    onClick={() => router.push(`/${locale}/pharmacy/drug/${drug.id}`)}
+                                    onClick={() => router.push(`/${locale}/pharmacy/product/${product.id}`)}
                                 />,
                               ]}
                           >
                             <div style={{ minHeight: 80 }}>
-                              <Tooltip title={drug.name}>
+                              <Tooltip title={product.name}>
                                 <Text strong style={{ fontSize: '14px', display: 'block' }}>
-                                  {drug.name.length > 20 ? drug.name.substring(0, 20) + '...' : drug.name}
+                                  {product.name.length > 20 ? product.name.substring(0, 20) + '...' : product.name}
                                 </Text>
                               </Tooltip>
-                              {drug.generic_name && (
+                              {product.generic_name && (
                                   <Text type="secondary" style={{ fontSize: '12px' }}>
-                                    {drug.generic_name}
+                                    {product.generic_name}
                                   </Text>
                               )}
                               <div style={{ marginTop: '4px' }}>
                                 <Tag color="blue" style={{ fontSize: '10px' }}>
-                                  {drug.category || 'عمومی'}
+                                  {product.category || 'عمومی'}
                                 </Tag>
                               </div>
                               <div style={{ marginTop: '8px' }}>
                                 <Text strong style={{ color: '#2563eb', fontSize: '16px' }}>
-                                  {drug.price?.toLocaleString() || 0}
+                                  {product.price?.toLocaleString() || 0}
                                 </Text>
                                 <Text type="secondary" style={{ fontSize: '12px' }}> تومان</Text>
                               </div>
                               <div style={{ marginTop: '4px' }}>
                                 <Text type="secondary" style={{ fontSize: '12px' }}>
-                                  {t('pharmacy.stock')}: {drug.stock > 0 ? `${drug.stock} عدد` : t('pharmacy.outOfStock')}
+                                  {t('pharmacy.stock')}: {product.stock > 0 ? `${product.stock} عدد` : t('pharmacy.outOfStock')}
                                 </Text>
                               </div>
                             </div>
@@ -449,7 +449,7 @@ export default function PharmacyPage() {
                     setSelectedCategory('all');
                     setRequiresPrescription('all');
                     setCurrentPage(1);
-                    fetchDrugs();
+                    fetchProducts();
                   }}>
                     {t('pharmacy.resetFilters')}
                   </Button>

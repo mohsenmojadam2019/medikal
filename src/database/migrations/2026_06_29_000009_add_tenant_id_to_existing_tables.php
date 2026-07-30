@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         $tables = [
-            'doctors', 'patients', 'appointments', 'prescriptions', 
+            'doctors', 'patients', 'appointments', 'prescriptions',
             'invoices', 'payments', 'notifications', 'messages',
             'posts', 'post_categories', 'post_comments', 'surveys',
             'survey_responses', 'feedbacks', 'ehr_records', 'ehr_visits',
@@ -18,7 +18,7 @@ return new class extends Migration
             'campaigns', 'campaign_interactions', 'telemedicine_sessions',
             'telemedicine_messages', 'telemedicine_files', 'medical_notes',
             'waiting_list', 'phone_appointments', 'appointment_cards',
-            'drugs', 'ratings', 'referrals', 'reminders',
+            'products', 'ratings', 'referrals', 'reminders',
             'installment_contracts', 'installments', 'wallet_transactions'
         ];
 

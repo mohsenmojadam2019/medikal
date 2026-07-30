@@ -20,29 +20,29 @@ export default function PrescriptionRequestPage() {
     const { message } = App.useApp();
 
     const [loading, setLoading] = useState(false);
-    const [drugInfo, setDrugInfo] = useState(null);
+    const [productInfo, setProductInfo] = useState(null);
     const [fileList, setFileList] = useState([]);
     const [form] = Form.useForm();
 
-    const drugId = searchParams?.get('drug_id');
+    const productId = searchParams?.get('product_id');
     const pharmacyId = searchParams?.get('pharmacy_id');
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
     useEffect(() => {
-        if (drugId) {
-            fetchDrugInfo();
+        if (productId) {
+            fetchProductInfo();
         }
-    }, [drugId]);
+    }, [productId]);
 
-    const fetchDrugInfo = async () => {
+    const fetchProductInfo = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/drugs/${drugId}`);
+            const res = await fetch(`${API_URL}/api/products/${productId}`);
             const data = await res.json();
             if (data.success) {
-                setDrugInfo(data.data);
+                setProductInfo(data.data);
             }
         } catch (error) {
-            console.error('Error fetching drug:', error);
+            console.error('Error fetching product:', error);
         }
     };
 
@@ -68,7 +68,7 @@ export default function PrescriptionRequestPage() {
             console.log('🔑 توکن:', cleanToken);
 
             const formData = new FormData();
-            formData.append('drug_id', drugId);
+            formData.append('product_id', productId);
             formData.append('pharmacy_id', pharmacyId || '');
             formData.append('patient_name', values.patient_name);
             formData.append('national_code', values.national_code);
@@ -113,7 +113,7 @@ export default function PrescriptionRequestPage() {
         }
     };
 
-    if (!drugId) {
+    if (!productId) {
         return (
             <>
                 <Header />
@@ -150,14 +150,14 @@ export default function PrescriptionRequestPage() {
 
                         <Divider style={{ margin: '12px 0' }} />
 
-                        {drugInfo && (
+                        {productInfo && (
                             <Alert
-                                message={`دارو: ${drugInfo.name}`}
+                                message={`دارو: ${productInfo.name}`}
                                 description={
                                     <div>
-                                        <div>قیمت: <strong>{drugInfo.price?.toLocaleString()} تومان</strong></div>
-                                        <div>موجودی: <strong>{drugInfo.stock > 0 ? `${drugInfo.stock} عدد` : 'ناموجود'}</strong></div>
-                                        {drugInfo.generic_name && <div>نام ژنریک: {drugInfo.generic_name}</div>}
+                                        <div>قیمت: <strong>{productInfo.price?.toLocaleString()} تومان</strong></div>
+                                        <div>موجودی: <strong>{productInfo.stock > 0 ? `${productInfo.stock} عدد` : 'ناموجود'}</strong></div>
+                                        {productInfo.generic_name && <div>نام ژنریک: {productInfo.generic_name}</div>}
                                     </div>
                                 }
                                 type="info"

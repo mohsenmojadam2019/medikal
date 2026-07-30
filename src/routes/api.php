@@ -1,6 +1,9 @@
 <?php
+// routes/api.php
 
 use App\Http\Controllers\Api\AIChatController;
+use App\Http\Controllers\Api\BrandController;
+use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\EmergencyController;
 use App\Http\Controllers\Api\WaitingController;
 use Illuminate\Support\Facades\Route;
@@ -17,12 +20,12 @@ use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PrescriptionController;
 use App\Http\Controllers\Api\PharmacyController;
+use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Admin\SpecialtyController;
-use App\Http\Controllers\Admin\DrugController;
 use App\Http\Controllers\Admin\PharmacyManagementController;
 use App\Http\Controllers\Api\ClinicController;
 use App\Http\Controllers\Api\MedicalNoteController;
@@ -32,6 +35,9 @@ use App\Http\Controllers\Api\QueueController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
+|--------------------------------------------------------------------------
+| نسخه: 2.0.0
+| تاریخ: 2026-07-30
 |--------------------------------------------------------------------------
 */
 
@@ -48,7 +54,7 @@ Route::get('/ping', function () {
 });
 
 // ============================================================
-// Waiting List (صف انتظار)
+// 2. WAITING LIST (صف انتظار)
 // ============================================================
 Route::middleware('auth:sanctum')->prefix('waiting')->group(function () {
     Route::get('/status/{appointmentId}', [WaitingController::class, 'getStatus']);
@@ -66,17 +72,21 @@ Route::middleware(['auth:sanctum', 'role:receptionist|admin'])->prefix('waiting'
 });
 
 // ============================================================
-// 2. PUBLIC ROUTES (بدون احراز هویت)
+// 3. PUBLIC ROUTES (بدون احراز هویت)
 // ============================================================
 
-// 2.1 AUTH
+// ============================================================
+// 3.1 AUTH
+// ============================================================
 Route::prefix('auth')->group(function () {
     Route::post('/login/mobile', [AuthController::class, 'loginWithMobile']);
     Route::post('/login/mobile/verify', [AuthController::class, 'verifyOtp']);
     Route::post('/login/email', [AuthController::class, 'loginWithEmail']);
 });
 
-// 2.2 DOCTORS (عمومی - API)
+// ============================================================
+// 3.2 DOCTORS (عمومی)
+// ============================================================
 Route::prefix('doctors')->group(function () {
     Route::get('/', [ApiDoctorController::class, 'index']);
     Route::get('/nearby', [ApiDoctorController::class, 'nearby']);
@@ -84,13 +94,57 @@ Route::prefix('doctors')->group(function () {
     Route::get('/{id}', [ApiDoctorController::class, 'show']);
 });
 
-// 2.3 SPECIALTIES
+// ============================================================
+// 3.3 SPECIALTIES
+// ============================================================
 Route::get('/specialties', [SpecialtyController::class, 'activeSpecialties']);
 
-// 2.4 APPOINTMENTS (Available Slots)
+// ============================================================
+// 3.4 APPOINTMENTS (Available Slots)
+// ============================================================
 Route::get('/appointments/doctors/{doctorId}/available-slots', [AppointmentController::class, 'availableSlots']);
 
-// 2.5 PHARMACY (عمومی)
+// ============================================================
+// 3.5 ✅ BRANDS (عمومی)
+// ============================================================
+Route::prefix('brands')->controller(BrandController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::get('/popular', 'popular');
+    Route::get('/top-rated', 'topRated');
+    Route::get('/{slug}', 'show');
+    Route::get('/{slug}/products', 'products');
+});
+
+// ============================================================
+// 3.6 ✅ CATEGORIES (عمومی)
+// ============================================================
+Route::prefix('categories')->controller(CategoryController::class)->group(function () {
+    Route::get('/tree', 'tree');
+    Route::get('/root', 'root');
+    Route::get('/popular', 'popular');
+    Route::get('/{slug}', 'show');
+});
+
+// ============================================================
+// 3.7 ✅ PRODUCTS (عمومی) - ترتیب مسیرها مهم است
+// ============================================================
+Route::prefix('products')->controller(ProductController::class)->group(function () {
+    // ✅ مسیرهای خاص (ابتدا)
+    Route::get('/tags', 'tags');
+    Route::get('/brands', 'brands');
+    Route::get('/filter/attributes', 'filterAttributes');
+    Route::get('/category/{slug}', 'categoryProducts');
+    Route::get('/brands/{slug}/products', 'brandProducts');
+    Route::get('/{productId}/reviews', 'getReviews');
+
+    // ✅ مسیرهای عمومی (آخر)
+    Route::get('/', 'index');
+    Route::get('/{slug}', 'show');
+});
+
+// ============================================================
+// 3.8 PHARMACY (عمومی)
+// ============================================================
 Route::prefix('pharmacy')->group(function () {
     Route::get('/pharmacies', [PharmacyController::class, 'index']);
     Route::get('/pharmacies/{id}', [PharmacyController::class, 'showPharmacy']);
@@ -101,7 +155,9 @@ Route::prefix('pharmacy')->group(function () {
     Route::get('/contracted', [PharmacyController::class, 'contracted']);
 });
 
-// 2.6 CLINICS (عمومی)
+// ============================================================
+// 3.9 CLINICS (عمومی)
+// ============================================================
 Route::prefix('clinics')->group(function () {
     Route::get('/', [ClinicController::class, 'index']);
     Route::get('/settings', [ClinicController::class, 'settings']);
@@ -110,30 +166,30 @@ Route::prefix('clinics')->group(function () {
     Route::get('/{id}', [ClinicController::class, 'show']);
 });
 
-// 2.7 DRUGS - PUBLIC
-Route::get('/drugs/active', [DrugController::class, 'activeDrugs']);
-Route::get('/drugs/{id}', [DrugController::class, 'show']);
-
-// 2.8 LABORATORY (عمومی)
+// ============================================================
+// 3.10 LABORATORY (عمومی)
+// ============================================================
 Route::prefix('lab')->group(function () {
     Route::get('/categories/active', [LabController::class, 'activeCategories']);
     Route::get('/tests/active', [LabController::class, 'activeTests']);
     Route::get('/tests/{id}', [LabController::class, 'showTest']);
 });
 
-// 2.9 PATIENTS (عمومی - محدود)
+// ============================================================
+// 3.11 PATIENTS (عمومی - محدود)
+// ============================================================
 Route::prefix('patients')->group(function () {
     Route::get('/nearby', [ApiPatientController::class, 'nearby']);
     Route::get('/{id}', [ApiPatientController::class, 'show']);
 });
 
 // ============================================================
-// 3. PROTECTED ROUTES (نیاز به احراز هویت)
+// 4. PROTECTED ROUTES (نیاز به احراز هویت)
 // ============================================================
 Route::middleware('auth:sanctum')->group(function () {
 
     // ============================================================
-    // 3.1 AUTH
+    // 4.1 AUTH
     // ============================================================
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -141,7 +197,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.2 PROFILE
+    // 4.2 PROFILE
     // ============================================================
     Route::prefix('profile')->group(function () {
         Route::put('/', [ProfileController::class, 'update']);
@@ -152,7 +208,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.3 DASHBOARD
+    // 4.3 DASHBOARD
     // ============================================================
     Route::prefix('dashboard')->group(function () {
         Route::get('/admin', [DashboardController::class, 'admin']);
@@ -161,7 +217,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.4 APPOINTMENTS
+    // 4.4 APPOINTMENTS
     // ============================================================
     Route::prefix('appointments')->group(function () {
         Route::get('/my/appointments', [AppointmentController::class, 'myAppointments']);
@@ -173,7 +229,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.5 PRESCRIPTIONS
+    // 4.5 PRESCRIPTIONS
     // ============================================================
     Route::prefix('prescriptions')->group(function () {
         Route::get('/my', [PrescriptionController::class, 'myPrescriptions']);
@@ -191,7 +247,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.6 INVOICES
+    // 4.6 INVOICES
     // ============================================================
     Route::prefix('invoices')->group(function () {
         Route::get('/my', [InvoiceController::class, 'myInvoices']);
@@ -201,7 +257,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.7 PAYMENTS
+    // 4.7 PAYMENTS
     // ============================================================
     Route::prefix('payments')->group(function () {
         Route::get('/gateways', [PaymentController::class, 'gateways']);
@@ -212,7 +268,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.8 WALLET
+    // 4.8 WALLET
     // ============================================================
     Route::prefix('wallet')->group(function () {
         Route::get('/balance', [WalletController::class, 'balance']);
@@ -223,7 +279,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.9 CHAT
+    // 4.9 CHAT
     // ============================================================
     Route::prefix('chat')->group(function () {
         Route::get('/conversations', [ChatController::class, 'conversations']);
@@ -235,7 +291,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.10 NOTIFICATIONS
+    // 4.10 NOTIFICATIONS
     // ============================================================
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
@@ -249,7 +305,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.11 RATINGS
+    // 4.11 RATINGS
     // ============================================================
     Route::prefix('ratings')->group(function () {
         Route::post('/', [RatingController::class, 'store']);
@@ -260,7 +316,12 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.12 PHARMACY (کاربران معمولی)
+    // 4.12 ✅ PRODUCT REVIEWS (ثبت نظر - نیاز به لاگین)
+    // ============================================================
+    Route::post('/products/reviews', [ProductController::class, 'storeReview']);
+
+    // ============================================================
+    // 4.13 PHARMACY (کاربران معمولی)
     // ============================================================
     Route::prefix('pharmacy')->group(function () {
         // سفارشات
@@ -274,11 +335,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // نسخه پزشکی
         Route::post('/orders/{id}/prescription', [PharmacyController::class, 'uploadPrescription']);
         Route::get('/orders/{id}/prescription-status', [PharmacyController::class, 'getPrescriptionStatus']);
-
-        // ✅ درخواست دارو با نسخه پزشکی (کاربر)
         Route::post('/prescription-request', [PharmacyController::class, 'prescriptionRequest']);
 
-        // ✅ تایید/رد درخواست نسخه (ادمین)
+        // تایید/رد درخواست نسخه (ادمین)
         Route::middleware(['role:admin|super_admin'])->group(function () {
             Route::post('/prescription-request/{id}/approve', [PharmacyController::class, 'approvePrescriptionRequest']);
             Route::post('/prescription-request/{id}/reject', [PharmacyController::class, 'rejectPrescriptionRequest']);
@@ -293,7 +352,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.13 PATIENTS
+    // 4.14 PATIENTS
     // ============================================================
     Route::prefix('patients')->group(function () {
         Route::get('/my', [ApiPatientController::class, 'myPatients']);
@@ -302,7 +361,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.15 MEDICAL NOTES
+    // 4.15 MEDICAL NOTES
     // ============================================================
     Route::prefix('medical-notes')->group(function () {
         Route::get('/', [MedicalNoteController::class, 'index']);
@@ -325,7 +384,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.16 LABORATORY
+    // 4.16 LABORATORY
     // ============================================================
     Route::prefix('lab')->group(function () {
         Route::post('/orders', [LabController::class, 'createOrder']);
@@ -341,7 +400,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.17 AiChat Routes - دکتر آنلاین
+    // 4.17 AiChat Routes - دکتر آنلاین
     // ============================================================
     Route::prefix('v1/chat')->group(function () {
         Route::post('/start', [App\Http\Controllers\Api\AiChat\ChatController::class, 'start']);
@@ -370,7 +429,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.18 PHARMACY REPORTS
+    // 4.18 PHARMACY REPORTS
     // ============================================================
     Route::prefix('pharmacy')->group(function () {
         Route::prefix('reports')->group(function () {
@@ -383,7 +442,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ============================================================
-    // 3.19 EMERGENCY (اورژانس - کاربر)
+    // 4.19 EMERGENCY (اورژانس - کاربر)
     // ============================================================
     Route::prefix('emergency')->group(function () {
         Route::post('/request', [EmergencyController::class, 'store']);
@@ -394,7 +453,7 @@ Route::middleware('auth:sanctum')->group(function () {
 }); // End auth:sanctum
 
 // ============================================================
-// 4. PAYMENT CALLBACKS (عمومی - نیازی به احراز هویت ندارد)
+// 5. PAYMENT CALLBACKS (عمومی - نیازی به احراز هویت ندارد)
 // ============================================================
 Route::prefix('payment')->group(function () {
     Route::get('/callback/{gateway}', [PaymentController::class, 'callback'])->name('payment.callback');
@@ -402,7 +461,7 @@ Route::prefix('payment')->group(function () {
 });
 
 // ============================================================
-// 5. PHARMACY CALLBACK (عمومی)
+// 6. PHARMACY CALLBACK (عمومی)
 // ============================================================
 Route::prefix('pharmacy')->group(function () {
     Route::get('/payment/callback', [PharmacyController::class, 'paymentCallback'])->name('pharmacy.payment.callback');
@@ -410,7 +469,7 @@ Route::prefix('pharmacy')->group(function () {
 });
 
 // ============================================================
-// 6. ADMIN ROUTES (برای مدیریت)
+// 7. ADMIN ROUTES (برای مدیریت)
 // ============================================================
 Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
     ->prefix('admin')
@@ -418,25 +477,25 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
     ->group(function () {
 
         // ============================================================
-        // 6.1 DRUG MANAGEMENT
+        // 7.1 ✅ PRODUCT MANAGEMENT (ادمین)
         // ============================================================
-        Route::prefix('drugs')->group(function () {
-            Route::get('/', [DrugController::class, 'index']);
-            Route::post('/', [DrugController::class, 'store']);
-            Route::get('/{id}', [DrugController::class, 'show']);
-            Route::put('/{id}', [DrugController::class, 'update']);
-            Route::delete('/{id}', [DrugController::class, 'destroy']);
-            Route::post('/{id}/toggle', [DrugController::class, 'toggleStatus']);
-            Route::post('/{id}/increase-stock', [DrugController::class, 'increaseStock']);
-            Route::post('/{id}/decrease-stock', [DrugController::class, 'decreaseStock']);
-            Route::get('/categories', [DrugController::class, 'categories']);
-            Route::get('/active', [DrugController::class, 'activeDrugs']);
-            Route::get('/search', [DrugController::class, 'search']);
-            Route::get('/pharmacy/{pharmacyId}', [DrugController::class, 'getPharmacyDrugs']);
+        Route::prefix('products')->group(function () {
+            Route::get('/', [ProductController::class, 'index']);
+            Route::post('/', [ProductController::class, 'store']);
+            Route::get('/{id}', [ProductController::class, 'show']);
+            Route::put('/{id}', [ProductController::class, 'update']);
+            Route::delete('/{id}', [ProductController::class, 'destroy']);
+            Route::post('/{id}/toggle', [ProductController::class, 'toggleStatus']);
+            Route::post('/{id}/increase-stock', [ProductController::class, 'increaseStock']);
+            Route::post('/{id}/decrease-stock', [ProductController::class, 'decreaseStock']);
+            Route::get('/categories', [ProductController::class, 'categories']);
+            Route::get('/active', [ProductController::class, 'activeProducts']);
+            Route::get('/search', [ProductController::class, 'search']);
+            Route::get('/pharmacy/{pharmacyId}', [ProductController::class, 'getPharmacyProducts']);
         });
 
         // ============================================================
-        // 6.2 AI CHAT
+        // 7.2 AI CHAT
         // ============================================================
         Route::prefix('ai-chat')->group(function () {
             Route::post('/start', [AIChatController::class, 'start']);
@@ -451,7 +510,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
         });
 
         // ============================================================
-        // 6.3 PHARMACY MANAGEMENT
+        // 7.3 PHARMACY MANAGEMENT
         // ============================================================
         Route::prefix('pharmacies')->group(function () {
             Route::get('/', [PharmacyManagementController::class, 'index']);
@@ -464,7 +523,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
         });
 
         // ============================================================
-        // 6.4 PHARMACY ORDERS (ادمین) - فقط متدهای موجود
+        // 7.4 PHARMACY ORDERS (ادمین)
         // ============================================================
         Route::prefix('pharmacy-orders')->group(function () {
             Route::get('/', [PharmacyController::class, 'pharmacyOrders']);
@@ -474,7 +533,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
         });
 
         // ============================================================
-        // 6.5 DOCTORS MANAGEMENT (ادمین)
+        // 7.5 DOCTORS MANAGEMENT (ادمین)
         // ============================================================
         Route::prefix('doctors')->group(function () {
             Route::get('/', [AdminDoctorController::class, 'index']);
@@ -491,7 +550,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
         });
 
         // ============================================================
-        // 6.6 PATIENTS MANAGEMENT (ادمین)
+        // 7.6 PATIENTS MANAGEMENT (ادمین)
         // ============================================================
         Route::prefix('patients')->group(function () {
             Route::get('/without-doctor', [AdminPatientController::class, 'withoutDoctor']);
@@ -513,7 +572,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
         });
 
         // ============================================================
-        // 6.7 LABORATORY MANAGEMENT (ادمین)
+        // 7.7 LABORATORY MANAGEMENT (ادمین)
         // ============================================================
         Route::prefix('lab')->group(function () {
             Route::get('/categories', [LabController::class, 'categories']);
@@ -531,7 +590,7 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
     });
 
 // ============================================================
-// 7. FALLBACK (مسیرهای پیدا نشد)
+// 8. FALLBACK (مسیرهای پیدا نشد)
 // ============================================================
 Route::fallback(function () {
     return response()->json([

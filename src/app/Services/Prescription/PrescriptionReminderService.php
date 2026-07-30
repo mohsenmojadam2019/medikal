@@ -43,7 +43,7 @@ class PrescriptionReminderService
             try {
                 $patient = $prescription->patient;
                 if ($patient && $patient->phone) {
-                    $message = "داروی {$prescription->drug_name} شما تا {$prescription->end_date->format('Y/m/d')} باقی مانده است.";
+                    $message = "داروی {$prescription->product_name} شما تا {$prescription->end_date->format('Y/m/d')} باقی مانده است.";
                     Log::info("Reminder sent for prescription {$prescription->code}", [
                         'tenant_id' => $this->tenantId,
                         'prescription_id' => $prescription->id,

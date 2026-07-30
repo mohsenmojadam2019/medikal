@@ -7,7 +7,7 @@ return [
     'patients' => 'المرضى',
     'appointments' => 'المواعيد',
     'prescriptions' => 'الوصفات الطبية',
-    'drugs' => 'الأدوية',
+    'products' => 'الأدوية',
     'invoices' => 'الفواتير',
     'settings' => 'الإعدادات',
     'search' => 'بحث...',

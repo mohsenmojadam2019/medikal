@@ -11,7 +11,7 @@ class PharmacyOrderItem extends Model
     protected $fillable = [
         'tenant_id',
         'order_id',
-        'drug_id',
+        'product_id',
         'quantity',
         'unit_price',
         'total_price',
@@ -30,8 +30,8 @@ class PharmacyOrderItem extends Model
         return $this->belongsTo(PharmacyOrder::class, 'order_id');
     }
 
-    public function drug()
+    public function product()
     {
-        return $this->belongsTo(Drug::class);
+        return $this->belongsTo(Product::class);
     }
 }

@@ -156,7 +156,7 @@ class LanguageSeeder extends Seeder
     private function createEssentialTranslations(): void
     {
         $languages = Language::whereIn('code', ['fa', 'ar', 'en'])->get();
-        
+
         $translations = [
             // Auth
             ['group' => 'auth', 'key' => 'failed', 'values' => [
@@ -206,10 +206,10 @@ class LanguageSeeder extends Seeder
                 'ar' => 'الوصفات الطبية',
                 'en' => 'Prescriptions',
             ]],
-            ['group' => 'messages', 'key' => 'drugs', 'values' => [
+            ['group' => 'messages', 'key' => 'products', 'values' => [
                 'fa' => 'داروها',
                 'ar' => 'الأدوية',
-                'en' => 'Drugs',
+                'en' => 'Products',
             ]],
             ['group' => 'messages', 'key' => 'invoices', 'values' => [
                 'fa' => 'فاکتورها',
@@ -286,7 +286,7 @@ class LanguageSeeder extends Seeder
         foreach ($translations as $translation) {
             foreach ($languages as $language) {
                 $value = $translation['values'][$language->code] ?? $translation['values']['fa'];
-                
+
                 Translation::updateOrCreate(
                     [
                         'language_id' => $language->id,
@@ -308,7 +308,7 @@ class LanguageSeeder extends Seeder
     private function importFromFilesIfExist(): void
     {
         $locales = ['fa', 'ar', 'en'];
-        
+
         foreach ($locales as $locale) {
             $langPath = resource_path("lang/{$locale}");
             if (!is_dir($langPath)) {

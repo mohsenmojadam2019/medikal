@@ -18,11 +18,11 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-export default function DrugsPage() {
+export default function ProductsPage() {
     const router = useRouter();
     const { message: appMessage } = App.useApp();
 
-    const [drugs, setDrugs] = useState([]);
+    const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(12);
@@ -71,7 +71,7 @@ export default function DrugsPage() {
         localStorage.setItem('pharmacyCart', JSON.stringify(cart));
     }, [cart]);
 
-    const fetchDrugs = useCallback(async () => {
+    const fetchProducts = useCallback(async () => {
         setLoading(true);
         try {
             const queryParams = new URLSearchParams();
@@ -84,17 +84,17 @@ export default function DrugsPage() {
             queryParams.append('page', currentPage);
             queryParams.append('per_page', pageSize);
 
-            const res = await fetch(`${API_URL}/api/drugs/active?${queryParams}`);
+            const res = await fetch(`${API_URL}/api/products/active?${queryParams}`);
             const data = await res.json();
             if (data.success) {
-                const drugsData = data.data.data || data.data || [];
-                setDrugs(drugsData);
-                setTotalItems(data.data.total || drugsData.length || 0);
-                const uniqueCategories = [...new Set(drugsData.map(d => d.category).filter(Boolean))];
+                const productsData = data.data.data || data.data || [];
+                setProducts(productsData);
+                setTotalItems(data.data.total || productsData.length || 0);
+                const uniqueCategories = [...new Set(productsData.map(d => d.category).filter(Boolean))];
                 setCategories(uniqueCategories);
             }
         } catch (error) {
-            console.error('Error fetching drugs:', error);
+            console.error('Error fetching products:', error);
         } finally {
             setLoading(false);
         }
@@ -114,13 +114,13 @@ export default function DrugsPage() {
     }, [API_URL]);
 
     useEffect(() => {
-        fetchDrugs();
+        fetchProducts();
         fetchPharmacies();
-    }, [fetchDrugs, fetchPharmacies]);
+    }, [fetchProducts, fetchPharmacies]);
 
     const handleSearch = () => {
         setCurrentPage(1);
-        fetchDrugs();
+        fetchProducts();
     };
 
     const resetFilters = () => {
@@ -129,45 +129,45 @@ export default function DrugsPage() {
         setRequiresPrescription('all');
         setSelectedPharmacy('all');
         setCurrentPage(1);
-        fetchDrugs();
+        fetchProducts();
     };
 
     // ============================================
     // توابع سبد خرید
     // ============================================
-    const addToCart = (drug) => {
+    const addToCart = (product) => {
         const token = getToken();
         if (!token) {
             appMessage.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
-            router.push('/fa/login?redirect=/fa/pharmacy/drugs');
+            router.push('/fa/login?redirect=/fa/pharmacy/products');
             return;
         }
 
-        const existing = cart.find(item => item.id === drug.id);
+        const existing = cart.find(item => item.id === product.id);
         let newCart;
         if (existing) {
             newCart = cart.map(item =>
-                item.id === drug.id ? { ...item, quantity: item.quantity + 1 } : item
+                item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
             );
         } else {
             newCart = [...cart, {
-                ...drug,
+                ...product,
                 quantity: 1,
-                price: drug.price
+                price: product.price
             }];
         }
         setCart(newCart);
-        appMessage.success(`${drug.name} به سبد خرید اضافه شد`);
+        appMessage.success(`${product.name} به سبد خرید اضافه شد`);
     };
 
-    const removeFromCart = (drugId) => {
-        const newCart = cart.filter(item => item.id !== drugId);
+    const removeFromCart = (productId) => {
+        const newCart = cart.filter(item => item.id !== productId);
         setCart(newCart);
     };
 
-    const updateQuantity = (drugId, change) => {
+    const updateQuantity = (productId, change) => {
         const newCart = cart.map(item =>
-            item.id === drugId
+            item.id === productId
                 ? { ...item, quantity: Math.max(1, item.quantity + change) }
                 : item
         );
@@ -204,17 +204,17 @@ export default function DrugsPage() {
     // ============================================
     // رفتن به صفحه درخواست نسخه
     // ============================================
-    const goToPrescriptionRequest = (drug) => {
+    const goToPrescriptionRequest = (product) => {
         const token = getToken();
         if (!token) {
             appMessage.warning('لطفاً ابتدا وارد حساب کاربری خود شوید');
             router.push('/fa/login?redirect=/fa/pharmacy/prescription-request');
             return;
         }
-        router.push(`/fa/pharmacy/prescription-request?drug_id=${drug.id}&pharmacy_id=${selectedPharmacy}`);
+        router.push(`/fa/pharmacy/prescription-request?product_id=${product.id}&pharmacy_id=${selectedPharmacy}`);
     };
 
-    if (loading && drugs.length === 0) {
+    if (loading && products.length === 0) {
         return <><Header /><LoadingSpinner /><Footer /></>;
     }
 
@@ -331,11 +331,11 @@ export default function DrugsPage() {
                     </div>
 
                     {/* لیست داروها */}
-                    {drugs.length > 0 ? (
+                    {products.length > 0 ? (
                         <>
                             <Row gutter={[16, 16]}>
-                                {drugs.map((drug) => (
-                                    <Col xs={24} sm={12} md={8} lg={6} key={drug.id}>
+                                {products.map((product) => (
+                                    <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
                                         <Card
                                             hoverable
                                             style={{ borderRadius: 12, height: '100%' }}
@@ -350,62 +350,62 @@ export default function DrugsPage() {
                                                     borderRadius: '12px 12px 0 0'
                                                 }}>
                                                     <MedicineBoxOutlined style={{ fontSize: 56, color: '#2563eb' }} />
-                                                    {drug.requires_prescription && (
+                                                    {product.requires_prescription && (
                                                         <Tag color="red" style={{ position: 'absolute', top: 8, left: 8, fontSize: 10 }}>
                                                             📋 نیاز به نسخه
                                                         </Tag>
                                                     )}
-                                                    {drug.stock === 0 && (
+                                                    {product.stock === 0 && (
                                                         <Tag color="red" style={{ position: 'absolute', top: 8, right: 8, fontSize: 10 }}>
                                                             ناموجود
                                                         </Tag>
                                                     )}
-                                                    {drug.pharmacy && (
+                                                    {product.pharmacy && (
                                                         <Tag color="blue" style={{ position: 'absolute', bottom: 8, right: 8, fontSize: 10 }}>
-                                                            {drug.pharmacy.name}
+                                                            {product.pharmacy.name}
                                                         </Tag>
                                                     )}
                                                 </div>
                                             }
                                         >
-                                            <Tooltip title={drug.name}>
+                                            <Tooltip title={product.name}>
                                                 <Text strong style={{ fontSize: 14 }}>
-                                                    {drug.name.length > 20 ? drug.name.substring(0, 20) + '...' : drug.name}
+                                                    {product.name.length > 20 ? product.name.substring(0, 20) + '...' : product.name}
                                                 </Text>
                                             </Tooltip>
-                                            {drug.generic_name && (
+                                            {product.generic_name && (
                                                 <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
-                                                    {drug.generic_name}
+                                                    {product.generic_name}
                                                 </Text>
                                             )}
                                             <div>
                                                 <Tag color="blue" style={{ fontSize: 10 }}>
-                                                    {drug.category || 'عمومی'}
+                                                    {product.category || 'عمومی'}
                                                 </Tag>
-                                                {drug.requires_prescription && (
+                                                {product.requires_prescription && (
                                                     <Tag color="orange" style={{ fontSize: 10 }}>نیاز به نسخه</Tag>
                                                 )}
                                             </div>
                                             <div>
                                                 <Text strong style={{ color: '#2563eb', fontSize: 16 }}>
-                                                    {drug.price?.toLocaleString() || 0}
+                                                    {product.price?.toLocaleString() || 0}
                                                 </Text>
                                                 <Text type="secondary" style={{ fontSize: 12 }}> تومان</Text>
                                             </div>
                                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                                موجودی: {drug.stock > 0 ? `${drug.stock} عدد` : 'ناموجود'}
+                                                موجودی: {product.stock > 0 ? `${product.stock} عدد` : 'ناموجود'}
                                             </Text>
 
                                             {/* ✅ دکمه‌های جداگانه برای داروهای با/بدون نسخه */}
                                             <div style={{ marginTop: 8 }}>
-                                                {drug.requires_prescription ? (
+                                                {product.requires_prescription ? (
                                                     <Button
                                                         type="primary"
                                                         size="small"
                                                         block
                                                         icon={<MedicineBoxOutlined />}
-                                                        disabled={drug.stock === 0}
-                                                        onClick={() => goToPrescriptionRequest(drug)}
+                                                        disabled={product.stock === 0}
+                                                        onClick={() => goToPrescriptionRequest(product)}
                                                         style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
                                                     >
                                                         📋 درخواست با نسخه
@@ -416,10 +416,10 @@ export default function DrugsPage() {
                                                         size="small"
                                                         block
                                                         icon={<ShoppingCartOutlined />}
-                                                        disabled={drug.stock === 0}
-                                                        onClick={() => addToCart(drug)}
+                                                        disabled={product.stock === 0}
+                                                        onClick={() => addToCart(product)}
                                                     >
-                                                        {drug.stock > 0 ? 'افزودن به سبد' : 'ناموجود'}
+                                                        {product.stock > 0 ? 'افزودن به سبد' : 'ناموجود'}
                                                     </Button>
                                                 )}
                                             </div>

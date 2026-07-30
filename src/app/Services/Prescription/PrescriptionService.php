@@ -36,7 +36,7 @@ class PrescriptionService
 
         if (isset($filters['search'])) {
             $query->where(function ($q) use ($filters) {
-                $q->where('drug_name', 'LIKE', "%{$filters['search']}%")
+                $q->where('product_name', 'LIKE', "%{$filters['search']}%")
                     ->orWhere('diagnosis', 'LIKE', "%{$filters['search']}%");
             });
         }
@@ -63,7 +63,7 @@ class PrescriptionService
                 'appointment_id' => $appointment->id,
                 'patient_id' => $appointment->patient_id,
                 'doctor_id' => $appointment->doctor_id,
-                'drug_name' => $data['drug_name'],
+                'product_name' => $data['product_name'],
                 'dosage' => $data['dosage'],
                 'frequency' => $data['frequency'] ?? 3,
                 'duration' => $duration,
@@ -161,7 +161,7 @@ class PrescriptionService
 
     public function checkInteractions(Prescription $prescription): array
     {
-        return $prescription->getDrugInteractions();
+        return $prescription->getProductInteractions();
     }
 
     public function generateReminders(Prescription $prescription): array
@@ -222,7 +222,7 @@ class PrescriptionService
                 'license_number' => $prescription->doctor->license_number,
             ],
             'details' => [
-                'drug' => $prescription->drug_name,
+                'product' => $prescription->product_name,
                 'dosage' => $prescription->dosage,
                 'frequency' => $prescription->frequency_label,
                 'duration' => $prescription->duration . ' روز',

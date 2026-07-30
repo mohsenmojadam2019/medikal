@@ -7,7 +7,7 @@ return [
     'patients' => 'Patients',
     'appointments' => 'Appointments',
     'prescriptions' => 'Prescriptions',
-    'drugs' => 'Drugs',
+    'products' => 'Products',
     'invoices' => 'Invoices',
     'settings' => 'Settings',
     'search' => 'Search...',

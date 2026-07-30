@@ -51,7 +51,7 @@ class ChatService
 
         // ثبت رویداد شروع جلسه
         $this->metricsCollector->increment('sessions_started');
-        
+
         // پیام خوش‌آمدگویی سیستم
         $this->addSystemMessage($session, 'سلام! من "دکتر آنلاین" هستم. چطور می‌توانم به شما کمک کنم؟');
 
@@ -85,7 +85,7 @@ class ChatService
     ): array {
         // ۱. دریافت یا ایجاد جلسه
         $session = $this->getActiveSession($user, $sessionToken);
-        
+
         if (!$session) {
             $session = $this->startSession($user);
         }
@@ -97,7 +97,7 @@ class ChatService
 
         // ۳. فیلتر و تحلیل سوال (پزشکی/غیرپزشکی/اورژانسی)
         $filterResult = $this->medicalFilter->filter($message);
-        
+
         // ۴. مدیریت وضعیت اورژانسی
         if ($filterResult->isEmergency) {
             $this->handleEmergency($user, $session, $filterResult);
@@ -135,7 +135,7 @@ class ChatService
 
         // ۸. تولید پاسخ توسط هوش مصنوعی
         $startTime = microtime(true);
-        
+
         $response = $this->ollamaClient
             ->setModel($options['model'] ?? $this->configManager->get('models.default'))
             ->setSystemPrompt($promptData['system'])
@@ -317,22 +317,22 @@ class ChatService
     private function calculateConfidence(string $response, $filterResult): float
     {
         $confidence = 0.5; // مقدار پایه
-        
+
         // افزایش اطمینان بر اساس دسته‌بندی دقیق
         if ($filterResult->category !== MedicalCategory::GENERAL) {
             $confidence += 0.2;
         }
-        
+
         // افزایش اطمینان در صورت تشخیص علائم
         if (!empty($filterResult->detectedSymptoms)) {
             $confidence += 0.15;
         }
-        
+
         // کاهش اطمینان در صورت پاسخ کوتاه
         if (strlen($response) < 50) {
             $confidence -= 0.1;
         }
-        
+
         return min(max($confidence, 0), 1);
     }
 
@@ -342,15 +342,15 @@ class ChatService
     private function generateEmergencyGuidance($filterResult): string
     {
         $guidance = [];
-        
+
         if (!empty($filterResult->detectedSymptoms)) {
             $guidance[] = 'علائم تشخیص داده شده: ' . implode('، ', $filterResult->detectedSymptoms);
         }
-        
+
         if (!empty($filterResult->suggestedActions)) {
             $guidance[] = 'اقدامات توصیه شده: ' . implode('، ', $filterResult->suggestedActions);
         }
-        
+
         return implode("\n", $guidance);
     }
 
@@ -360,14 +360,14 @@ class ChatService
     private function generateSuggestions($filterResult): array
     {
         $suggestions = [];
-        
+
         // پیشنهاد بر اساس دسته‌بندی
         switch ($filterResult->category) {
             case MedicalCategory::SYMPTOM:
                 $suggestions[] = '📋 برای تشخیص دقیق‌تر، به پزشک مراجعه کنید.';
                 $suggestions[] = '💊 از مصرف خودسرانه دارو خودداری کنید.';
                 break;
-            case MedicalCategory::DRUG:
+            case MedicalCategory::Product:
                 $suggestions[] = '💊 داروها را فقط با نسخه پزشک مصرف کنید.';
                 $suggestions[] = '📋 عوارض جانبی را جدی بگیرید و به پزشک اطلاع دهید.';
                 break;
@@ -380,10 +380,10 @@ class ChatService
                 $suggestions[] = '💬 با یک مشاور یا روانشناس صحبت کنید.';
                 break;
         }
-        
+
         // پیشنهاد کلی
         $suggestions[] = '🏥 این پاسخ فقط جنبه اطلاع‌رسانی دارد و تشخیص نهایی با پزشک است.';
-        
+
         return $suggestions;
     }
 

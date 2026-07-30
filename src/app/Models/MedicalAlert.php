@@ -67,7 +67,7 @@ class MedicalAlert extends Model
     {
         $labels = [
             'allergy' => 'حساسیت',
-            'drug_interaction' => 'تداخل دارویی',
+            'product_interaction' => 'تداخل دارویی',
             'chronic_disease' => 'بیماری مزمن',
             'critical_result' => 'نتیجه بحرانی',
         ];

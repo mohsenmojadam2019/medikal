@@ -8,10 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('admission_drugs', function (Blueprint $table) {
+        Schema::create('admission_products', function (Blueprint $table) {
             $table->id();
             $table->foreignId('admission_id')->constrained('admissions')->onDelete('cascade');
-            $table->string('drug_name');
+            $table->string('product_name');
             $table->string('dosage');
             $table->integer('frequency')->default(1);
             $table->string('route')->default('oral');
@@ -31,6 +31,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('admission_drugs');
+        Schema::dropIfExists('admission_products');
     }
 };

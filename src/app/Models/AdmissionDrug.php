@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class AdmissionDrug extends Model
+class AdmissionProduct extends Model
 {
     protected $fillable = [
         'tenant_id',
         'admission_id',
-        'drug_name',
+        'product_name',
         'dosage',
         'frequency',
         'route',

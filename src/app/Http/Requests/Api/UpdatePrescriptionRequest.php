@@ -15,7 +15,7 @@ class UpdatePrescriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'drug_name' => 'sometimes|string|max:255',
+            'product_name' => 'sometimes|string|max:255',
             'dosage' => 'sometimes|string|max:100',
             'frequency' => 'sometimes|integer|min:1|max:4',
             'duration' => 'sometimes|integer|min:1|max:365',

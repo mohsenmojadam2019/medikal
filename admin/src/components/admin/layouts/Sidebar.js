@@ -123,9 +123,9 @@ export default function Sidebar({ collapsed, onCollapse }) {
           label: <Link href="/admin/prescriptions">{t('prescriptions', 'نسخه‌ها')}</Link>,
         },
         {
-          key: 'drugs',
+          key: 'products',
           icon: <MedicineBoxOutlined />,
-          label: <Link href="/admin/drugs">{t('drugs', 'داروها')}</Link>,
+          label: <Link href="/admin/products">{t('products', 'داروها')}</Link>,
         },
         {
           key: 'referrals',

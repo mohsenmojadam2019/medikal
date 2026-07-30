@@ -19,7 +19,7 @@ return [
     'category_mapping' => [
         'symptom' => 'medical',
         'disease' => 'medical',
-        'drug' => 'pharmacy',
+        'product' => 'pharmacy',
         'emergency' => 'emergency',
         'nutrition' => 'nutrition',
         'psychology' => 'psychology',

@@ -216,7 +216,7 @@ class EHRController extends Controller
         $validator = Validator::make($request->all(), [
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'nullable|exists:doctors,id',
-            'type' => 'required|in:allergy,drug_interaction,chronic_disease,critical_result',
+            'type' => 'required|in:allergy,product_interaction,chronic_disease,critical_result',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'severity' => 'nullable|in:low,medium,high,critical',

@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('prescription_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('prescription_id')->constrained('prescriptions')->onDelete('cascade');
-            $table->foreignId('drug_id')->constrained('drugs')->onDelete('cascade');
+            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
             $table->integer('quantity')->default(1);
             $table->string('dosage')->nullable();
             $table->string('frequency')->nullable();

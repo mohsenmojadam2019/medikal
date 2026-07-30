@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignId('doctor_id')->constrained('doctors')->onDelete('cascade');
 
             $table->string('code')->unique();
-            $table->string('drug_name');
+            $table->string('product_name');
             $table->string('dosage');
             $table->integer('frequency'); // تعداد در روز
             $table->integer('duration'); // روز

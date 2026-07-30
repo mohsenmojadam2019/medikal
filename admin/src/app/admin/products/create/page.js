@@ -25,13 +25,13 @@ import {
   DollarOutlined,
   StockOutlined,
 } from '@ant-design/icons';
-import { drugsService } from '@/services/api';
+import { productsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-export default function CreateDrugPage() {
+export default function CreateProductPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const [form] = Form.useForm();
@@ -40,11 +40,11 @@ export default function CreateDrugPage() {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      await drugsService.create(values);
-      message.success(t('drug_created', 'دارو با موفقیت ایجاد شد'));
-      router.push('/admin/drugs');
+      await productsService.create(values);
+      message.success(t('product_created', 'دارو با موفقیت ایجاد شد'));
+      router.push('/admin/products');
     } catch (error) {
-      console.error('Error creating drug:', error);
+      console.error('Error creating product:', error);
       message.error(t('create_error', 'خطا در ایجاد دارو'));
     } finally {
       setLoading(false);
@@ -75,10 +75,10 @@ export default function CreateDrugPage() {
             />
             <div>
               <Title level={2} style={{ margin: 0 }}>
-                {t('new_drug', 'دارو جدید')}
+                {t('new_product', 'دارو جدید')}
               </Title>
               <Text type="secondary">
-                {t('create_drug_subtitle', 'ثبت دارو جدید در سیستم')}
+                {t('create_product_subtitle', 'ثبت دارو جدید در سیستم')}
               </Text>
             </div>
           </Space>
@@ -108,12 +108,12 @@ export default function CreateDrugPage() {
                 <Col xs={24} md={12}>
                   <Form.Item
                     name="name"
-                    label={t('drug_name', 'نام دارو')}
+                    label={t('product_name', 'نام دارو')}
                     rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
                   >
                     <Input
                       prefix={<MedicineBoxOutlined />}
-                      placeholder={t('drug_name_placeholder', 'مثال: ایبوپروفن')}
+                      placeholder={t('product_name_placeholder', 'مثال: ایبوپروفن')}
                     />
                   </Form.Item>
                 </Col>
@@ -248,7 +248,7 @@ export default function CreateDrugPage() {
                 <div style={{ textAlign: 'center', padding: '16px 0' }}>
                   <MedicineBoxOutlined style={{ fontSize: 48, color: '#2563eb' }} />
                   <div style={{ marginTop: 8 }}>
-                    <Text type="secondary">{t('drug_settings', 'تنظیمات دارو')}</Text>
+                    <Text type="secondary">{t('product_settings', 'تنظیمات دارو')}</Text>
                   </div>
                 </div>
 
@@ -280,7 +280,7 @@ export default function CreateDrugPage() {
 
                 <div style={{ textAlign: 'center' }}>
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    {t('drug_help', 'پس از ایجاد، دارو در لیست داروها قابل مشاهده است')}
+                    {t('product_help', 'پس از ایجاد، دارو در لیست داروها قابل مشاهده است')}
                   </Text>
                 </div>
               </Card>

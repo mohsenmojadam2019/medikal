@@ -18,7 +18,7 @@ class Prescription extends Model
         'patient_id',
         'doctor_id',
         'code',
-        'drug_name',
+        'product_name',
         'dosage',
         'frequency',
         'duration',
@@ -195,7 +195,7 @@ class Prescription extends Model
                 $reminders[] = [
                     'patient_id' => $this->patient_id,
                     'prescription_id' => $this->id,
-                    'drug_name' => $this->drug_name,
+                    'product_name' => $this->product_name,
                     'dosage' => $this->dosage,
                     'date' => $date->format('Y-m-d'),
                     'time' => $time,
@@ -207,12 +207,12 @@ class Prescription extends Model
         return $reminders;
     }
 
-    public function getDrugInteractions(): array
+    public function getProductInteractions(): array
     {
-        $otherDrugs = Prescription::where('patient_id', $this->patient_id)
+        $otherProducts = Prescription::where('patient_id', $this->patient_id)
             ->where('id', '!=', $this->id)
             ->where('status', PrescriptionStatusEnum::ACTIVE)
-            ->pluck('drug_name')
+            ->pluck('product_name')
             ->toArray();
 
         $interactions = [];
@@ -222,13 +222,13 @@ class Prescription extends Model
             'لوزارتان' => ['آموکسی‌سیلین', 'دیازپام'],
         ];
 
-        foreach ($otherDrugs as $drug) {
-            if (isset($knownInteractions[$this->drug_name]) &&
-                in_array($drug, $knownInteractions[$this->drug_name])) {
+        foreach ($otherProducts as $product) {
+            if (isset($knownInteractions[$this->product_name]) &&
+                in_array($product, $knownInteractions[$this->product_name])) {
                 $interactions[] = [
-                    'drug' => $drug,
+                    'product' => $product,
                     'severity' => 'moderate',
-                    'message' => "تداخل بین {$this->drug_name} و {$drug}",
+                    'message' => "تداخل بین {$this->product_name} و {$product}",
                 ];
             }
         }

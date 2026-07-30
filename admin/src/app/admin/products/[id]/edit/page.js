@@ -26,49 +26,49 @@ import {
   DollarOutlined,
   StockOutlined,
 } from '@ant-design/icons';
-import { drugsService } from '@/services/api';
+import { productsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-export default function EditDrugPage() {
+export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
-  const drugId = params.id;
+  const productId = params.id;
   const { t } = useLanguage();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
-  const [drug, setDrug] = useState(null);
+  const [product, setProduct] = useState(null);
 
   useEffect(() => {
-    const fetchDrug = async () => {
+    const fetchProduct = async () => {
       try {
-        const response = await drugsService.getById(drugId);
-        setDrug(response.data);
+        const response = await productsService.getById(productId);
+        setProduct(response.data);
         form.setFieldsValue(response.data);
       } catch (error) {
-        console.error('Error fetching drug:', error);
+        console.error('Error fetching product:', error);
         message.error(t('fetch_error', 'خطا در دریافت اطلاعات'));
       } finally {
         setFetchLoading(false);
       }
     };
 
-    if (drugId) {
-      fetchDrug();
+    if (productId) {
+      fetchProduct();
     }
-  }, [drugId, form, t]);
+  }, [productId, form, t]);
 
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      await drugsService.update(drugId, values);
+      await productsService.update(productId, values);
       message.success(t('updated', 'دارو با موفقیت به‌روزرسانی شد'));
-      router.push('/admin/drugs');
+      router.push('/admin/products');
     } catch (error) {
-      console.error('Error updating drug:', error);
+      console.error('Error updating product:', error);
       message.error(t('update_error', 'خطا در به‌روزرسانی'));
     } finally {
       setLoading(false);
@@ -107,10 +107,10 @@ export default function EditDrugPage() {
             />
             <div>
               <Title level={2} style={{ margin: 0 }}>
-                {t('edit_drug', 'ویرایش دارو')}
+                {t('edit_product', 'ویرایش دارو')}
               </Title>
               <Text type="secondary">
-                {drug?.name || t('edit_drug_subtitle', 'ویرایش اطلاعات دارو')}
+                {product?.name || t('edit_product_subtitle', 'ویرایش اطلاعات دارو')}
               </Text>
             </div>
           </Space>
@@ -135,12 +135,12 @@ export default function EditDrugPage() {
                 <Col xs={24} md={12}>
                   <Form.Item
                     name="name"
-                    label={t('drug_name', 'نام دارو')}
+                    label={t('product_name', 'نام دارو')}
                     rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
                   >
                     <Input
                       prefix={<MedicineBoxOutlined />}
-                      placeholder={t('drug_name_placeholder', 'مثال: ایبوپروفن')}
+                      placeholder={t('product_name_placeholder', 'مثال: ایبوپروفن')}
                     />
                   </Form.Item>
                 </Col>
@@ -275,7 +275,7 @@ export default function EditDrugPage() {
                 <div style={{ textAlign: 'center', padding: '16px 0' }}>
                   <MedicineBoxOutlined style={{ fontSize: 48, color: '#2563eb' }} />
                   <div style={{ marginTop: 8 }}>
-                    <Text type="secondary">{t('drug_settings', 'تنظیمات دارو')}</Text>
+                    <Text type="secondary">{t('product_settings', 'تنظیمات دارو')}</Text>
                   </div>
                 </div>
 
@@ -307,7 +307,7 @@ export default function EditDrugPage() {
 
                 <div style={{ textAlign: 'center' }}>
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    {t('drug_edit_help', 'تغییرات روی اطلاعات دارو اعمال می‌شود')}
+                    {t('product_edit_help', 'تغییرات روی اطلاعات دارو اعمال می‌شود')}
                   </Text>
                 </div>
               </Card>

@@ -27,7 +27,7 @@ import {
   MedicineBoxOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { prescriptionsService, doctorsService, patientsService, drugsService } from '@/services/api';
+import { prescriptionsService, doctorsService, patientsService, productsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import JalaliDatePicker from '@/components/admin/common/JalaliDatePicker';
 import dayjs from 'dayjs';
@@ -46,21 +46,21 @@ export default function EditPrescriptionPage() {
   const [prescription, setPrescription] = useState(null);
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
-  const [drugs, setDrugs] = useState([]);
+  const [products, setProducts] = useState([]);
   const [items, setItems] = useState([]);
-  const [selectedDrug, setSelectedDrug] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [doctorsRes, patientsRes, drugsRes] = await Promise.all([
+        const [doctorsRes, patientsRes, productsRes] = await Promise.all([
           doctorsService.getAll({ per_page: 100 }),
           patientsService.getAll({ per_page: 100 }),
-          drugsService.getAll({ per_page: 1000 }),
+          productsService.getAll({ per_page: 1000 }),
         ]);
         setDoctors(doctorsRes.data || []);
         setPatients(patientsRes.data || []);
-        setDrugs(drugsRes.data || []);
+        setProducts(productsRes.data || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -88,25 +88,25 @@ export default function EditPrescriptionPage() {
     }
   }, [prescriptionId, form, t]);
 
-  const handleAddDrug = () => {
-    if (!selectedDrug) {
-      message.warning(t('select_drug', 'لطفاً یک دارو انتخاب کنید'));
+  const handleAddProduct = () => {
+    if (!selectedProduct) {
+      message.warning(t('select_product', 'لطفاً یک دارو انتخاب کنید'));
       return;
     }
 
     const formValues = form.getFieldsValue(['dosage', 'frequency', 'duration', 'instructions']);
     if (!formValues.dosage || !formValues.frequency || !formValues.duration) {
-      message.warning(t('fill_drug_fields', 'لطفاً دوز، تعداد و مدت مصرف را وارد کنید'));
+      message.warning(t('fill_product_fields', 'لطفاً دوز، تعداد و مدت مصرف را وارد کنید'));
       return;
     }
 
-    const drug = drugs.find(d => d.id === selectedDrug);
+    const product = products.find(d => d.id === selectedProduct);
     setItems([
       ...items,
       {
         id: Date.now(),
-        drug_id: selectedDrug,
-        drug_name: drug?.name || '',
+        product_id: selectedProduct,
+        product_name: product?.name || '',
         dosage: formValues.dosage,
         frequency: formValues.frequency,
         duration: formValues.duration,
@@ -120,17 +120,17 @@ export default function EditPrescriptionPage() {
       duration: undefined,
       instructions: undefined,
     });
-    setSelectedDrug(null);
-    message.success(t('drug_added', 'دارو به نسخه اضافه شد'));
+    setSelectedProduct(null);
+    message.success(t('product_added', 'دارو به نسخه اضافه شد'));
   };
 
-  const handleRemoveDrug = (id) => {
+  const handleRemoveProduct = (id) => {
     setItems(items.filter(item => item.id !== id));
   };
 
   const handleSubmit = async (values) => {
     if (items.length === 0) {
-      message.warning(t('no_drugs', 'حداقل یک دارو باید به نسخه اضافه شود'));
+      message.warning(t('no_products', 'حداقل یک دارو باید به نسخه اضافه شود'));
       return;
     }
 
@@ -139,7 +139,7 @@ export default function EditPrescriptionPage() {
       const data = {
         ...values,
         items: items.map(item => ({
-          drug_id: item.drug_id,
+          product_id: item.product_id,
           dosage: item.dosage,
           frequency: item.frequency,
           duration: item.duration,
@@ -164,9 +164,9 @@ export default function EditPrescriptionPage() {
 
   const columns = [
     {
-      title: t('drug_name', 'نام دارو'),
-      dataIndex: 'drug_name',
-      key: 'drug_name',
+      title: t('product_name', 'نام دارو'),
+      dataIndex: 'product_name',
+      key: 'product_name',
     },
     {
       title: t('dosage', 'دوز مصرفی'),
@@ -194,8 +194,8 @@ export default function EditPrescriptionPage() {
       key: 'actions',
       render: (_, record) => (
         <Popconfirm
-          title={t('remove_drug_confirm', 'آیا از حذف این دارو اطمینان دارید؟')}
-          onConfirm={() => handleRemoveDrug(record.id)}
+          title={t('remove_product_confirm', 'آیا از حذف این دارو اطمینان دارید؟')}
+          onConfirm={() => handleRemoveProduct(record.id)}
           okText={t('yes', 'بله')}
           cancelText={t('no', 'خیر')}
         >
@@ -341,18 +341,18 @@ export default function EditPrescriptionPage() {
 
               <Divider />
 
-              <Title level={4}>{t('add_drug', 'افزودن دارو')}</Title>
+              <Title level={4}>{t('add_product', 'افزودن دارو')}</Title>
 
               <Row gutter={[16, 0]}>
                 <Col xs={24} md={12}>
-                  <Form.Item label={t('select_drug', 'انتخاب دارو')}>
+                  <Form.Item label={t('select_product', 'انتخاب دارو')}>
                     <Select
-                      placeholder={t('search_drug', 'جستجوی دارو...')}
+                      placeholder={t('search_product', 'جستجوی دارو...')}
                       showSearch
                       optionFilterProp="children"
-                      value={selectedDrug}
-                      onChange={setSelectedDrug}
-                      options={drugs.map((d) => ({
+                      value={selectedProduct}
+                      onChange={setSelectedProduct}
+                      options={products.map((d) => ({
                         value: d.id,
                         label: `${d.name} (${d.form || ''} ${d.strength || ''})`,
                       }))}
@@ -400,7 +400,7 @@ export default function EditPrescriptionPage() {
               <Button
                 type="dashed"
                 icon={<PlusOutlined />}
-                onClick={handleAddDrug}
+                onClick={handleAddProduct}
                 block
                 style={{ marginBottom: 16 }}
               >
@@ -420,7 +420,7 @@ export default function EditPrescriptionPage() {
                       <Table.Summary.Row>
                         <Table.Summary.Cell index={0} colSpan={5}>
                           <Text strong>
-                            {t('total_drugs', 'تعداد داروها')}: {items.length}
+                            {t('total_products', 'تعداد داروها')}: {items.length}
                           </Text>
                         </Table.Summary.Cell>
                       </Table.Summary.Row>

@@ -380,14 +380,14 @@ class HospitalController extends Controller
     }
 
     // ============================================================
-    // ADMISSION DRUGS
+    // ADMISSION ProductS
     // ============================================================
 
-    public function addDrug(Request $request)
+    public function addProduct(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'admission_id' => 'required|exists:admissions,id',
-            'drug_name' => 'required|string|max:255',
+            'product_name' => 'required|string|max:255',
             'dosage' => 'required|string|max:100',
             'frequency' => 'nullable|integer|min:1|max:10',
             'route' => 'nullable|string|in:oral,iv,im,sc,topical,inhalation',
@@ -403,8 +403,8 @@ class HospitalController extends Controller
         }
 
         try {
-            $drug = $this->hospitalService->addDrug($request->all());
-            return $this->success($drug, 'دارو با موفقیت اضافه شد', 201);
+            $product = $this->hospitalService->addProduct($request->all());
+            return $this->success($product, 'دارو با موفقیت اضافه شد', 201);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 400);
         }

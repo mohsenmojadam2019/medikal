@@ -15,7 +15,7 @@ use App\Models\Rating;
 use App\Models\Wallet;
 use App\Models\Notification;
 use App\Models\LabResult;
-use App\Models\Drug;
+use App\Models\Product;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -158,7 +158,7 @@ class ManagementDashboardService
             'total_orders' => $query->count(),
             'pending_orders' => (clone $query)->whereIn('status', ['pending', 'checking', 'payment_pending'])->count(),
             'completed_orders' => (clone $query)->where('status', 'delivered')->count(),
-            'low_stock_drugs' => Drug::where('tenant_id', $this->tenantId)->where('stock', '<', 10)->where('is_active', true)->count(),
+            'low_stock_products' => Product::where('tenant_id', $this->tenantId)->where('stock', '<', 10)->where('is_active', true)->count(),
         ];
     }
 

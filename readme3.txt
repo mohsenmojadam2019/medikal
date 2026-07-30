@@ -226,7 +226,7 @@ curl -X POST http://localhost:8210/api/prescriptions \
   -H "Content-Type: application/json" \
   -d '{
     "appointment_id": 1,
-    "drug_name": "آموکسی‌سیلین",
+    "product_name": "آموکسی‌سیلین",
     "dosage": "500mg",
     "frequency": 3,
     "duration": 7,
@@ -299,14 +299,14 @@ curl -X POST http://localhost:8210/api/admin/notifications/send-to-doctors \
     "body": "جلسه هماهنگی فردا ساعت ۱۰ برگزار می‌شود",
     "priority": "urgent"
   }'
-۹. مدیریت داروها (Drugs)
+۹. مدیریت داروها (Products)
 ۹.۱ لیست داروها
 bash
-curl -X GET http://localhost:8210/api/admin/drugs \
+curl -X GET http://localhost:8210/api/admin/products \
   -H "Authorization: Bearer $TOKEN"
 ۹.۲ ایجاد دارو جدید
 bash
-curl -X POST http://localhost:8210/api/admin/drugs \
+curl -X POST http://localhost:8210/api/admin/products \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -322,11 +322,11 @@ curl -X POST http://localhost:8210/api/admin/drugs \
   }'
 ۹.۳ جستجوی دارو
 bash
-curl -X GET "http://localhost:8210/api/drugs/search?q=ایبوپروفن" \
+curl -X GET "http://localhost:8210/api/products/search?q=ایبوپروفن" \
   -H "Authorization: Bearer $TOKEN"
 ۹.۴ افزایش موجودی دارو
 bash
-curl -X POST http://localhost:8210/api/admin/drugs/1/increase-stock \
+curl -X POST http://localhost:8210/api/admin/products/1/increase-stock \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -334,7 +334,7 @@ curl -X POST http://localhost:8210/api/admin/drugs/1/increase-stock \
   }'
 ۹.۵ کاهش موجودی دارو
 bash
-curl -X POST http://localhost:8210/api/admin/drugs/1/decrease-stock \
+curl -X POST http://localhost:8210/api/admin/products/1/decrease-stock \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -342,7 +342,7 @@ curl -X POST http://localhost:8210/api/admin/drugs/1/decrease-stock \
   }'
 ۹.۶ تغییر وضعیت دارو (فعال/غیرفعال)
 bash
-curl -X POST http://localhost:8210/api/admin/drugs/1/toggle-status \
+curl -X POST http://localhost:8210/api/admin/products/1/toggle-status \
   -H "Authorization: Bearer $TOKEN"
 ۱۰. سیستم زمان‌بندی پزشکان (Schedules)
 ۱۰.۱ دریافت زمان‌بندی هفتگی پزشک
@@ -1132,12 +1132,12 @@ curl -X POST http://localhost:8210/api/hospital/services \
   }'
 
 # ثبت داروی بستری
-curl -X POST http://localhost:8210/api/hospital/drugs \
+curl -X POST http://localhost:8210/api/hospital/products \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "admission_id": 1,
-    "drug_name": "آسپرین",
+    "product_name": "آسپرین",
     "dosage": "80mg",
     "frequency": 1,
     "route": "oral",

@@ -3,6 +3,8 @@ http://localhost:8210/admin/login
 📧 Email: admin@clinic-yar.com
 🔑 Password: 12345678
 
+ADMIN_TOKEN="2|5OCAlH5X5zKhh70McpEV4MtrxDp466ihkOovYE69cf16da0d"
+
 
 ✅ نقش admin به کاربر موجود اختصاص داده شد.
 ✅ نقش‌ها و مجوزها با موفقیت ایجاد شدند!

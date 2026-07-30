@@ -1,4 +1,4 @@
-// src/app/admin/drugs/page.js
+// src/app/admin/products/page.js
 
 'use client';
 
@@ -39,19 +39,19 @@ import {
   MedicineBoxOutlined,
   TagOutlined,
 } from '@ant-design/icons';
-import { drugsService } from '@/services/api';
+import { productsService } from '@/services/api';
 import { useLanguage } from '@/context/LanguageContext';
 import Loading from '@/components/admin/common/Loading';
 
 const { Title, Text } = Typography;
 
-export default function DrugsPage() {
+export default function ProductsPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const { message } = App.useApp(); // ✅ استفاده از App.useApp()
 
   const [loading, setLoading] = useState(false);
-  const [drugs, setDrugs] = useState([]);
+  const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -59,17 +59,17 @@ export default function DrugsPage() {
   });
   const [searchText, setSearchText] = useState('');
   const [filters, setFilters] = useState({});
-  const [selectedDrug, setSelectedDrug] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState('view');
   const [stockForm] = Form.useForm();
   const [stockLoading, setStockLoading] = useState(false);
 
   // ===== دریافت لیست داروها =====
-  const fetchDrugs = async (params = {}) => {
+  const fetchProducts = async (params = {}) => {
     setLoading(true);
     try {
-      const response = await drugsService.getAll({
+      const response = await productsService.getAll({
         page: pagination.current,
         per_page: pagination.pageSize,
         search: searchText,
@@ -81,47 +81,47 @@ export default function DrugsPage() {
       if (response.data?.success) {
         const data = response.data.data;
         const list = data?.data || data || [];
-        setDrugs(Array.isArray(list) ? list : []);
+        setProducts(Array.isArray(list) ? list : []);
         setPagination({
           ...pagination,
           total: data?.total || (Array.isArray(list) ? list.length : 0),
           current: data?.current_page || 1,
         });
       } else {
-        setDrugs([]);
+        setProducts([]);
         setPagination({
           ...pagination,
           total: 0,
         });
       }
     } catch (error) {
-      console.error('Error fetching drugs:', error);
+      console.error('Error fetching products:', error);
       message.error(t('fetch_error', 'خطا در دریافت اطلاعات'));
-      setDrugs([]);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDrugs();
+    fetchProducts();
   }, [pagination.current, pagination.pageSize]);
 
   const handleSearch = () => {
-    fetchDrugs({ page: 1 });
+    fetchProducts({ page: 1 });
   };
 
   const handleReset = () => {
     setSearchText('');
     setFilters({});
-    fetchDrugs({ page: 1 });
+    fetchProducts({ page: 1 });
   };
 
   const handleToggleStatus = async (id) => {
     try {
-      await drugsService.toggleStatus(id);
+      await productsService.toggleStatus(id);
       message.success(t('status_changed', 'وضعیت با موفقیت تغییر کرد'));
-      fetchDrugs();
+      fetchProducts();
     } catch (error) {
       message.error(t('error', 'خطا در تغییر وضعیت'));
     }
@@ -129,50 +129,50 @@ export default function DrugsPage() {
 
   const handleDelete = async (id) => {
     try {
-      await drugsService.delete(id);
+      await productsService.delete(id);
       message.success(t('deleted', 'دارو با موفقیت حذف شد'));
-      fetchDrugs();
+      fetchProducts();
     } catch (error) {
       message.error(t('error', 'خطا در حذف دارو'));
     }
   };
 
   const handleView = (record) => {
-    setSelectedDrug(record);
+    setSelectedProduct(record);
     setModalMode('view');
     setIsModalVisible(true);
   };
 
   const handleEdit = (record) => {
-    router.push(`/admin/drugs/${record.id}/edit`);
+    router.push(`/admin/products/${record.id}/edit`);
   };
 
   const handleCreate = () => {
-    router.push('/admin/drugs/create');
+    router.push('/admin/products/create');
   };
 
   // ===== مدیریت موجودی =====
   const handleStockAction = (record, action) => {
-    setSelectedDrug(record);
+    setSelectedProduct(record);
     setModalMode(action);
     stockForm.resetFields();
     setIsModalVisible(true);
   };
 
   const handleStockSubmit = async (values) => {
-    if (!selectedDrug) return;
+    if (!selectedProduct) return;
 
     setStockLoading(true);
     try {
       if (modalMode === 'increase') {
-        await drugsService.increaseStock(selectedDrug.id, values.quantity);
+        await productsService.increaseStock(selectedProduct.id, values.quantity);
         message.success(t('stock_increased', 'موجودی با موفقیت افزایش یافت'));
       } else {
-        await drugsService.decreaseStock(selectedDrug.id, values.quantity);
+        await productsService.decreaseStock(selectedProduct.id, values.quantity);
         message.success(t('stock_decreased', 'موجودی با موفقیت کاهش یافت'));
       }
       setIsModalVisible(false);
-      fetchDrugs();
+      fetchProducts();
     } catch (error) {
       message.error(error?.response?.data?.message || error?.message || t('error', 'خطا در عملیات'));
     } finally {
@@ -197,7 +197,7 @@ export default function DrugsPage() {
       render: (text) => <Tag color="blue">{text}</Tag>,
     },
     {
-      title: t('drug_name', 'نام دارو'),
+      title: t('product_name', 'نام دارو'),
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
@@ -338,9 +338,9 @@ export default function DrugsPage() {
     },
   ];
 
-  // اگر drugs آرایه نیست
-  if (!Array.isArray(drugs)) {
-    console.error('⚠️ Drugs is not an array:', drugs);
+  // اگر products آرایه نیست
+  if (!Array.isArray(products)) {
+    console.error('⚠️ Products is not an array:', products);
     return (
         <div style={{ padding: 24 }}>
           <Title level={4}>خطا در نمایش داده‌ها</Title>
@@ -361,10 +361,10 @@ export default function DrugsPage() {
         >
           <div>
             <Title level={2} style={{ margin: 0 }}>
-              {t('drugs_management', 'مدیریت داروها')}
+              {t('products_management', 'مدیریت داروها')}
             </Title>
             <Text type="secondary">
-              {t('drugs_subtitle', 'لیست و مدیریت داروهای موجود')}
+              {t('products_subtitle', 'لیست و مدیریت داروهای موجود')}
             </Text>
           </div>
           <Button
@@ -377,7 +377,7 @@ export default function DrugsPage() {
                 border: 'none',
               }}
           >
-            {t('new_drug', 'دارو جدید')}
+            {t('new_product', 'دارو جدید')}
           </Button>
         </div>
 
@@ -391,7 +391,7 @@ export default function DrugsPage() {
           <Row gutter={[16, 16]} align="middle">
             <Col xs={24} sm={12} md={8} lg={6}>
               <Input
-                  placeholder={t('search_drug', 'جستجوی دارو...')}
+                  placeholder={t('search_product', 'جستجوی دارو...')}
                   prefix={<SearchOutlined />}
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
@@ -456,7 +456,7 @@ export default function DrugsPage() {
         >
           <Table
               columns={columns}
-              dataSource={drugs}
+              dataSource={products}
               loading={loading}
               rowKey="id"
               pagination={{
@@ -471,7 +471,7 @@ export default function DrugsPage() {
               }}
               scroll={{ x: 1400 }}
               locale={{
-                emptyText: t('no_drugs', 'هیچ دارویی یافت نشد'),
+                emptyText: t('no_products', 'هیچ دارویی یافت نشد'),
               }}
           />
         </Card>
@@ -480,7 +480,7 @@ export default function DrugsPage() {
         <Modal
             title={
               modalMode === 'view'
-                  ? t('drug_details', 'جزئیات دارو')
+                  ? t('product_details', 'جزئیات دارو')
                   : modalMode === 'increase'
                       ? t('increase_stock', 'افزایش موجودی')
                       : t('decrease_stock', 'کاهش موجودی')
@@ -490,56 +490,56 @@ export default function DrugsPage() {
             footer={null}
             width={500}
         >
-          {modalMode === 'view' && selectedDrug && (
+          {modalMode === 'view' && selectedProduct && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
                   <Avatar
                       size={64}
                       icon={<MedicineBoxOutlined />}
-                      style={{ backgroundColor: selectedDrug.is_active ? '#10b981' : '#94a3b8' }}
+                      style={{ backgroundColor: selectedProduct.is_active ? '#10b981' : '#94a3b8' }}
                   />
                   <div>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>{selectedDrug.name}</div>
-                    <div style={{ color: '#64748b' }}>{selectedDrug.code}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{selectedProduct.name}</div>
+                    <div style={{ color: '#64748b' }}>{selectedProduct.code}</div>
                   </div>
                 </div>
 
                 <Row gutter={[16, 16]}>
                   <Col span={12}>
                     <Text type="secondary">{t('generic_name', 'نام ژنریک')}</Text>
-                    <div style={{ fontWeight: 500 }}>{selectedDrug.generic_name || '—'}</div>
+                    <div style={{ fontWeight: 500 }}>{selectedProduct.generic_name || '—'}</div>
                   </Col>
                   <Col span={12}>
                     <Text type="secondary">{t('category', 'دسته‌بندی')}</Text>
-                    <div style={{ fontWeight: 500 }}>{selectedDrug.category || '—'}</div>
+                    <div style={{ fontWeight: 500 }}>{selectedProduct.category || '—'}</div>
                   </Col>
                   <Col span={12}>
                     <Text type="secondary">{t('form', 'فرم')}</Text>
-                    <div style={{ fontWeight: 500 }}>{selectedDrug.form || '—'}</div>
+                    <div style={{ fontWeight: 500 }}>{selectedProduct.form || '—'}</div>
                   </Col>
                   <Col span={12}>
                     <Text type="secondary">{t('strength', 'قدرت')}</Text>
-                    <div style={{ fontWeight: 500 }}>{selectedDrug.strength || '—'}</div>
+                    <div style={{ fontWeight: 500 }}>{selectedProduct.strength || '—'}</div>
                   </Col>
                   <Col span={12}>
                     <Text type="secondary">{t('manufacturer', 'سازنده')}</Text>
-                    <div style={{ fontWeight: 500 }}>{selectedDrug.manufacturer || '—'}</div>
+                    <div style={{ fontWeight: 500 }}>{selectedProduct.manufacturer || '—'}</div>
                   </Col>
                   <Col span={12}>
                     <Text type="secondary">{t('price', 'قیمت')}</Text>
                     <div style={{ fontWeight: 500 }}>
-                      {selectedDrug.price ? `${Number(selectedDrug.price).toLocaleString()} تومان` : '—'}
+                      {selectedProduct.price ? `${Number(selectedProduct.price).toLocaleString()} تومان` : '—'}
                     </div>
                   </Col>
                   <Col span={12}>
                     <Text type="secondary">{t('stock', 'موجودی')}</Text>
-                    <div style={{ fontWeight: 500 }}>{selectedDrug.stock || 0}</div>
+                    <div style={{ fontWeight: 500 }}>{selectedProduct.stock || 0}</div>
                   </Col>
                   <Col span={12}>
                     <Text type="secondary">{t('requires_prescription', 'نیاز به نسخه')}</Text>
                     <div style={{ fontWeight: 500 }}>
-                      <Tag color={selectedDrug.requires_prescription ? 'orange' : 'green'}>
-                        {selectedDrug.requires_prescription ? t('yes', 'بله') : t('no', 'خیر')}
+                      <Tag color={selectedProduct.requires_prescription ? 'orange' : 'green'}>
+                        {selectedProduct.requires_prescription ? t('yes', 'بله') : t('no', 'خیر')}
                       </Tag>
                     </div>
                   </Col>
@@ -547,8 +547,8 @@ export default function DrugsPage() {
                     <Text type="secondary">{t('status', 'وضعیت')}</Text>
                     <div style={{ fontWeight: 500 }}>
                       <Badge
-                          status={selectedDrug.is_active ? 'success' : 'error'}
-                          text={selectedDrug.is_active ? t('active', 'فعال') : t('inactive', 'غیرفعال')}
+                          status={selectedProduct.is_active ? 'success' : 'error'}
+                          text={selectedProduct.is_active ? t('active', 'فعال') : t('inactive', 'غیرفعال')}
                       />
                     </div>
                   </Col>

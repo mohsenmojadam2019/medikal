@@ -70,9 +70,9 @@ class Admission extends Model
         return $this->hasMany(AdmissionService::class);
     }
 
-    public function drugs()
+    public function products()
     {
-        return $this->hasMany(AdmissionDrug::class);
+        return $this->hasMany(AdmissionProduct::class);
     }
 
     public function days()
@@ -141,8 +141,8 @@ class Admission extends Model
     {
         $bedCost = $this->duration * $this->bed?->price_per_day ?? 0;
         $servicesCost = $this->services()->sum('price');
-        $drugsCost = $this->drugs()->sum('total_price');
-        return $bedCost + $servicesCost + $drugsCost;
+        $productsCost = $this->products()->sum('total_price');
+        return $bedCost + $servicesCost + $productsCost;
     }
 
     public function getIsActiveAttribute(): bool

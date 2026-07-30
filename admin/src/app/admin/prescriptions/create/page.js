@@ -230,13 +230,13 @@ export default function CreatePrescriptionPage() {
                 <Row gutter={[16, 0]}>
                   <Col xs={24} md={12}>
                     <Form.Item
-                        name="drug_name"
-                        label={t('drug_name', 'نام دارو')}
+                        name="product_name"
+                        label={t('product_name', 'نام دارو')}
                         rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
                     >
                       <Input
                           prefix={<MedicineBoxOutlined />}
-                          placeholder={t('drug_name_placeholder', 'مثال: آموکسی‌سیلین')}
+                          placeholder={t('product_name_placeholder', 'مثال: آموکسی‌سیلین')}
                       />
                     </Form.Item>
                   </Col>

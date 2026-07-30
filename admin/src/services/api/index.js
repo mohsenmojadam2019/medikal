@@ -10,7 +10,7 @@ export { default as appointmentsService } from './admin/appointments';
 export { default as specialtiesService } from './admin/specialties';
 export { default as schedulesService } from './admin/schedules';
 export { default as prescriptionsService } from './admin/prescriptions';
-export { default as drugsService } from './admin/drugs';
+export { default as productsService } from './admin/products';
 export { default as referralsService } from './admin/referrals';
 export { default as ratingsService } from './admin/ratings';
 export { default as invoicesService } from './admin/invoices';

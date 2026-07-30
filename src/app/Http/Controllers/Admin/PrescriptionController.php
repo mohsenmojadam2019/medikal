@@ -39,12 +39,12 @@ class PrescriptionController extends Controller
             $query->where('patient_id', $request->patient_id);
         }
 
-        // جستجو - فقط روی code و drug_name
+        // جستجو - فقط روی code و product_name
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")
-                    ->orWhere('drug_name', 'like', "%{$search}%");
+                    ->orWhere('product_name', 'like', "%{$search}%");
             });
         }
 
@@ -62,7 +62,7 @@ class PrescriptionController extends Controller
         $validator = Validator::make($request->all(), [
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
-            'drug_name' => 'required|string|max:255',
+            'product_name' => 'required|string|max:255',
             'dosage' => 'required|string|max:255',
             'frequency' => 'nullable|integer|min:1|max:24',
             'duration' => 'nullable|integer|min:1|max:365',
@@ -129,7 +129,7 @@ class PrescriptionController extends Controller
         $validator = Validator::make($request->all(), [
             'patient_id' => 'sometimes|exists:patients,id',
             'doctor_id' => 'sometimes|exists:doctors,id',
-            'drug_name' => 'sometimes|string|max:255',
+            'product_name' => 'sometimes|string|max:255',
             'dosage' => 'sometimes|string|max:255',
             'frequency' => 'nullable|integer|min:1|max:24',
             'duration' => 'nullable|integer|min:1|max:365',

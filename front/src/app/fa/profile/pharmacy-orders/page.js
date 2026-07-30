@@ -719,7 +719,7 @@ export default function PharmacyOrdersPage() {
                             <Table
                                 dataSource={selectedOrder.items}
                                 columns={[
-                                    { title: 'نام محصول', dataIndex: 'drug', key: 'drug', render: (drug) => drug?.name || '—' },
+                                    { title: 'نام محصول', dataIndex: 'product', key: 'product', render: (product) => product?.name || '—' },
                                     { title: 'تعداد', dataIndex: 'quantity', key: 'quantity', render: (q) => toPersianNumber(q) },
                                     {
                                         title: 'قیمت واحد',

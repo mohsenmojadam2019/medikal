@@ -157,7 +157,7 @@ class HospitalService
                 'ward',
                 'bed',
                 'services',
-                'drugs',
+                'products',
                 'days',
                 'discharge',
                 'invoice'
@@ -345,7 +345,7 @@ class HospitalService
         return $service->fresh();
     }
 
-    public function addDrug(array $data): AdmissionDrug
+    public function addProduct(array $data): AdmissionProduct
     {
         $admission = Admission::where('tenant_id', $this->tenantId)
             ->findOrFail($data['admission_id']);
@@ -357,10 +357,10 @@ class HospitalService
         $totalPrice = ($data['unit_price'] ?? 0) * ($data['quantity'] ?? 1);
 
         $data['tenant_id'] = $this->tenantId;
-        $drug = AdmissionDrug::create([
+        $product = AdmissionProduct::create([
             'tenant_id' => $this->tenantId,
             'admission_id' => $data['admission_id'],
-            'drug_name' => $data['drug_name'],
+            'product_name' => $data['product_name'],
             'dosage' => $data['dosage'],
             'frequency' => $data['frequency'] ?? 1,
             'route' => $data['route'] ?? 'oral',
@@ -375,7 +375,7 @@ class HospitalService
         ]);
 
         $this->updateAdmissionInvoice($admission);
-        return $drug->fresh();
+        return $product->fresh();
     }
 
     public function calculateAdmissionCost(Admission $admission): float
@@ -387,9 +387,9 @@ class HospitalService
         }
 
         $servicesCost = $admission->services()->sum('price');
-        $drugsCost = $admission->drugs()->sum('total_price');
+        $productsCost = $admission->products()->sum('total_price');
 
-        return $bedCost + $servicesCost + $drugsCost;
+        return $bedCost + $servicesCost + $productsCost;
     }
 
     public function createAdmissionInvoice(Admission $admission): Invoice
@@ -457,12 +457,12 @@ class HospitalService
             ];
         }
 
-        foreach ($admission->drugs as $drug) {
+        foreach ($admission->products as $product) {
             $items[] = [
-                'description' => "{$drug->drug_name} ({$drug->dosage})",
-                'quantity' => $drug->quantity,
-                'unit_price' => $drug->unit_price,
-                'total' => $drug->total_price,
+                'description' => "{$product->product_name} ({$product->dosage})",
+                'quantity' => $product->quantity,
+                'unit_price' => $product->unit_price,
+                'total' => $product->total_price,
             ];
         }
 

@@ -17,9 +17,9 @@ const { Option } = Select;
 export default function PharmacyPage() {
   const router = useRouter();
   const { t, locale } = useLanguage();
-  const [drugs, setDrugs] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filteredDrugs, setFilteredDrugs] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [cart, setCart] = useState([]);
@@ -30,25 +30,25 @@ export default function PharmacyPage() {
 
   const getToken = () => localStorage.getItem('token');
 
-  const fetchDrugs = async () => {
+  const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/drugs/active`, {
+      const res = await fetch(`${API_URL}/api/products/active`, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
       const data = await res.json();
       if (data.success) {
-        setDrugs(data.data || []);
-        setFilteredDrugs(data.data || []);
+        setProducts(data.data || []);
+        setFilteredProducts(data.data || []);
         const uniqueCategories = [...new Set(data.data.map(d => d.category))];
         setCategories(uniqueCategories);
       } else {
         message.error(data.message || 'خطا در دریافت لیست داروها');
       }
     } catch (error) {
-      console.error('Error fetching drugs:', error);
+      console.error('Error fetching products:', error);
       message.error('خطا در ارتباط با سرور');
     } finally {
       setLoading(false);
@@ -61,37 +61,37 @@ export default function PharmacyPage() {
       router.push(`/${locale}/login`);
       return;
     }
-    fetchDrugs();
+    fetchProducts();
   }, []);
 
   const handleSearch = ({ text, filters }) => {
-    let filtered = drugs;
+    let filtered = products;
     
     if (text) {
-      filtered = filtered.filter(drug =>
-        drug.name?.toLowerCase().includes(text.toLowerCase()) ||
-        drug.category?.toLowerCase().includes(text.toLowerCase())
+      filtered = filtered.filter(product =>
+        product.name?.toLowerCase().includes(text.toLowerCase()) ||
+        product.category?.toLowerCase().includes(text.toLowerCase())
       );
     }
     
     if (filters?.category && filters.category !== 'all') {
-      filtered = filtered.filter(drug => drug.category === filters.category);
+      filtered = filtered.filter(product => product.category === filters.category);
     }
     
     if (filters?.prescription) {
-      filtered = filtered.filter(drug =>
-        drug.requires_prescription === (filters.prescription === 'required')
+      filtered = filtered.filter(product =>
+        product.requires_prescription === (filters.prescription === 'required')
       );
     }
     
     if (filters?.priceRange) {
       const [min, max] = filters.priceRange.split('-').map(Number);
-      filtered = filtered.filter(drug =>
-        drug.price >= min && drug.price <= max
+      filtered = filtered.filter(product =>
+        product.price >= min && product.price <= max
       );
     }
     
-    setFilteredDrugs(filtered);
+    setFilteredProducts(filtered);
     setCurrentPage(1);
   };
 
@@ -133,25 +133,25 @@ export default function PharmacyPage() {
     },
   ];
 
-  const addToCart = (drug) => {
-    const existing = cart.find(item => item.id === drug.id);
+  const addToCart = (product) => {
+    const existing = cart.find(item => item.id === product.id);
     if (existing) {
       setCart(cart.map(item =>
-        item.id === drug.id ? { ...item, quantity: item.quantity + 1 } : item
+        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
       ));
     } else {
-      setCart([...cart, { ...drug, quantity: 1 }]);
+      setCart([...cart, { ...product, quantity: 1 }]);
     }
-    message.success(`${drug.name} به سبد خرید اضافه شد`);
+    message.success(`${product.name} به سبد خرید اضافه شد`);
   };
 
-  const removeFromCart = (drugId) => {
-    setCart(cart.filter(item => item.id !== drugId));
+  const removeFromCart = (productId) => {
+    setCart(cart.filter(item => item.id !== productId));
   };
 
-  const updateQuantity = (drugId, change) => {
+  const updateQuantity = (productId, change) => {
     setCart(cart.map(item =>
-      item.id === drugId
+      item.id === productId
         ? { ...item, quantity: Math.max(1, item.quantity + change) }
         : item
     ));
@@ -179,7 +179,7 @@ export default function PharmacyPage() {
         },
         body: JSON.stringify({
           items: cart.map(item => ({
-            drug_id: item.id,
+            product_id: item.id,
             quantity: item.quantity,
           })),
           total: getTotalPrice(),
@@ -213,7 +213,7 @@ export default function PharmacyPage() {
     );
   }
 
-  const paginatedDrugs = filteredDrugs.slice(
+  const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
@@ -250,25 +250,25 @@ export default function PharmacyPage() {
 
           <div style={{ marginTop: '16px' }}>
             <Text type="secondary">
-              {filteredDrugs.length} دارو یافت شد
+              {filteredProducts.length} دارو یافت شد
             </Text>
           </div>
 
-          {paginatedDrugs.length > 0 ? (
+          {paginatedProducts.length > 0 ? (
             <>
               <Row gutter={[16, 16]} style={{ marginTop: '16px' }}>
-                {paginatedDrugs.map((drug) => (
-                  <Col xs={24} sm={12} lg={6} key={drug.id}>
+                {paginatedProducts.map((product) => (
+                  <Col xs={24} sm={12} lg={6} key={product.id}>
                     <Card
                       style={{ borderRadius: '12px', height: '100%' }}
                       actions={[
                         <Button
                           type="primary"
-                          onClick={() => addToCart(drug)}
-                          disabled={drug.stock === 0}
+                          onClick={() => addToCart(product)}
+                          disabled={product.stock === 0}
                           block
                         >
-                          {drug.stock > 0 ? 'افزودن به سبد' : 'ناموجود'}
+                          {product.stock > 0 ? 'افزودن به سبد' : 'ناموجود'}
                         </Button>
                       ]}
                     >
@@ -276,23 +276,23 @@ export default function PharmacyPage() {
                         💊
                       </div>
                       <Title level={4} style={{ textAlign: 'center' }}>
-                        {drug.name}
+                        {product.name}
                       </Title>
                       <div style={{ textAlign: 'center' }}>
-                        <Tag color="blue">{drug.category}</Tag>
-                        {drug.requires_prescription && (
+                        <Tag color="blue">{product.category}</Tag>
+                        {product.requires_prescription && (
                           <Tag color="orange">نیاز به نسخه</Tag>
                         )}
                       </div>
                       <div style={{ marginTop: '12px', textAlign: 'center' }}>
                         <Text strong style={{ fontSize: '20px', color: '#2563eb' }}>
-                          {drug.price?.toLocaleString() || 0}
+                          {product.price?.toLocaleString() || 0}
                         </Text>
                         <Text type="secondary"> تومان</Text>
                       </div>
                       <div style={{ marginTop: '8px', textAlign: 'center' }}>
                         <Text type="secondary">
-                          موجودی: {drug.stock > 0 ? `${drug.stock} عدد` : 'ناموجود'}
+                          موجودی: {product.stock > 0 ? `${product.stock} عدد` : 'ناموجود'}
                         </Text>
                       </div>
                     </Card>
@@ -302,7 +302,7 @@ export default function PharmacyPage() {
 
               <Pagination
                 current={currentPage}
-                total={filteredDrugs.length}
+                total={filteredProducts.length}
                 pageSize={pageSize}
                 onChange={(page) => setCurrentPage(page)}
                 showSizeChanger

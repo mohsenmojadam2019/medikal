@@ -64,7 +64,7 @@ class DashboardStatsResource extends JsonResource
                 'total_orders' => $this['pharmacy']['total_orders'] ?? 0,
                 'pending_orders' => $this['pharmacy']['pending_orders'] ?? 0,
                 'completed_orders' => $this['pharmacy']['completed_orders'] ?? 0,
-                'low_stock_drugs' => $this['pharmacy']['low_stock_drugs'] ?? 0,
+                'low_stock_products' => $this['pharmacy']['low_stock_products'] ?? 0,
             ],
             'prescriptions' => [
                 'total' => $this['prescriptions']['total'] ?? 0,

@@ -27,7 +27,7 @@ class PharmacyOrderController extends Controller
                 'patient.user',
                 'pharmacy',
                 'items',
-                'items.drug'
+                'items.product'
             ]);
 
             // فیلتر بر اساس وضعیت
@@ -103,7 +103,7 @@ class PharmacyOrderController extends Controller
                 'patient.user',
                 'pharmacy',
                 'items',
-                'items.drug',
+                'items.product',
                 'notifications'
             ])->findOrFail($id);
 
@@ -328,7 +328,7 @@ class PharmacyOrderController extends Controller
         try {
             $orders = PharmacyOrder::where('status', 'payment_pending')
                 ->where('created_at', '<', now()->subHours(24))
-                ->with(['patient', 'patient.user', 'items', 'items.drug'])
+                ->with(['patient', 'patient.user', 'items', 'items.product'])
                 ->orderBy('created_at', 'asc')
                 ->paginate($request->get('per_page', 20));
 

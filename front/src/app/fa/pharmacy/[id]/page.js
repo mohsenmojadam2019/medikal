@@ -199,7 +199,7 @@ export default function PharmacyDetailPage({ params }) {
                                         مشاهده در نقشه
                                     </Button>
                                     <Button
-                                        onClick={() => router.push(`/fa/pharmacy/drugs?pharmacy_id=${pharmacy.id}`)}
+                                        onClick={() => router.push(`/fa/pharmacy/products?pharmacy_id=${pharmacy.id}`)}
                                     >
                                         مشاهده داروها
                                     </Button>

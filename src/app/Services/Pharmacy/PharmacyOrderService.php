@@ -5,7 +5,7 @@ namespace App\Services\Pharmacy;
 use App\Models\PharmacyOrder;
 use App\Models\PharmacyOrderItem;
 use App\Models\PharmacyNotification;
-use App\Models\Drug;
+use App\Models\Product;
 use App\Models\Pharmacy;
 use App\Models\Patient;
 use Illuminate\Support\Facades\DB;
@@ -67,10 +67,10 @@ class PharmacyOrderService
             if (isset($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as &$item) {
                     if (!isset($item['price']) || $item['price'] == 0) {
-                        $drug = Drug::find($item['drug_id']);
-                        if ($drug) {
-                            $item['price'] = $drug->price;
-                            $item['name'] = $drug->generic_name ?? $drug->name;
+                        $product = Product::find($item['product_id']);
+                        if ($product) {
+                            $item['price'] = $product->price;
+                            $item['name'] = $product->generic_name ?? $product->name;
                         }
                     }
                     $subtotal += ($item['price'] ?? 0) * ($item['quantity'] ?? 1);
@@ -93,21 +93,21 @@ class PharmacyOrderService
                 foreach ($data['items'] as $item) {
                     $orderItem = $order->items()->create([
                         'order_id' => $order->id,
-                        'drug_id' => $item['drug_id'],
+                        'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
                         'unit_price' => $item['price'] ?? 0,
                         'total_price' => ($item['price'] ?? 0) * ($item['quantity'] ?? 1),
                         'is_available' => true,
                     ]);
 
-                    $drug = Drug::find($item['drug_id']);
-                    if ($drug) {
-                        $drug->decrement('stock', $item['quantity']);
+                    $product = Product::find($item['product_id']);
+                    if ($product) {
+                        $product->decrement('stock', $item['quantity']);
                     }
 
                     Log::info('✅ Order item created', [
                         'order_id' => $order->id,
-                        'drug_id' => $item['drug_id'],
+                        'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
                         'price' => $item['price'] ?? 0
                     ]);
@@ -286,7 +286,7 @@ class PharmacyOrderService
     {
         return PharmacyOrder::where('tenant_id', $this->tenantId)
             ->where('patient_id', $patientId)
-            ->with(['items', 'items.drug'])
+            ->with(['items', 'items.product'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -298,7 +298,7 @@ class PharmacyOrderService
     {
         return PharmacyOrder::where('tenant_id', $this->tenantId)
             ->where('pharmacy_id', $pharmacyId)
-            ->with(['items', 'items.drug', 'patient'])
+            ->with(['items', 'items.product', 'patient'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -310,7 +310,7 @@ class PharmacyOrderService
     {
         return PharmacyOrder::with([
             'items',
-            'items.drug',
+            'items.product',
             'pharmacy',
             'patient'
         ])->findOrFail($orderId);

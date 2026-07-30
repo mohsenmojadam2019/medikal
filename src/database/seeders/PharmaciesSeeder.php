@@ -13,6 +13,9 @@ class PharmaciesSeeder extends Seeder
 {
     public function run(): void
     {
+        // ✅ دریافت Tenant پیش‌فرض
+        $tenantId = \App\Models\Tenant::first()?->id ?? 1;
+
         $clinics = Clinic::all()->keyBy('slug');
         $tehran = Province::where('name', 'تهران')->first();
         $tehranCity = City::where('name', 'تهران')->where('province_id', $tehran?->id)->first();
@@ -22,6 +25,7 @@ class PharmaciesSeeder extends Seeder
         $pharmacies = [
             [
                 'name' => 'داروخانه دکتر وب',
+                'slug' => 'dr-web',
                 'license_number' => 'PH-001',
                 'address' => 'تهران، خیابان ولیعصر، پلاک ۱۲۳',
                 'phone' => '۰۲۱-۲۲۲۲۲۲۲۱',
@@ -36,6 +40,7 @@ class PharmaciesSeeder extends Seeder
             ],
             [
                 'name' => 'داروخانه سلامت پارس',
+                'slug' => 'salamat-pars',
                 'license_number' => 'PH-002',
                 'address' => 'تهران، خیابان انقلاب، پلاک ۴۵',
                 'phone' => '۰۲۱-۳۳۳۳۳۳۳۱',
@@ -50,6 +55,7 @@ class PharmaciesSeeder extends Seeder
             ],
             [
                 'name' => 'داروخانه مهرگان',
+                'slug' => 'mehragan',
                 'license_number' => 'PH-003',
                 'address' => 'اصفهان، خیابان چهارباغ، پلاک ۷۸',
                 'phone' => '۰۳۱-۴۴۴۴۴۴۴۱',
@@ -64,6 +70,7 @@ class PharmaciesSeeder extends Seeder
             ],
             [
                 'name' => 'داروخانه امید',
+                'slug' => 'omid',
                 'license_number' => 'PH-004',
                 'address' => 'شیراز، خیابان زند، پلاک ۵۶',
                 'phone' => '۰۷۱-۵۵۵۵۵۵۵۱',
@@ -78,6 +85,7 @@ class PharmaciesSeeder extends Seeder
             ],
             [
                 'name' => 'داروخانه نور',
+                'slug' => 'noor',
                 'license_number' => 'PH-005',
                 'address' => 'مشهد، خیابان امام رضا، پلاک ۳۴',
                 'phone' => '۰۵۱-۶۶۶۶۶۶۶۱',
@@ -92,6 +100,7 @@ class PharmaciesSeeder extends Seeder
             ],
             [
                 'name' => 'داروخانه آتیه',
+                'slug' => 'atiyeh',
                 'license_number' => 'PH-006',
                 'address' => 'تبریز، خیابان ولیعصر، پلاک ۱۲',
                 'phone' => '۰۴۱-۷۷۷۷۷۷۷۱',
@@ -110,16 +119,15 @@ class PharmaciesSeeder extends Seeder
             $clinic = $clinics[$data['clinic_slug']] ?? null;
             unset($data['clinic_slug']);
 
+            // ✅ اضافه کردن tenant_id
+            $data['tenant_id'] = $tenantId;
+
             $pharmacy = Pharmacy::updateOrCreate(
                 ['license_number' => $data['license_number']],
                 array_merge($data, ['clinic_id' => $clinic?->id])
             );
 
-            $logoPath = public_path('images/pharmacies/' . $pharmacy->slug . '/logo.png');
-            if (file_exists($logoPath)) {
-                $pharmacy->uploadLogo($logoPath);
-                $this->command->info("✅ لوگو برای {$pharmacy->name} آپلود شد");
-            }
+            $this->command->info("✅ داروخانه {$pharmacy->name} ایجاد شد");
         }
 
         $this->command->info('✅ ۶ داروخانه با موفقیت ایجاد شدند.');

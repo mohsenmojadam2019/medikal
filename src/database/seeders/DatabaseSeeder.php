@@ -67,7 +67,16 @@ class DatabaseSeeder extends Seeder
         }
 
         // ============================================================
-        // ۴. داروخانه‌ها
+        // ۴. بیماران
+        // ============================================================
+//        if (Schema::hasTable('patients') && \App\Models\Patient::count() === 0) {
+//            $this->call(PatientsSeeder::class);
+//        } else {
+//            $this->command->info('⏭️ بیماران قبلاً وجود دارند.');
+//        }
+
+        // ============================================================
+        // ۵. داروخانه‌ها
         // ============================================================
         if (Schema::hasTable('pharmacies') && \App\Models\Pharmacy::count() === 0) {
             $this->call(PharmaciesSeeder::class);
@@ -76,7 +85,43 @@ class DatabaseSeeder extends Seeder
         }
 
         // ============================================================
-        // ۵. تصویربرداری
+        // ۶. ✅ برندها
+        // ============================================================
+        if (Schema::hasTable('brands') && \App\Models\Brand::count() === 0) {
+            $this->call(BrandsSeeder::class);
+        } else {
+            $this->command->info('⏭️ برندها قبلاً وجود دارند.');
+        }
+
+        // ============================================================
+        // ۷. ✅ برچسب‌ها
+        // ============================================================
+        if (Schema::hasTable('product_tags') && \App\Models\ProductTag::count() === 0) {
+            $this->call(ProductTagsSeeder::class);
+        } else {
+            $this->command->info('⏭️ برچسب‌ها قبلاً وجود دارند.');
+        }
+
+        // ============================================================
+        // ۸. ✅ ویژگی‌ها
+        // ============================================================
+        if (Schema::hasTable('product_attributes') && \App\Models\ProductAttribute::count() === 0) {
+            $this->call(ProductAttributesSeeder::class);
+        } else {
+            $this->command->info('⏭️ ویژگی‌ها قبلاً وجود دارند.');
+        }
+
+        // ============================================================
+        // ۹. ✅ محصولات (داروها و کالاها)
+        // ============================================================
+        if (Schema::hasTable('products') && \App\Models\Product::count() === 0) {
+            $this->call(ProductsSeeder::class);
+        } else {
+            $this->command->info('⏭️ محصولات قبلاً وجود دارند.');
+        }
+
+        // ============================================================
+        // ۱۰. تصویربرداری
         // ============================================================
         if (Schema::hasTable('medical_images') && \App\Models\PACS\MedicalImage::count() === 0) {
             $this->call(ImagingCentersSeeder::class);
@@ -85,7 +130,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // ============================================================
-        // ۶. بلاگ
+        // ۱۱. بلاگ
         // ============================================================
         if (Schema::hasTable('post_categories') && \App\Models\PostCategory::count() === 0) {
             $this->call(BlogSeeder::class);
@@ -94,16 +139,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // ============================================================
-        // ۷. داروها
-        // ============================================================
-        if (Schema::hasTable('drugs') && \App\Models\Drug::count() === 0) {
-            $this->call(DrugsSeeder::class);
-        } else {
-            $this->command->info('⏭️ داروها قبلاً وجود دارند.');
-        }
-
-        // ============================================================
-        // ۸. آزمایشگاه
+        // ۱۲. آزمایشگاه
         // ============================================================
         if (Schema::hasTable('lab_tests') && \App\Models\LabTest::count() === 0) {
             $this->call(LabTestsSeeder::class);
@@ -112,12 +148,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // ============================================================
-        // ۹. اورژانس
-        // ============================================================
-
-
-        // ============================================================
-        // ۱۰. زبان‌ها و ترجمه‌ها
+        // ۱۳. زبان‌ها و ترجمه‌ها
         // ============================================================
         if (Schema::hasTable('languages') && \App\Models\Language::count() === 0) {
             $this->call(LanguageSeeder::class);
@@ -126,7 +157,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // ============================================================
-        // ۱۱. فرم‌های دیجیتال
+        // ۱۴. فرم‌های دیجیتال
         // ============================================================
         if (Schema::hasTable('digital_forms') && \App\Models\DigitalForm::count() === 0) {
             $this->call(FormSeeder::class);
@@ -135,7 +166,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // ============================================================
-        // ۱۲. پلن‌های اشتراک
+        // ۱۵. پلن‌های اشتراک
         // ============================================================
         if (Schema::hasTable('subscription_plans') && \App\Models\SubscriptionPlan::count() === 0) {
             $this->call(SubscriptionPlanSeeder::class);
@@ -144,18 +175,8 @@ class DatabaseSeeder extends Seeder
         }
 
         // ============================================================
-        // ۱۳. بخش‌های بیمارستان
+        // ۱۶. نوبت‌های تست (اختیاری)
         // ============================================================
-//        if (Schema::hasTable('wards') && \App\Models\Ward::count() === 0) {
-//            $this->call(HospitalSeeder::class);
-//        } else {
-//            $this->command->info('⏭️ بخش‌های بیمارستان قبلاً وجود دارند.');
-//        }
-
-        // ============================================================
-        // ۱۴. نوبت‌های تست (اختیاری)
-        // ============================================================
-        // اگر می‌خواهید نوبت‌های تست ایجاد شود، این بخش را فعال کنید
         // if (\App\Models\Appointment::count() === 0) {
         //     $this->call(DoctorAppointmentSeeder::class);
         // } else {
@@ -163,13 +184,13 @@ class DatabaseSeeder extends Seeder
         // }
 
         // ============================================================
-        // ۱۵. گزارش‌های BI (اختیاری)
+        // ۱۷. گزارش‌های BI (اختیاری)
         // ============================================================
-//        if (Schema::hasTable('bi_reports') && \App\Models\BI\BIReport::count() === 0) {
-//            $this->call(\Database\Seeders\BI\BISeeder::class);
-//        } else {
-//            $this->command->info('⏭️ گزارش‌های BI قبلاً وجود دارند.');
-//        }
+        // if (Schema::hasTable('bi_reports') && \App\Models\BI\BIReport::count() === 0) {
+        //     $this->call(\Database\Seeders\BI\BISeeder::class);
+        // } else {
+        //     $this->command->info('⏭️ گزارش‌های BI قبلاً وجود دارند.');
+        // }
 
         $this->command->info('');
         $this->command->info('✅ سیدر کامل با موفقیت انجام شد!');
@@ -179,7 +200,10 @@ class DatabaseSeeder extends Seeder
         $this->command->info('   👨‍⚕️ پزشکان: ' . \App\Models\Doctor::count());
         $this->command->info('   👤 بیماران: ' . \App\Models\Patient::count());
         $this->command->info('   💊 داروخانه‌ها: ' . \App\Models\Pharmacy::count());
-        $this->command->info('   💊 داروها: ' . \App\Models\Drug::count());
+        $this->command->info('   💊 محصولات: ' . \App\Models\Product::count());
+        $this->command->info('   🏷️ برندها: ' . \App\Models\Brand::count());
+        $this->command->info('   🏷️ برچسب‌ها: ' . \App\Models\ProductTag::count());
+        $this->command->info('   📋 ویژگی‌ها: ' . \App\Models\ProductAttribute::count());
         $this->command->info('   📷 مراکز تصویربرداری: ' . \App\Models\PACS\MedicalImage::count());
         $this->command->info('   🧪 آزمایشگاه‌ها: ' . \App\Models\LabTest::count());
         $this->command->info('   🌐 زبان‌ها: ' . \App\Models\Language::count());
@@ -187,6 +211,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('   💳 پلن‌های اشتراک: ' . \App\Models\SubscriptionPlan::count());
         $this->command->info('');
         $this->command->info('🔑 اطلاعات ورود ادمین:');
+        $this->command->info('   📧 ایمیل: admin@clinic-yar.com');
         $this->command->info('   📱 موبایل: 09123456789');
         $this->command->info('   🔑 رمز عبور: 12345678');
         $this->command->info('');

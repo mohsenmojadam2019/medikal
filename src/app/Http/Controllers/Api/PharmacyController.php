@@ -9,7 +9,7 @@ use App\Models\PharmacyOrder;
 use App\Models\PharmacyOrderItem;
 use App\Models\Pharmacy;
 use App\Models\Patient;
-use App\Models\Drug;
+use App\Models\Product;
 use App\Models\User;
 use App\Models\Notification;
 use App\Http\Requests\Api\PharmacyOrderRequest;
@@ -160,13 +160,13 @@ class PharmacyController extends Controller
             return $this->success([], 'عبارت جستجو را وارد کنید');
         }
 
-        $drugs = Drug::where('is_active', true);
+        $products = Product::where('is_active', true);
 
         if ($pharmacyId) {
-            $drugs->where('pharmacy_id', $pharmacyId);
+            $products->where('pharmacy_id', $pharmacyId);
         }
 
-        $drugs = $drugs->where(function ($q) use ($query) {
+        $products = $products->where(function ($q) use ($query) {
             $q->where('generic_name', 'like', "%{$query}%")
                 ->orWhere('name', 'like', "%{$query}%")
                 ->orWhere('code', 'like', "%{$query}%")
@@ -176,12 +176,12 @@ class PharmacyController extends Controller
             ->orderBy('generic_name')
             ->paginate($request->per_page ?? 20);
 
-        return $this->success($drugs, 'نتایج جستجو');
+        return $this->success($products, 'نتایج جستجو');
     }
 
     public function products(Request $request, $pharmacyId = null)
     {
-        $query = Drug::where('is_active', true);
+        $query = Product::where('is_active', true);
 
         if ($pharmacyId) {
             $query->where('pharmacy_id', $pharmacyId)
@@ -204,17 +204,17 @@ class PharmacyController extends Controller
             });
         }
 
-        $drugs = $query->orderBy('name')
+        $products = $query->orderBy('name')
             ->paginate($request->per_page ?? 20);
 
-        return $this->success($drugs, 'لیست محصولات');
+        return $this->success($products, 'لیست محصولات');
     }
 
     public function categories(Request $request)
     {
         $pharmacyId = $request->query('pharmacy_id');
 
-        $query = Drug::whereNotNull('category')
+        $query = Product::whereNotNull('category')
             ->where('is_active', true);
 
         if ($pharmacyId) {
@@ -255,7 +255,7 @@ class PharmacyController extends Controller
             $pharmacy = Pharmacy::with(['province', 'city', 'clinic'])
                 ->findOrFail($id);
 
-            $drugs = Drug::where('pharmacy_id', $id)
+            $products = Product::where('pharmacy_id', $id)
                 ->where('is_active', true)
                 ->where('stock', '>', 0)
                 ->limit(10)
@@ -268,8 +268,8 @@ class PharmacyController extends Controller
                 'logo_medium' => $pharmacy->logo_medium,
                 'logo_large' => $pharmacy->logo_large,
                 'images' => $pharmacy->images_urls,
-                'drugs' => $drugs,
-                'drugs_count' => Drug::where('pharmacy_id', $id)->where('is_active', true)->count(),
+                'products' => $products,
+                'products_count' => Product::where('pharmacy_id', $id)->where('is_active', true)->count(),
             ]);
         } catch (\Exception $e) {
             return $this->error('داروخانه یافت نشد', 404);
@@ -296,17 +296,17 @@ class PharmacyController extends Controller
 
             if (isset($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as $item) {
-                    $drug = Drug::find($item['drug_id']);
-                    if (!$drug) {
-                        return $this->error("دارو با شناسه {$item['drug_id']} یافت نشد", 404);
+                    $product = Product::find($item['product_id']);
+                    if (!$product) {
+                        return $this->error("دارو با شناسه {$item['product_id']} یافت نشد", 404);
                     }
 
-                    if ($drug->pharmacy_id != $data['pharmacy_id']) {
-                        return $this->error("دارو {$drug->name} در داروخانه انتخابی موجود نیست", 400);
+                    if ($product->pharmacy_id != $data['pharmacy_id']) {
+                        return $this->error("دارو {$product->name} در داروخانه انتخابی موجود نیست", 400);
                     }
 
-                    if ($drug->stock < $item['quantity']) {
-                        return $this->error("موجودی دارو {$drug->name} کافی نیست. موجودی: {$drug->stock}", 400);
+                    if ($product->stock < $item['quantity']) {
+                        return $this->error("موجودی دارو {$product->name} کافی نیست. موجودی: {$product->stock}", 400);
                     }
                 }
             }
@@ -315,10 +315,10 @@ class PharmacyController extends Controller
             if (isset($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as &$item) {
                     if (!isset($item['price']) || $item['price'] == 0) {
-                        $drug = Drug::find($item['drug_id']);
-                        if ($drug) {
-                            $item['price'] = $drug->price;
-                            $item['name'] = $drug->generic_name ?? $drug->name;
+                        $product = Product::find($item['product_id']);
+                        if ($product) {
+                            $item['price'] = $product->price;
+                            $item['name'] = $product->generic_name ?? $product->name;
                         }
                     }
                     $subtotal += ($item['price'] ?? 0) * ($item['quantity'] ?? 1);
@@ -379,7 +379,7 @@ class PharmacyController extends Controller
         try {
             $order = PharmacyOrder::with([
                 'items',
-                'items.drug',
+                'items.product',
                 'pharmacy',
                 'patient'
             ])->findOrFail($id);
@@ -895,7 +895,7 @@ class PharmacyController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                'drug_id' => 'required|exists:drugs,id',
+                'product_id' => 'required|exists:products,id',
                 'pharmacy_id' => 'required|exists:pharmacies,id',
                 'patient_name' => 'required|string|max:255',
                 'national_code' => 'required|string|size:10',
@@ -912,13 +912,13 @@ class PharmacyController extends Controller
             }
 
             // دریافت دارو
-            $drug = Drug::find($request->drug_id);
-            if (!$drug) {
+            $product = Product::find($request->product_id);
+            if (!$product) {
                 return $this->error('دارو یافت نشد', 404);
             }
 
             // بررسی اینکه دارو نیاز به نسخه دارد
-            if (!$drug->requires_prescription) {
+            if (!$product->requires_prescription) {
                 return $this->error('این دارو نیاز به نسخه ندارد', 400);
             }
 
@@ -937,16 +937,16 @@ class PharmacyController extends Controller
                 'order_number' => $orderNumber,
                 'status' => 'pending',
                 'payment_status' => 'pending',
-                'subtotal' => $drug->price,
-                'total_amount' => $drug->price,
+                'subtotal' => $product->price,
+                'total_amount' => $product->price,
                 'recipient_name' => $request->patient_name,
                 'recipient_phone' => $patient->phone ?? $user->mobile,
                 'delivery_address' => $patient->address,
                 'prescription_file' => $path,
                 'prescription_status' => 'pending',
                 'metadata' => [
-                    'drug_id' => $request->drug_id,
-                    'drug_name' => $drug->name,
+                    'product_id' => $request->product_id,
+                    'product_name' => $product->name,
                     'doctor_name' => $request->doctor_name,
                     'diagnosis' => $request->diagnosis,
                     'insurance_type' => $request->insurance_type,
@@ -960,10 +960,10 @@ class PharmacyController extends Controller
             PharmacyOrderItem::create([
                 'tenant_id' => session('tenant_id'),
                 'order_id' => $order->id,
-                'drug_id' => $request->drug_id,
+                'product_id' => $request->product_id,
                 'quantity' => 1,
-                'unit_price' => $drug->price,
-                'total_price' => $drug->price,
+                'unit_price' => $product->price,
+                'total_price' => $product->price,
                 'is_available' => true,
             ]);
 
@@ -974,7 +974,7 @@ class PharmacyController extends Controller
                     'user_id' => $admin->id,
                     'type' => 'prescription_request',
                     'title' => '📋 درخواست نسخه جدید',
-                    'body' => "درخواست نسخه برای داروی {$drug->name} توسط {$patient->full_name}",
+                    'body' => "درخواست نسخه برای داروی {$product->name} توسط {$patient->full_name}",
                     'data' => ['order_id' => $order->id],
                     'priority' => 'high',
                     'sent_at' => now(),
@@ -984,7 +984,7 @@ class PharmacyController extends Controller
             Log::info('📋 Prescription request created', [
                 'order_id' => $order->id,
                 'patient_id' => $patient->id,
-                'drug_id' => $request->drug_id,
+                'product_id' => $request->product_id,
                 'pharmacy_id' => $request->pharmacy_id,
             ]);
 
@@ -1011,7 +1011,7 @@ class PharmacyController extends Controller
                 return $this->error('شما دسترسی به این بخش را ندارید', 403);
             }
 
-            $order = PharmacyOrder::with(['patient', 'items.drug'])->findOrFail($id);
+            $order = PharmacyOrder::with(['patient', 'items.product'])->findOrFail($id);
 
             if ($order->prescription_status !== 'pending') {
                 return $this->error('این درخواست در وضعیت تایید نیست', 400);
@@ -1029,7 +1029,7 @@ class PharmacyController extends Controller
                 'user_id' => $order->patient->user_id,
                 'type' => 'prescription_approved',
                 'title' => '✅ نسخه شما تایید شد',
-                'body' => "نسخه شما برای داروی {$order->items->first()->drug->name} تایید شد. می‌توانید پرداخت را انجام دهید.",
+                'body' => "نسخه شما برای داروی {$order->items->first()->product->name} تایید شد. می‌توانید پرداخت را انجام دهید.",
                 'data' => ['order_id' => $order->id],
                 'priority' => 'high',
                 'sent_at' => now(),

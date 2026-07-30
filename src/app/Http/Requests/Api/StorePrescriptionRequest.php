@@ -16,7 +16,7 @@ class StorePrescriptionRequest extends FormRequest
     {
         return [
             'appointment_id' => 'required|exists:appointments,id',
-            'drug_name' => 'required|string|max:255',
+            'product_name' => 'required|string|max:255',
             'dosage' => 'required|string|max:100',
             'frequency' => 'nullable|integer|min:1|max:4',
             'duration' => 'nullable|integer|min:1|max:365',
@@ -32,7 +32,7 @@ class StorePrescriptionRequest extends FormRequest
     {
         return [
             'appointment_id.required' => 'شناسه نوبت الزامی است',
-            'drug_name.required' => 'نام دارو الزامی است',
+            'product_name.required' => 'نام دارو الزامی است',
             'dosage.required' => 'دوز مصرفی الزامی است',
             'frequency.min' => 'تعداد دفعات مصرف باید حداقل ۱ باشد',
             'frequency.max' => 'تعداد دفعات مصرف باید حداکثر ۴ باشد',

@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
             $table->foreignId('doctor_id')->nullable()->constrained('doctors')->onDelete('set null');
-            $table->string('type'); // allergy, drug_interaction, chronic_disease, critical_result
+            $table->string('type'); // allergy, product_interaction, chronic_disease, critical_result
             $table->string('title');
             $table->text('description');
             $table->string('severity')->default('medium'); // low, medium, high, critical

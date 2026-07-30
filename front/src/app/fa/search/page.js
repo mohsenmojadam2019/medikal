@@ -36,22 +36,22 @@ export default function SearchPage() {
         setLoading(false);
     }, [searchParams]);
 
-    const addToCart = (drug) => {
+    const addToCart = (product) => {
         let cart = JSON.parse(localStorage.getItem('pharmacyCart') || '[]');
-        const existing = cart.find(item => item.id === drug.id);
+        const existing = cart.find(item => item.id === product.id);
         if (existing) {
             existing.quantity += 1;
         } else {
             cart.push({
-                id: drug.id,
-                name: drug.generic_name || drug.name || 'دارو',
-                price: parseFloat(drug.price) || 0,
+                id: product.id,
+                name: product.generic_name || product.name || 'دارو',
+                price: parseFloat(product.price) || 0,
                 quantity: 1,
-                stock: drug.stock || 0,
+                stock: product.stock || 0,
             });
         }
         localStorage.setItem('pharmacyCart', JSON.stringify(cart));
-        message.success(`${drug.generic_name || drug.name} به سبد خرید اضافه شد`);
+        message.success(`${product.generic_name || product.name} به سبد خرید اضافه شد`);
     };
 
     if (loading) {
