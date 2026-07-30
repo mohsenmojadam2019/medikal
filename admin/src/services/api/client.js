@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// آدرس پایه API
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
 const client = axios.create({
@@ -12,7 +11,7 @@ const client = axios.create({
     },
 });
 
-// ===== Interceptor برای افزودن توکن =====
+// ===== اینترسپتور برای اضافه کردن توکن =====
 client.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -24,17 +23,13 @@ client.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// ===== Interceptor برای مدیریت خطاها =====
+// ===== اینترسپتور برای خطاها =====
 client.interceptors.response.use(
     (response) => response,
     (error) => {
-        // اگر توکن منقضی شده بود (401)
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            localStorage.removeItem('roles');
-            localStorage.removeItem('permissions');
-            // هدایت به صفحه لاگین
             if (typeof window !== 'undefined') {
                 window.location.href = '/admin/login';
             }
