@@ -1,386 +1,615 @@
-// src/app/admin/schedules/page.js
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Card,
-  Form,
-  Input,
+  App,
   Button,
-  Select,
-  message,
-  Row,
+  Card,
   Col,
-  Typography,
   Divider,
+  Empty,
+  Form,
+  Row,
+  Select,
   Space,
-  TimePicker,
   Switch,
   Table,
-  Popconfirm,
-  Tooltip,
-  Tag,
-  App,
+  TimePicker,
+  Typography,
 } from 'antd';
 import {
   ArrowLeftOutlined,
-  SaveOutlined,
-  PlusOutlined,
-  DeleteOutlined,
-  EditOutlined,
   ClockCircleOutlined,
-  CalendarOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  SaveOutlined,
 } from '@ant-design/icons';
-import { schedulesService, doctorsService } from '@/services/api';
-import { useLanguage } from '@/context/LanguageContext';
 import dayjs from 'dayjs';
+import { doctorsService, schedulesService } from '@/services/api';
+import { useLanguage } from '@/context/LanguageContext';
 
 const { Title, Text } = Typography;
+
+const DAYS = [
+  { value: 6, label: 'شنبه' },
+  { value: 0, label: 'یکشنبه' },
+  { value: 1, label: 'دوشنبه' },
+  { value: 2, label: 'سه‌شنبه' },
+  { value: 3, label: 'چهارشنبه' },
+  { value: 4, label: 'پنج‌شنبه' },
+  { value: 5, label: 'جمعه' },
+];
+
+const extractList = (response) => {
+  const body = response?.data;
+  const root = body?.data ?? body;
+
+  if (Array.isArray(root)) {
+    return root;
+  }
+
+  if (Array.isArray(root?.data)) {
+    return root.data;
+  }
+
+  if (Array.isArray(root?.doctors)) {
+    return root.doctors;
+  }
+
+  if (Array.isArray(root?.schedules)) {
+    return root.schedules;
+  }
+
+  return [];
+};
+
+const doctorName = (doctor) => {
+  return (
+    doctor?.full_name ||
+    doctor?.name ||
+    doctor?.user?.full_name ||
+    doctor?.user?.name ||
+    doctor?.user?.email ||
+    `پزشک شماره ${doctor?.id}`
+  );
+};
+
+const doctorLabel = (doctor) => {
+  const name = doctorName(doctor);
+  const specialty =
+    doctor?.specialty?.name ||
+    doctor?.specialty_name ||
+    '';
+
+  return specialty ? `${name} (${specialty})` : name;
+};
+
+const normalizeTimeString = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value.substring(0, 5);
+  }
+
+  if (dayjs.isDayjs(value)) {
+    return value.format('HH:mm');
+  }
+
+  return null;
+};
+
+const timeToDayjs = (value) => {
+  const time = normalizeTimeString(value);
+
+  if (!time) {
+    return null;
+  }
+
+  return dayjs(`2000-01-01T${time}:00`);
+};
+
+const normalizeSchedule = (schedule) => ({
+  id: schedule?.id,
+  day_of_week: Number(schedule?.day_of_week),
+  start_time: normalizeTimeString(schedule?.start_time),
+  end_time: normalizeTimeString(schedule?.end_time),
+  break_start: normalizeTimeString(schedule?.break_start),
+  break_end: normalizeTimeString(schedule?.break_end),
+  slot_duration: Number(schedule?.slot_duration || 30),
+  max_slots_per_day: schedule?.max_slots_per_day
+    ? Number(schedule.max_slots_per_day)
+    : null,
+  is_active: schedule?.is_active !== false,
+});
 
 export default function SchedulesPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const { message } = App.useApp();
-
-  const [loading, setLoading] = useState(false);
-  const [doctors, setDoctors] = useState([]);
-  const [loadingDoctors, setLoadingDoctors] = useState(false);
-  const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [schedules, setSchedules] = useState([]);
   const [form] = Form.useForm();
 
-  // ===== دریافت لیست پزشکان =====
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      setLoadingDoctors(true);
+  const [doctors, setDoctors] = useState([]);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [savedSchedules, setSavedSchedules] = useState([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const loadSchedules = useCallback(
+    async (doctorId) => {
+      if (!doctorId) {
+        setSavedSchedules([]);
+        form.setFieldsValue({ schedules: [] });
+        return;
+      }
+
+      setLoadingSchedules(true);
+
       try {
-        const response = await doctorsService.getAll({ per_page: 100 });
-        // ✅ بررسی ساختار پاسخ
-        if (response.data?.success) {
-          const data = response.data.data;
-          const list = data?.data || data || [];
-          setDoctors(Array.isArray(list) ? list : []);
+        const response =
+          await schedulesService.getByDoctor(doctorId);
+
+        const list = extractList(response)
+          .map(normalizeSchedule)
+          .filter((item) =>
+            Number.isInteger(item.day_of_week)
+          )
+          .sort((a, b) => {
+            const order = [6, 0, 1, 2, 3, 4, 5];
+            return (
+              order.indexOf(a.day_of_week) -
+              order.indexOf(b.day_of_week)
+            );
+          });
+
+        setSavedSchedules(list);
+
+        form.setFieldsValue({
+          schedules: list.map((item) => ({
+            ...item,
+            start_time: timeToDayjs(item.start_time),
+            end_time: timeToDayjs(item.end_time),
+            break_start: timeToDayjs(item.break_start),
+            break_end: timeToDayjs(item.break_end),
+          })),
+        });
+      } catch (error) {
+        console.error('Error fetching schedules:', error);
+        setSavedSchedules([]);
+        form.setFieldsValue({ schedules: [] });
+
+        message.error(
+          error?.response?.data?.message ||
+            t('fetch_error', 'خطا در دریافت اطلاعات')
+        );
+      } finally {
+        setLoadingSchedules(false);
+      }
+    },
+    [form, message, t]
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    const loadDoctors = async () => {
+      setLoadingDoctors(true);
+
+      try {
+        const response = await doctorsService.getAll({
+          per_page: 100,
+        });
+
+        if (!active) {
+          return;
+        }
+
+        const list = extractList(response);
+        setDoctors(list);
+
+        if (list.length > 0) {
+          const firstDoctorId = list[0].id;
+          setSelectedDoctor(firstDoctorId);
+          await loadSchedules(firstDoctorId);
         } else {
-          setDoctors([]);
+          setSelectedDoctor(null);
+          setSavedSchedules([]);
+          form.setFieldsValue({ schedules: [] });
         }
       } catch (error) {
         console.error('Error fetching doctors:', error);
-        setDoctors([]);
+
+        if (active) {
+          setDoctors([]);
+          setSelectedDoctor(null);
+
+          message.error(
+            error?.response?.data?.message ||
+              t(
+                'fetch_doctors_error',
+                'خطا در دریافت لیست پزشکان'
+              )
+          );
+        }
       } finally {
-        setLoadingDoctors(false);
+        if (active) {
+          setLoadingDoctors(false);
+        }
       }
     };
-    fetchDoctors();
-  }, []);
 
-  // ===== دریافت ساعات کاری پزشک =====
-  const fetchSchedules = async (doctorId) => {
-    if (!doctorId) {
-      setSchedules([]);
-      return;
-    }
+    loadDoctors();
 
-    setLoading(true);
-    try {
-      const response = await schedulesService.getByDoctor(doctorId);
-      // ✅ بررسی ساختار پاسخ
-      if (response.data?.success) {
-        const data = response.data.data;
-        const list = data?.data || data || [];
-        setSchedules(Array.isArray(list) ? list : []);
-      } else {
-        setSchedules([]);
-      }
-    } catch (error) {
-      console.error('Error fetching schedules:', error);
-      message.error(t('fetch_error', 'خطا در دریافت اطلاعات'));
-      setSchedules([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      active = false;
+    };
+  }, [form, loadSchedules, message, t]);
 
-  // ===== انتخاب پزشک =====
-  const handleDoctorSelect = (doctorId) => {
+  const doctorOptions = useMemo(
+    () =>
+      doctors.map((doctor) => ({
+        value: doctor.id,
+        label: doctorLabel(doctor),
+      })),
+    [doctors]
+  );
+
+  const handleDoctorChange = async (doctorId) => {
     setSelectedDoctor(doctorId);
-    if (doctorId) {
-      fetchSchedules(doctorId);
-    } else {
-      setSchedules([]);
-    }
+    await loadSchedules(doctorId);
   };
 
-  // ===== ذخیره ساعات کاری =====
   const handleSubmit = async (values) => {
     if (!selectedDoctor) {
-      message.warning(t('select_doctor_first', 'لطفاً ابتدا پزشک را انتخاب کنید'));
+      message.warning(
+        t(
+          'select_doctor_first',
+          'لطفاً ابتدا پزشک را انتخاب کنید'
+        )
+      );
       return;
     }
 
-    setLoading(true);
-    try {
-      const data = {
-        doctor_id: selectedDoctor,
-        schedules: values.schedules.map((item) => ({
-          day_of_week: item.day_of_week,
-          start_time: item.start_time?.format('HH:mm'),
-          end_time: item.end_time?.format('HH:mm'),
-          is_working: item.is_working !== false,
-          break_start: item.break_start?.format('HH:mm'),
-          break_end: item.break_end?.format('HH:mm'),
-        })),
-      };
+    const formSchedules = Array.isArray(values?.schedules)
+      ? values.schedules
+      : [];
 
-      await schedulesService.save(data);
-      message.success(t('saved', 'ساعات کاری با موفقیت ذخیره شد'));
-      fetchSchedules(selectedDoctor);
+    if (formSchedules.length === 0) {
+      message.warning('حداقل یک ساعت کاری اضافه کنید');
+      return;
+    }
+
+    const uniqueSchedules = new Map();
+
+    formSchedules.forEach((item) => {
+      if (
+        item?.day_of_week === undefined ||
+        item?.day_of_week === null
+      ) {
+        return;
+      }
+
+      uniqueSchedules.set(Number(item.day_of_week), {
+        day_of_week: Number(item.day_of_week),
+        start_time: normalizeTimeString(item.start_time),
+        end_time: normalizeTimeString(item.end_time),
+        break_start: normalizeTimeString(item.break_start),
+        break_end: normalizeTimeString(item.break_end),
+        slot_duration: Number(item.slot_duration || 30),
+        max_slots_per_day: item.max_slots_per_day
+          ? Number(item.max_slots_per_day)
+          : null,
+        is_active: item.is_active !== false,
+      });
+    });
+
+    const schedules = Array.from(uniqueSchedules.values());
+
+    if (schedules.length === 0) {
+      message.warning('اطلاعات ساعات کاری کامل نیست');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const response = await schedulesService.setWeekly(
+        selectedDoctor,
+        { schedules }
+      );
+
+      if (response.data?.success === false) {
+        throw new Error(
+          response.data?.message || 'خطا در ذخیره اطلاعات'
+        );
+      }
+
+      message.success(
+        response.data?.message ||
+          t(
+            'schedule_saved',
+            'ساعات کاری با موفقیت ذخیره شد'
+          )
+      );
+
+      await loadSchedules(selectedDoctor);
     } catch (error) {
       console.error('Error saving schedules:', error);
-      message.error(t('save_error', 'خطا در ذخیره ساعات کاری'));
+
+      const validationErrors =
+        error?.response?.data?.errors;
+
+      const firstValidationError = validationErrors
+        ? Object.values(validationErrors)?.flat()?.[0]
+        : null;
+
+      message.error(
+        firstValidationError ||
+          error?.response?.data?.message ||
+          error?.message ||
+          t('save_error', 'خطا در ذخیره ساعات کاری')
+      );
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  // ===== ستون‌های جدول ساعات کاری =====
-  const columns = [
+  const tableColumns = [
     {
-      title: t('day', 'روز'),
+      title: 'روز',
       dataIndex: 'day_of_week',
       key: 'day_of_week',
-      render: (day) => {
-        const days = {
-          saturday: 'شنبه',
-          sunday: 'یکشنبه',
-          monday: 'دوشنبه',
-          tuesday: 'سه‌شنبه',
-          wednesday: 'چهارشنبه',
-          thursday: 'پنجشنبه',
-          friday: 'جمعه',
-        };
-        return days[day] || day;
-      },
+      render: (value) =>
+        DAYS.find((day) => day.value === Number(value))
+          ?.label || 'نامشخص',
     },
     {
-      title: t('start_time', 'ساعت شروع'),
+      title: 'ساعت شروع',
       dataIndex: 'start_time',
       key: 'start_time',
+      render: (value) => normalizeTimeString(value) || '—',
     },
     {
-      title: t('end_time', 'ساعت پایان'),
+      title: 'ساعت پایان',
       dataIndex: 'end_time',
       key: 'end_time',
+      render: (value) => normalizeTimeString(value) || '—',
     },
     {
-      title: t('status', 'وضعیت'),
-      dataIndex: 'is_working',
-      key: 'is_working',
-      render: (isWorking) => (
-          <Tag color={isWorking ? 'green' : 'red'}>
-            {isWorking ? t('working', 'فعال') : t('not_working', 'غیرفعال')}
-          </Tag>
-      ),
+      title: 'وضعیت',
+      dataIndex: 'is_active',
+      key: 'is_active',
+      render: (value) => (value ? 'فعال' : 'غیرفعال'),
     },
   ];
 
-  // اگر doctors آرایه نیست
-  if (!Array.isArray(doctors)) {
-    console.error('⚠️ Doctors is not an array:', doctors);
-    return (
-        <div style={{ padding: 24 }}>
-          <Title level={4}>خطا در نمایش داده‌ها</Title>
-          <Text type="danger">داده‌های دریافتی معتبر نیستند.</Text>
-        </div>
-    );
-  }
-
   return (
-      <div>
-        <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 24,
-            }}
-        >
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 24,
+        }}
+      >
+        <Space>
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => router.back()}
+          />
+
           <div>
-            <Space>
-              <Button
-                  type="text"
-                  icon={<ArrowLeftOutlined />}
-                  onClick={() => router.back()}
-                  style={{ fontSize: 18 }}
-              />
-              <div>
-                <Title level={2} style={{ margin: 0 }}>
-                  {t('schedules_management', 'مدیریت ساعات کاری')}
-                </Title>
-                <Text type="secondary">
-                  {t('schedules_subtitle', 'تنظیم ساعات کاری پزشکان')}
-                </Text>
-              </div>
-            </Space>
+            <Title level={2} style={{ margin: 0 }}>
+              مدیریت ساعات کاری
+            </Title>
+
+            <Text type="secondary">
+              تنظیم ساعات کاری پزشکان
+            </Text>
           </div>
-        </div>
-
-        <Card
-            style={{
-              borderRadius: 12,
-              borderColor: '#e8e8f0',
-            }}
-        >
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={8}>
-              <Form.Item label={t('select_doctor', 'انتخاب پزشک')}>
-                <Select
-                    placeholder={t('select_doctor', 'انتخاب پزشک...')}
-                    loading={loadingDoctors}
-                    showSearch
-                    optionFilterProp="children"
-                    onChange={handleDoctorSelect}
-                    style={{ width: '100%' }}
-                    options={doctors.map((d) => ({
-                      value: d.id,
-                      label: `${d.full_name} (${d.specialty?.name || ''})`,
-                    }))}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {selectedDoctor && (
-              <div style={{ marginTop: 24 }}>
-                <Divider>
-                  <Space>
-                    <ClockCircleOutlined />
-                    <span>{t('working_hours', 'ساعات کاری')}</span>
-                  </Space>
-                </Divider>
-
-                <Table
-                    columns={columns}
-                    dataSource={schedules}
-                    loading={loading}
-                    rowKey="id"
-                    pagination={false}
-                    locale={{
-                      emptyText: t('no_schedules', 'هیچ ساعات کاری ثبت نشده است'),
-                    }}
-                />
-
-                <Divider />
-
-                <Title level={5}>{t('edit_schedules', 'ویرایش ساعات کاری')}</Title>
-
-                <Form
-                    form={form}
-                    layout="vertical"
-                    onFinish={handleSubmit}
-                    size="large"
-                >
-                  <Form.List name="schedules">
-                    {(fields, { add, remove }) => (
-                        <>
-                          {fields.map(({ key, name, ...restField }) => (
-                              <Row key={key} gutter={[16, 16]} align="middle">
-                                <Col xs={24} sm={6}>
-                                  <Form.Item
-                                      {...restField}
-                                      name={[name, 'day_of_week']}
-                                      label={t('day', 'روز')}
-                                      rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-                                  >
-                                    <Select
-                                        options={[
-                                          { value: 'saturday', label: 'شنبه' },
-                                          { value: 'sunday', label: 'یکشنبه' },
-                                          { value: 'monday', label: 'دوشنبه' },
-                                          { value: 'tuesday', label: 'سه‌شنبه' },
-                                          { value: 'wednesday', label: 'چهارشنبه' },
-                                          { value: 'thursday', label: 'پنجشنبه' },
-                                          { value: 'friday', label: 'جمعه' },
-                                        ]}
-                                    />
-                                  </Form.Item>
-                                </Col>
-                                <Col xs={24} sm={5}>
-                                  <Form.Item
-                                      {...restField}
-                                      name={[name, 'start_time']}
-                                      label={t('start_time', 'ساعت شروع')}
-                                      rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-                                  >
-                                    <TimePicker format="HH:mm" style={{ width: '100%' }} />
-                                  </Form.Item>
-                                </Col>
-                                <Col xs={24} sm={5}>
-                                  <Form.Item
-                                      {...restField}
-                                      name={[name, 'end_time']}
-                                      label={t('end_time', 'ساعت پایان')}
-                                      rules={[{ required: true, message: t('required', 'لطفاً این فیلد را وارد کنید') }]}
-                                  >
-                                    <TimePicker format="HH:mm" style={{ width: '100%' }} />
-                                  </Form.Item>
-                                </Col>
-                                <Col xs={24} sm={4}>
-                                  <Form.Item
-                                      {...restField}
-                                      name={[name, 'is_working']}
-                                      label={t('status', 'وضعیت')}
-                                      valuePropName="checked"
-                                  >
-                                    <Switch checkedChildren="فعال" unCheckedChildren="غیرفعال" />
-                                  </Form.Item>
-                                </Col>
-                                <Col xs={24} sm={4}>
-                                  <Button
-                                      type="text"
-                                      danger
-                                      icon={<DeleteOutlined />}
-                                      onClick={() => remove(name)}
-                                  />
-                                </Col>
-                              </Row>
-                          ))}
-                          <Button
-                              type="dashed"
-                              onClick={() => add()}
-                              icon={<PlusOutlined />}
-                              style={{ width: '100%', marginTop: 16 }}
-                          >
-                            {t('add_schedule', 'افزودن ساعات کاری')}
-                          </Button>
-                        </>
-                    )}
-                  </Form.List>
-
-                  <Divider />
-                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                    <Button onClick={() => router.back()} size="large">
-                      {t('cancel', 'انصراف')}
-                    </Button>
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={loading}
-                        icon={<SaveOutlined />}
-                        size="large"
-                        style={{
-                          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                          border: 'none',
-                        }}
-                    >
-                      {t('save', 'ذخیره')}
-                    </Button>
-                  </div>
-                </Form>
-              </div>
-          )}
-        </Card>
+        </Space>
       </div>
+
+      <Card
+        style={{
+          borderRadius: 12,
+          borderColor: '#e8e8f0',
+        }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{ schedules: [] }}
+        >
+          <Form.Item label="انتخاب پزشک">
+            <Select
+              showSearch
+              allowClear
+              loading={loadingDoctors}
+              value={selectedDoctor}
+              options={doctorOptions}
+              optionFilterProp="label"
+              placeholder="پزشک را انتخاب کنید"
+              onChange={handleDoctorChange}
+            />
+          </Form.Item>
+
+          <Divider>
+            <Space>
+              <ClockCircleOutlined />
+              ساعات کاری ثبت‌شده
+            </Space>
+          </Divider>
+
+          <Table
+            rowKey={(record) =>
+              record.id || `day-${record.day_of_week}`
+            }
+            loading={loadingSchedules}
+            columns={tableColumns}
+            dataSource={savedSchedules}
+            pagination={false}
+            locale={{
+              emptyText: (
+                <Empty description="هیچ ساعت کاری ثبت نشده است" />
+              ),
+            }}
+          />
+
+          <Divider orientation="right">
+            ویرایش ساعات کاری
+          </Divider>
+
+          <Form.List name="schedules">
+            {(fields, { add, remove }) => (
+              <Space
+                direction="vertical"
+                size={16}
+                style={{ width: '100%' }}
+              >
+                {fields.map((field) => (
+                  <Card
+                    key={field.key}
+                    size="small"
+                    styles={{ body: { padding: 16 } }}
+                  >
+                    <Row gutter={[12, 12]} align="middle">
+                      <Col xs={24} md={5}>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'day_of_week']}
+                          label="روز"
+                          rules={[
+                            {
+                              required: true,
+                              message: 'روز را انتخاب کنید',
+                            },
+                          ]}
+                        >
+                          <Select options={DAYS} />
+                        </Form.Item>
+                      </Col>
+
+                      <Col xs={24} md={5}>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'start_time']}
+                          label="ساعت شروع"
+                          rules={[
+                            {
+                              required: true,
+                              message:
+                                'ساعت شروع را انتخاب کنید',
+                            },
+                          ]}
+                        >
+                          <TimePicker
+                            format="HH:mm"
+                            minuteStep={15}
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+                      </Col>
+
+                      <Col xs={24} md={5}>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'end_time']}
+                          label="ساعت پایان"
+                          rules={[
+                            {
+                              required: true,
+                              message:
+                                'ساعت پایان را انتخاب کنید',
+                            },
+                          ]}
+                        >
+                          <TimePicker
+                            format="HH:mm"
+                            minuteStep={15}
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+                      </Col>
+
+                      <Col xs={12} md={5}>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'is_active']}
+                          label="وضعیت"
+                          valuePropName="checked"
+                          initialValue
+                        >
+                          <Switch
+                            checkedChildren="فعال"
+                            unCheckedChildren="غیرفعال"
+                          />
+                        </Form.Item>
+                      </Col>
+
+                      <Col xs={12} md={4}>
+                        <Button
+                          danger
+                          block
+                          icon={<DeleteOutlined />}
+                          onClick={() => remove(field.name)}
+                        >
+                          حذف
+                        </Button>
+                      </Col>
+                    </Row>
+                  </Card>
+                ))}
+
+                <Button
+                  block
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  onClick={() =>
+                    add({
+                      day_of_week: 6,
+                      start_time: dayjs(
+                        '2000-01-01T08:00:00'
+                      ),
+                      end_time: dayjs(
+                        '2000-01-01T16:00:00'
+                      ),
+                      slot_duration: 30,
+                      is_active: true,
+                    })
+                  }
+                >
+                  افزودن ساعات کاری
+                </Button>
+              </Space>
+            )}
+          </Form.List>
+
+          <Divider />
+
+          <Space>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={saving}
+              disabled={!selectedDoctor}
+              icon={<SaveOutlined />}
+            >
+              ذخیره
+            </Button>
+
+            <Button onClick={() => router.back()}>
+              انصراف
+            </Button>
+          </Space>
+        </Form>
+      </Card>
+    </div>
   );
 }
