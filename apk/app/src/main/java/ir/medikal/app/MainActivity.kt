@@ -218,7 +218,7 @@ private fun HomeScreen(state: UiState, vm: MainViewModel) {
         item { HeroCard { vm.navigate(Screen.AI) } }
         item { Text("خدمات سریع", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
         item {
-            val actions = listOf(
+            val actions: List<Triple<String, androidx.compose.ui.graphics.vector.ImageVector, () -> Unit>> = listOf(
                 Triple("نوبت پزشک", Icons.Outlined.CalendarMonth) { vm.openDoctors() },
                 Triple("پزشک در خانه", Icons.Outlined.HomeWork) { vm.navigate(Screen.EMERGENCY) },
                 Triple("داروخانه", Icons.Outlined.LocalPharmacy) { vm.openPharmacy() },
