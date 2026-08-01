@@ -191,7 +191,7 @@ fun MedikalApp(vm: MainViewModel) {
 
 @Composable
 private fun BottomNav(screen: Screen, vm: MainViewModel) {
-    NavigationBar(containerColor = Color.Black, tonalElevation = 0.dp) {
+    NavigationBar(containerColor = Color.White, tonalElevation = 2.dp) {
         listOf(
             Triple(Screen.HOME, "خانه", Icons.Outlined.Home),
             Triple(Screen.DOCTORS, "پزشکان", Icons.Outlined.MedicalServices),
@@ -246,7 +246,7 @@ private fun HeroCard(onClick: () -> Unit) {
 
 @Composable
 private fun ActionCard(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, click: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedCard(modifier.clickable(onClick = click), border = BorderStroke(1.dp, Color(0xFF333333)), shape = RoundedCornerShape(20.dp)) {
+    OutlinedCard(modifier.clickable(onClick = click), border = BorderStroke(1.dp, Color(0xFFD0D0D0)), shape = RoundedCornerShape(20.dp)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) { Surface(shape = RoundedCornerShape(14.dp), color = Color.White) { Icon(icon, null, tint = Color.Black, modifier = Modifier.padding(10.dp)) }; Spacer(Modifier.width(12.dp)); Text(title, fontWeight = FontWeight.Bold) }
     }
 }
@@ -327,7 +327,7 @@ private fun AiScreen(state: UiState, vm: MainViewModel) {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         PageHeader("دستیار هوشمند پزشکی", "این سرویس جایگزین تشخیص پزشک نیست")
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 16.dp)) {
-            items(state.aiMessages) { (mine, msg) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.Start else Arrangement.End) { Surface(color = if (mine) Color.White else Color(0xFF222222), contentColor = if (mine) Color.Black else Color.White, shape = RoundedCornerShape(18.dp), modifier = Modifier.widthIn(max = 310.dp)) { Text(msg, Modifier.padding(14.dp)) } } }
+            items(state.aiMessages) { (mine, msg) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.Start else Arrangement.End) { Surface(color = if (mine) Color(0xFF202020) else Color.White, contentColor = if (mine) Color.White else Color.Black, shadowElevation = 1.dp, shape = RoundedCornerShape(18.dp), modifier = Modifier.widthIn(max = 310.dp)) { Text(msg, Modifier.padding(14.dp)) } } }
         }
         Row(verticalAlignment = Alignment.CenterVertically) { OutlinedTextField(text, { text = it }, Modifier.weight(1f), placeholder = { Text("سؤال پزشکی خود را بنویسید") }, maxLines = 4, shape = RoundedCornerShape(20.dp)); Spacer(Modifier.width(8.dp)); FilledIconButton(onClick = { if (text.isNotBlank()) { vm.sendAi(text); text = "" } }) { Icon(Icons.Outlined.Send, "ارسال") } }
     }
@@ -337,7 +337,7 @@ private fun AiScreen(state: UiState, vm: MainViewModel) {
 private fun EmergencyScreen(state: UiState, vm: MainViewModel) {
     var name by remember { mutableStateOf("") }; var mobile by remember { mutableStateOf("") }; var address by remember { mutableStateOf("") }; var complaint by remember { mutableStateOf("") }
     FormPage("پزشک در خانه و اورژانس", onBack = { vm.navigate(Screen.HOME) }) {
-        Surface(color = Color(0xFF221111), shape = RoundedCornerShape(18.dp)) { Text("در وضعیت تهدیدکننده حیات فوراً با ۱۱۵ تماس بگیرید.", Modifier.padding(16.dp), color = Color(0xFFFFAAAA)) }
+        Surface(color = Color(0xFFFFE9E7), shape = RoundedCornerShape(18.dp)) { Text("در وضعیت تهدیدکننده حیات فوراً با ۱۱۵ تماس بگیرید.", Modifier.padding(16.dp), color = Color(0xFF8C1D18)) }
         Field("نام بیمار", name) { name = it }; Field("موبایل", mobile) { mobile = it }; Field("آدرس دقیق", address, 3) { address = it }; Field("شرح مشکل یا علائم", complaint, 4) { complaint = it }
         Button({ vm.emergency(name, mobile, address, complaint) }, Modifier.fillMaxWidth().height(54.dp)) { Text("ثبت درخواست اعزام") }
     }
