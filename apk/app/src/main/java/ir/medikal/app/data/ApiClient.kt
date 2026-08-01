@@ -9,11 +9,16 @@ import java.io.BufferedReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.util.concurrent.ConcurrentHashMap
 
 data class ApiResult(val ok: Boolean, val data: Any? = null, val message: String = "", val status: Int = 0)
 
 class ApiClient(private val session: SessionStore) {
-    suspend fun get(path: String, query: Map<String, String> = emptyMap()) = request("GET", path, query = query)
+    suspend fun get(path: String, query: Map<String, String> = emptyMap()): ApiResult {
+        val key = path + query.toString() + session.token.take(8)
+        cache[key]?.takeIf { System.currentTimeMillis() - it.first < 30_000 }?.let { return it.second }
+        return request("GET", path, query = query).also { if (it.ok) cache[key] = System.currentTimeMillis() to it }
+    }
     suspend fun post(path: String, body: JSONObject = JSONObject()) = request("POST", path, body)
     suspend fun put(path: String, body: JSONObject = JSONObject()) = request("PUT", path, body)
     suspend fun delete(path: String) = request("DELETE", path)
@@ -61,6 +66,7 @@ class ApiClient(private val session: SessionStore) {
     }
 
     companion object {
+        private val cache = ConcurrentHashMap<String, Pair<Long, ApiResult>>()
         fun arrayFrom(value: Any?): JSONArray = when (value) {
             is JSONArray -> value
             is JSONObject -> when {

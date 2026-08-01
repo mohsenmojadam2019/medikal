@@ -11,6 +11,9 @@ class SessionStore(context: Context) {
     var apiUrl: String
         get() = prefs.getString("api_url", BuildConfig.DEFAULT_API_URL).orEmpty()
         set(value) = prefs.edit().putString("api_url", value).apply()
+    var offlineMode: Boolean
+        get() = prefs.getBoolean("offline_mode", true)
+        set(value) = prefs.edit().putBoolean("offline_mode", value).apply()
     val isLoggedIn get() = token.isNotBlank()
     fun clear() = prefs.edit().remove("token").apply()
 }

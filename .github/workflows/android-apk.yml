@@ -44,13 +44,14 @@ jobs:
         run: gradle assembleDebug --stacktrace
       - name: Package install ZIP
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk medikal.apk
-          zip -j medikal-android-install.zip medikal.apk README.md
+          cp app/build/outputs/apk/debug/app-debug.apk medikal-v2-offline.apk
+          zip -j medikal-android-install.zip medikal-v2-offline.apk README.md
       - uses: actions/upload-artifact@v4
         with:
           name: medikal-android-debug
           path: |
             apk/app/build/outputs/apk/debug/app-debug.apk
+            apk/medikal-v2-offline.apk
             apk/medikal-android-install.zip
           if-no-files-found: error
           retention-days: 30
@@ -59,4 +60,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release view android-latest >/dev/null 2>&1 || gh release create android-latest --target main --title "Medikal Android" --notes "نسخه قابل نصب اندروید مدیکال"
-          gh release upload android-latest medikal-android-install.zip --clobber
+          gh release upload android-latest medikal-android-install.zip medikal-v2-offline.apk --clobber

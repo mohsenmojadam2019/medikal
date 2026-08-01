@@ -30,6 +30,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import ir.medikal.app.data.ApiClient
 import ir.medikal.app.data.SessionStore
+import ir.medikal.app.data.StaticData
 import ir.medikal.app.ui.theme.MedikalTheme
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,13 +51,14 @@ data class UiState(
     val selectedDoctor: JSONObject? = null,
     val genericTitle: String = "",
     val aiMessages: List<Pair<Boolean, String>> = listOf(false to "سلام، من دستیار سلامت مدیکال هستم. پرسش پزشکی خود را مطرح کنید."),
-    val userName: String = "کاربر مدیکال"
+    val userName: String = "کاربر مدیکال",
+    val offlineMode: Boolean = true
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     val session = SessionStore(app)
     private val api = ApiClient(session)
-    private val _state = MutableStateFlow(UiState(loggedIn = session.isLoggedIn))
+    private val _state = MutableStateFlow(UiState(loggedIn = session.isLoggedIn || session.offlineMode, offlineMode = session.offlineMode))
     val state = _state.asStateFlow()
 
     init { loadHome() }
@@ -66,6 +68,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun notify(text: String) { _state.value = _state.value.copy(message = text) }
 
     fun loadHome() = viewModelScope.launch {
+        if (session.offlineMode) {
+            _state.value = _state.value.copy(loading = false, doctors = StaticData.doctors, specialties = StaticData.specialties, offlineMode = true)
+            return@launch
+        }
         busy(true)
         val doctors = async { api.get("doctors", mapOf("per_page" to "10")) }
         val specs = async { api.get("specialties") }
@@ -77,18 +83,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loginEmail(email: String, password: String) = viewModelScope.launch {
+        if (session.offlineMode) { session.token = "offline-session"; _state.value = _state.value.copy(loggedIn = true, screen = Screen.HOME, message = "ورود آفلاین انجام شد"); return@launch }
         busy(true)
         val r = api.post("auth/login/email", JSONObject().put("email", email).put("password", password))
         finishLogin(r.data, r.ok, r.message)
     }
 
     fun sendOtp(mobile: String, done: () -> Unit) = viewModelScope.launch {
+        if (session.offlineMode) { done(); notify("کد آزمایشی ۱۲۳۴ است"); return@launch }
         busy(true)
         val r = api.post("auth/login/mobile", JSONObject().put("mobile", mobile))
         busy(false); if (r.ok) done() else notify(r.message.ifBlank { "ارسال کد ناموفق بود" })
     }
 
     fun verifyOtp(mobile: String, code: String) = viewModelScope.launch {
+        if (session.offlineMode) { session.token = "offline-session"; _state.value = _state.value.copy(loggedIn = true, screen = Screen.HOME, message = "ورود آفلاین انجام شد"); return@launch }
         busy(true)
         val r = api.post("auth/login/mobile/verify", JSONObject().put("mobile", mobile).put("code", code).put("otp", code))
         finishLogin(r.data, r.ok, r.message)
@@ -115,6 +124,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun logout() { session.clear(); _state.value = UiState(screen = Screen.LOGIN, loggedIn = false) }
     fun saveApiUrl(url: String) { session.apiUrl = url.trim().trimEnd('/') + "/"; notify("آدرس سرور ذخیره شد") }
+    fun setOfflineMode(enabled: Boolean) {
+        session.offlineMode = enabled
+        _state.value = _state.value.copy(offlineMode = enabled, loggedIn = enabled || session.isLoggedIn, message = if (enabled) "حالت آفلاین فعال شد" else "حالت اتصال به سرور فعال شد")
+        loadHome()
+    }
 
     fun openDoctors() { navigate(Screen.DOCTORS); if (_state.value.doctors.isEmpty()) loadHome() }
     fun selectDoctor(doctor: JSONObject) { _state.value = _state.value.copy(screen = Screen.BOOKING, selectedDoctor = doctor) }
@@ -128,6 +142,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun openModule(title: String, path: String) = loadGeneric(title, path, Screen.GENERIC)
 
     private fun loadGeneric(title: String, path: String, screen: Screen) = viewModelScope.launch {
+        if (session.offlineMode) {
+            _state.value = _state.value.copy(screen = screen, genericTitle = title, loading = false, items = StaticData.forPath(path), offlineMode = true)
+            return@launch
+        }
         if (!session.isLoggedIn && path.contains("my")) { navigate(Screen.LOGIN); return@launch }
         _state.value = _state.value.copy(screen = screen, genericTitle = title, loading = true, items = emptyList())
         val r = api.get(path)
@@ -135,6 +153,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun protectedAction(block: suspend () -> ir.medikal.app.data.ApiResult) = viewModelScope.launch {
+        if (session.offlineMode) {
+            if (_state.value.screen == Screen.BOOKING) {
+                val doctor = _state.value.selectedDoctor
+                StaticData.appointments.add(0, JSONObject().put("id", System.currentTimeMillis()).put("name", "ویزیت ${doctor?.optString("full_name", "پزشک")}").put("date", "درخواست جدید").put("status_label", "ثبت آفلاین"))
+            }
+            _state.value = _state.value.copy(screen = Screen.HOME, message = "اطلاعات با موفقیت در حالت آفلاین ثبت شد")
+            return@launch
+        }
         if (!session.isLoggedIn) { navigate(Screen.LOGIN); return@launch }
         busy(true); val r = block(); busy(false)
         notify(if (r.ok) r.message.ifBlank { "عملیات با موفقیت انجام شد" } else r.message.ifBlank { "عملیات ناموفق بود" })
@@ -142,6 +168,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sendAi(question: String) = viewModelScope.launch {
+        if (session.offlineMode) {
+            _state.value = _state.value.copy(aiMessages = _state.value.aiMessages + (true to question) + (false to StaticData.aiAnswer(question)))
+            return@launch
+        }
         if (!session.isLoggedIn) { navigate(Screen.LOGIN); return@launch }
         _state.value = _state.value.copy(loading = true, aiMessages = _state.value.aiMessages + (true to question))
         val r = api.post("v1/chat/medical/ask", JSONObject().put("question", question))
@@ -215,6 +245,7 @@ private fun HomeScreen(state: UiState, vm: MainViewModel) {
                 IconButton(onClick = { vm.openModule("اعلان‌ها", "notifications") }) { Icon(Icons.Outlined.Notifications, "اعلان‌ها") }
             }
         }
+        item { if (state.offlineMode) AssistChip(onClick = {}, label = { Text("حالت آفلاین • اطلاعات آماده استفاده") }, leadingIcon = { Icon(Icons.Outlined.OfflineBolt, null) }) }
         item { HeroCard { vm.navigate(Screen.AI) } }
         item { Text("خدمات سریع", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
         item {
@@ -350,7 +381,17 @@ private fun MoreScreen(state: UiState, vm: MainViewModel) {
         item { PageHeader("خدمات و حساب کاربری", if (state.loggedIn) state.userName else "برای خدمات شخصی وارد شوید") }
         val modules = listOf("نوبت‌های من" to "appointments/my/appointments", "کیف پول" to "wallet/summary", "پرداخت‌ها" to "payments/history", "نسخه‌ها" to "prescriptions/my", "آزمایشگاه" to "lab/tests/active", "گفتگوها" to "chat/conversations", "اعلان‌ها" to "notifications", "پرونده پزشکی" to "medical-notes")
         items(modules) { (title, path) -> ActionCard(title, Icons.Outlined.ArrowBack, { vm.openModule(title, path) }, Modifier.fillMaxWidth()) }
-        item { HorizontalDivider(); Text("تنظیمات اتصال", fontWeight = FontWeight.Bold); Field("آدرس پایه API", url) { url = it }; OutlinedButton({ vm.saveApiUrl(url) }, Modifier.fillMaxWidth()) { Text("ذخیره آدرس سرور") } }
+        item {
+            HorizontalDivider()
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text("حالت آفلاین", fontWeight = FontWeight.Bold); Text("نمایش فوری داده‌های داخلی بدون نیاز به سرور", color = Color.Gray) }
+                Switch(checked = state.offlineMode, onCheckedChange = vm::setOfflineMode)
+            }
+            if (!state.offlineMode) {
+                Spacer(Modifier.height(12.dp)); Field("آدرس پایه API", url) { url = it }
+                OutlinedButton({ vm.saveApiUrl(url) }, Modifier.fillMaxWidth()) { Text("ذخیره آدرس سرور") }
+            }
+        }
         item { if (state.loggedIn) Button(vm::logout, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)) { Text("خروج از حساب") } else Button({ vm.navigate(Screen.LOGIN) }, Modifier.fillMaxWidth()) { Text("ورود / ثبت‌نام") } }
         item { Text("نسخه ۱.۰.۰ • طراحی بومی RTL", color = Color.Gray) }
     }
