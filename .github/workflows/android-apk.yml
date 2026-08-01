@@ -35,6 +35,11 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$result"
+      - name: Publish Gradle error annotation
+        if: failure()
+        run: |
+          details=$(tail -n 120 test-build.log | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=Android Gradle failure::$details"
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
