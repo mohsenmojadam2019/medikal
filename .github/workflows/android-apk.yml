@@ -38,7 +38,7 @@ jobs:
       - name: Publish Gradle error annotation
         if: failure()
         run: |
-          details=$(tail -n 120 test-build.log | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
+          details=$(grep -E '(^e: |FAILURE:|What went wrong|Execution failed|Compilation error|Could not |error:|Caused by:)' test-build.log | tail -n 100 | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
           echo "::error title=Android Gradle failure::$details"
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
