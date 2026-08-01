@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -42,9 +42,21 @@ jobs:
           echo "::error title=Android Gradle failure::$details"
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
+      - name: Package install ZIP
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk medikal.apk
+          zip -j medikal-android-install.zip medikal.apk README.md
       - uses: actions/upload-artifact@v4
         with:
           name: medikal-android-debug
-          path: apk/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            apk/app/build/outputs/apk/debug/app-debug.apk
+            apk/medikal-android-install.zip
           if-no-files-found: error
           retention-days: 30
+      - name: Publish install ZIP
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view android-latest >/dev/null 2>&1 || gh release create android-latest --target main --title "Medikal Android" --notes "نسخه قابل نصب اندروید مدیکال"
+          gh release upload android-latest medikal-android-install.zip --clobber
