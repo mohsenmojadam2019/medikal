@@ -31,7 +31,7 @@ export default function DoctorDetailPage() {
   // دریافت اطلاعات پزشک از API
   const fetchDoctor = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/doctors/${doctorId}/public`, {
+      const res = await fetch(`${API_URL}/api/doctors/${doctorId}`, {
         headers: {
           'Content-Type': 'application/json',
         },

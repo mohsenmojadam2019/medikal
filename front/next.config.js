@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['localhost', 'medikall-laravel'],
+    remotePatterns: [{ protocol: 'http', hostname: 'localhost' }, { protocol: 'http', hostname: 'medikall-laravel' }],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
   },

@@ -33,7 +33,7 @@ export default function PharmacyPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/products/active`, {
+      const res = await fetch(`${API_URL}/api/products`, {
         headers: {
           'Content-Type': 'application/json',
         },

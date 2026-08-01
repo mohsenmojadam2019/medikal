@@ -1,14 +1,14 @@
 // /src/app/fa/pharmacy/payment/callback/page.js
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Result, Button, Spin, message } from 'antd';
 import { useLanguage } from '@/lib/context/LanguageContext';
 import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
 
-export default function PharmacyPaymentCallbackPage() {
+function PharmacyPaymentCallbackPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { locale } = useLanguage();
@@ -138,4 +138,8 @@ export default function PharmacyPaymentCallbackPage() {
             </div>
         </>
     );
+}
+
+export default function Page() {
+  return <Suspense fallback={null}><PharmacyPaymentCallbackPage /></Suspense>;
 }

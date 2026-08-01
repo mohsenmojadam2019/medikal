@@ -68,7 +68,7 @@ const STATIC_PATHS = [
 
 const AUTH_PATHS = ['/login', '/register', '/verify', '/forgot-password', '/reset-password'];
 
-export function middleware(request) {
+export function proxy(request) {
   const { pathname } = request.nextUrl;
 
   if (STATIC_PATHS.some(path => pathname.startsWith(path))) {

@@ -1,4 +1,4 @@
-import { ConfigProvider } from 'antd';
+import { App as AntdApp, ConfigProvider } from 'antd';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { AuthProvider } from '@/lib/context/AuthContext';
 import { LanguageProvider } from '@/lib/context/LanguageContext';
@@ -52,6 +52,7 @@ export default function RootLayout({ children }) {
               },
             }}
           >
+            <AntdApp>
             <LanguageProvider>
               <ThemeProvider>
                 <AuthProvider>
@@ -59,6 +60,7 @@ export default function RootLayout({ children }) {
                 </AuthProvider>
               </ThemeProvider>
             </LanguageProvider>
+            </AntdApp>
           </ConfigProvider>
         </AntdRegistry>
       </body>

@@ -29,7 +29,7 @@ export default function DoctorsPage() {
   const fetchDoctors = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/doctors/public`, {
+      const res = await fetch(`${API_URL}/api/doctors`, {
         headers: {
           'Content-Type': 'application/json',
         },

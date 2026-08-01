@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import {
   Card, Row, Col, Button, Typography, Spin, Tag,
   Divider, Space, QRCode, message, Alert, Statistic
@@ -21,7 +21,7 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
 
-export default function ConfirmationPage() {
+function ConfirmationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useLanguage();
@@ -93,7 +93,10 @@ export default function ConfirmationPage() {
   };
 
   const handleShareWhatsApp = () => {
-    const text = `نوبت من در دکتر وب\nپزشک: ${appointment?.doctorName}\nتاریخ: ${dayjs(appointment?.date).format('YYYY/MM/DD')}\nساعت: ${appointment?.time}`;
+    const text = `نوبت من در دکتر وب
+پزشک: ${appointment?.doctorName}
+تاریخ: ${dayjs(appointment?.date).format('YYYY/MM/DD')}
+ساعت: ${appointment?.time}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -316,4 +319,8 @@ export default function ConfirmationPage() {
         <Footer />
       </>
   );
+}
+
+export default function Page() {
+  return <Suspense fallback={<LoadingSpinner />}><ConfirmationPage /></Suspense>;
 }

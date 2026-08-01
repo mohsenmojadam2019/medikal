@@ -31,7 +31,7 @@ export default function DoctorsPage() {
   const fetchDoctors = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `${API_URL}/api/doctors/public`;
+      const url = `${API_URL}/api/doctors`;
       const res = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',

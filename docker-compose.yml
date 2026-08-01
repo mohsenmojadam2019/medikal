@@ -135,7 +135,7 @@ services:
 
   # Frontend (React/Vue)
   front:
-    image: node:23-alpine
+    image: node:22-alpine
     working_dir: /app
     volumes:
       - ./front:/app
@@ -160,7 +160,7 @@ services:
 
   # Admin panel (React/Vue)
   admin:
-    image: node:23-alpine
+    image: node:22-alpine
     working_dir: /app
     volumes:
       - ./admin:/app

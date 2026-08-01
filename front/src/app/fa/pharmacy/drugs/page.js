@@ -84,7 +84,7 @@ export default function ProductsPage() {
             queryParams.append('page', currentPage);
             queryParams.append('per_page', pageSize);
 
-            const res = await fetch(`${API_URL}/api/products/active?${queryParams}`);
+            const res = await fetch(`${API_URL}/api/products?${queryParams}`);
             const data = await res.json();
             if (data.success) {
                 const productsData = data.data.data || data.data || [];

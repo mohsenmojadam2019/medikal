@@ -70,7 +70,7 @@ export default function EditProfilePage() {
 
       // دریافت اطلاعات بیمار
       try {
-        const patientRes = await fetch(`${API_URL}/api/patients/me`, {
+        const patientRes = await fetch(`${API_URL}/api/patients/my-profile`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

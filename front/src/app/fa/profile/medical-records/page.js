@@ -24,7 +24,7 @@ export default function MedicalRecordsPage() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/ehr/records`, {
+      const res = await fetch(`${API_URL}/api/medical-notes/my-notes`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

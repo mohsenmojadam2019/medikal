@@ -111,7 +111,7 @@ export default function PharmacyCheckoutPage() {
                 setRecipientName(data.data.name || '');
                 setRecipientPhone(data.data.mobile || '');
 
-                const patientRes = await fetch(`${API_URL}/api/patients/me`, {
+                const patientRes = await fetch(`${API_URL}/api/patients/my-profile`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json',

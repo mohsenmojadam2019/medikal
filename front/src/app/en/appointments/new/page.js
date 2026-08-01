@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import {
   Card, Row, Col, Button, Typography, Spin, Empty, Tag, message,
   Calendar, Space, Divider, Alert, Steps
@@ -20,7 +20,7 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const { Title, Text } = Typography;
 
-export default function NewAppointmentPage() {
+function NewAppointmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useLanguage();
@@ -47,7 +47,7 @@ export default function NewAppointmentPage() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/doctors/${doctorId}/public`, {
+      const res = await fetch(`${API_URL}/api/doctors/${doctorId}`, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -321,4 +321,8 @@ export default function NewAppointmentPage() {
         <Footer />
       </>
   );
+}
+
+export default function Page() {
+  return <Suspense fallback={<LoadingSpinner />}><NewAppointmentPage /></Suspense>;
 }

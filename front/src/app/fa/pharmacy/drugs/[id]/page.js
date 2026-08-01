@@ -60,7 +60,7 @@ export default function PharmacyPage() {
       params.append('page', currentPage);
       params.append('per_page', pageSize);
 
-      const res = await fetch(`${API_URL}/api/products/active?${params}`, {
+      const res = await fetch(`${API_URL}/api/products?${params}`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',

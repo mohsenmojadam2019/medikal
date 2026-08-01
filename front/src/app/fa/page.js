@@ -94,7 +94,7 @@ export default function HomePage() {
 
   const fetchTopDoctors = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/doctors/public`, {
+      const res = await fetch(`${API_URL}/api/doctors`, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -116,7 +116,7 @@ export default function HomePage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/products/active`, {
+      const res = await fetch(`${API_URL}/api/products`, {
         headers: {
           'Content-Type': 'application/json',
         },

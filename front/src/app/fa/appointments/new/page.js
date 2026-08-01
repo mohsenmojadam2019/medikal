@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Card, Row, Col, Button, Typography, Spin, Tag,
@@ -43,7 +43,7 @@ function formatDateForAPI(date) {
   return `${year}-${month}-${day}`;
 }
 
-export default function NewAppointmentPage() {
+function NewAppointmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { locale } = useLanguage();
@@ -112,7 +112,7 @@ export default function NewAppointmentPage() {
 
       try {
         setError(null);
-        const res = await fetch(`${API_URL}/api/doctors/${finalDoctorId}/public`, {
+        const res = await fetch(`${API_URL}/api/doctors/${finalDoctorId}`, {
           headers: { 'Content-Type': 'application/json' },
         });
 
@@ -673,4 +673,8 @@ export default function NewAppointmentPage() {
         <Footer />
       </>
   );
+}
+
+export default function Page() {
+  return <Suspense fallback={<LoadingSpinner />}><NewAppointmentPage /></Suspense>;
 }

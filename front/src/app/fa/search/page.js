@@ -1,7 +1,7 @@
 // /src/app/fa/search/page.js
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, Row, Col, Typography, Spin, Empty, Tag, Button, message } from 'antd';
 import { MedicineBoxOutlined } from '@ant-design/icons';
@@ -11,7 +11,7 @@ import Footer from '@/components/front/Footer/Footer';
 
 const { Title, Text } = Typography;
 
-export default function SearchPage() {
+function SearchPage() {
     const searchParams = useSearchParams();
     const { locale } = useLanguage();
     const [loading, setLoading] = useState(false);
@@ -131,4 +131,8 @@ export default function SearchPage() {
             <Footer />
         </>
     );
+}
+
+export default function Page() {
+  return <Suspense fallback={null}><SearchPage /></Suspense>;
 }

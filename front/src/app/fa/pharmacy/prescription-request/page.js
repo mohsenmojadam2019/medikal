@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Card, Row, Col, Typography, Button, Input, Form,
@@ -14,7 +14,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-export default function PrescriptionRequestPage() {
+function PrescriptionRequestPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { message } = App.useApp();
@@ -307,4 +307,8 @@ export default function PrescriptionRequestPage() {
             <Footer />
         </>
     );
+}
+
+export default function Page() {
+  return <Suspense fallback={null}><PrescriptionRequestPage /></Suspense>;
 }
