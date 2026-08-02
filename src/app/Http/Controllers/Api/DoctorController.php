@@ -23,7 +23,6 @@ class DoctorController extends Controller
             'clinic',
             'province',
             'city',
-            'primaryAddress'
         ])
             ->where('is_available', true)
             ->where('is_verified', true)
@@ -87,7 +86,6 @@ class DoctorController extends Controller
             $doctor = Doctor::with([
                 'user',
                 'specialty',
-                'primaryAddress',
                 'schedules',
                 'clinic',
                 'province',

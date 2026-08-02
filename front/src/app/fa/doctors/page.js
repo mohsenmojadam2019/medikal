@@ -13,6 +13,8 @@ import Breadcrumb from '@/components/shared/Breadcrumb';
 const { Title, Text } = Typography;
 const { Search } = Input;
 
+const API_URL = '';
+
 export default function DoctorsPage() {
   const router = useRouter();
   const { locale } = useLanguage();
@@ -26,12 +28,11 @@ export default function DoctorsPage() {
   const [favorites, setFavorites] = useState([]);
   const [sortBy, setSortBy] = useState('rating');
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
   const fetchDoctors = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `${API_URL}/api/doctors`;
+      const url = '/api/doctors';
       const res = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +78,7 @@ export default function DoctorsPage() {
 
   const fetchSpecialties = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/specialties`, {
+      const res = await fetch('/api/specialties', {
         headers: {
           'Content-Type': 'application/json',
         },
