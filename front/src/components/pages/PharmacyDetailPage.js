@@ -9,6 +9,7 @@ import Footer from '@/components/front/Footer/Footer';
 import ServiceState from '@/components/platform/ServiceState';
 import { apiFetch, getApiErrorMessage } from '@/lib/api/client';
 
+import { useLanguage } from '@/lib/context/LanguageContext';
 const { Title, Text, Paragraph } = Typography;
 const copyMap = {
   fa: { back: 'بازگشت به داروخانه‌ها', products: 'محصولات موجود', empty: 'محصول فعالی ثبت نشده است', error: 'اطلاعات داروخانه دریافت نشد', retry: 'تلاش دوباره', price: 'تومان' },
@@ -16,7 +17,8 @@ const copyMap = {
   ar: { back: 'العودة إلى الصيدليات', products: 'المنتجات المتاحة', empty: 'لا توجد منتجات فعالة', error: 'تعذر تحميل معلومات الصيدلية', retry: 'إعادة المحاولة', price: 'تومان' },
 };
 
-export default function PharmacyDetailPage({ locale = 'fa', pharmacyId }) {
+export default function PharmacyDetailPage({pharmacyId}) {
+  const { locale } = useLanguage();
   const copy = copyMap[locale] || copyMap.fa;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ export default function PharmacyDetailPage({ locale = 'fa', pharmacyId }) {
     <div className="medikal-platform">
       <Header />
       <main className="medikal-page"><div className="medikal-shell">
-        <Link href={`/${locale}/pharmacy`} className="medikal-back-link"><ArrowLeftOutlined /> {copy.back}</Link>
+        <Link href={`/pharmacy`} className="medikal-back-link"><ArrowLeftOutlined /> {copy.back}</Link>
         {loading ? <Card><Skeleton active avatar paragraph={{ rows: 6 }} /></Card> : null}
         {error ? <ServiceState title={copy.error} description={error} retryLabel={copy.retry} onRetry={load} /> : null}
         {!loading && !error && pharmacy ? (

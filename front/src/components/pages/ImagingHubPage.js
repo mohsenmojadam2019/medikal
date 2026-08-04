@@ -6,6 +6,7 @@ import { CalendarOutlined, FileImageOutlined, FileSearchOutlined, SafetyCertific
 import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
 
+import { useLanguage } from '@/lib/context/LanguageContext';
 const { Title, Text, Paragraph } = Typography;
 
 const copyMap = {
@@ -35,7 +36,8 @@ const copyMap = {
   },
 };
 
-export default function ImagingHubPage({ locale = 'fa' }) {
+export default function ImagingHubPage() {
+  const { locale } = useLanguage();
   const copy = copyMap[locale] || copyMap.fa;
   const cards = [
     [CalendarOutlined, copy.request, copy.requestText],
@@ -75,7 +77,7 @@ export default function ImagingHubPage({ locale = 'fa' }) {
             />
             <div className="medikal-process-card__action">
               <Text>{copy.requestText}</Text>
-              <Link href={`/${locale}/profile/medical-records`}><Button type="primary">{copy.action}</Button></Link>
+              <Link href={`/profile/medical-records`}><Button type="primary">{copy.action}</Button></Link>
             </div>
           </Card>
         </div>

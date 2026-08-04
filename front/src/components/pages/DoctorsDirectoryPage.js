@@ -9,6 +9,7 @@ import Footer from '@/components/front/Footer/Footer';
 import ServiceState from '@/components/platform/ServiceState';
 import { apiFetch, extractCollection, extractPagination, getApiErrorMessage } from '@/lib/api/client';
 
+import { useLanguage } from '@/lib/context/LanguageContext';
 const { Title, Text } = Typography;
 
 const copyMap = {
@@ -17,7 +18,8 @@ const copyMap = {
   ar: { title: 'الأطباء المتخصصون', subtitle: 'اختر الطبيب المناسب واحجز موعداً عبر الإنترنت', search: 'اسم الطبيب أو التخصص أو العيادة', specialty: 'كل التخصصات', results: 'طبيب', book: 'حجز موعد', profile: 'عرض الملف', empty: 'لا يوجد أطباء مطابقون', error: 'تعذر تحميل قائمة الأطباء', retry: 'إعادة المحاولة', fee: 'تومان', available: 'متاح' },
 };
 
-export default function DoctorsDirectoryPage({ locale = 'fa' }) {
+export default function DoctorsDirectoryPage() {
+  const { locale } = useLanguage();
   const copy = copyMap[locale] || copyMap.fa;
   const router = useRouter();
   const [doctors, setDoctors] = useState([]);
@@ -115,8 +117,8 @@ export default function DoctorsDirectoryPage({ locale = 'fa' }) {
                     <div className="medikal-card-rating"><Rate disabled allowHalf value={Number(doctor.rating || 0)} /><span>{Number(doctor.rating || 0).toFixed(1)}</span></div>
                     <div className="medikal-card-fee">{Number(doctor.fee_value ?? doctor.consultation_fee ?? 0).toLocaleString(locale === 'en' ? 'en-US' : 'fa-IR')} <small>{copy.fee}</small></div>
                     <div className="medikal-card-actions">
-                      <Button onClick={() => router.push(`/${locale}/doctors/${doctor.id}`)}>{copy.profile}</Button>
-                      <Button type="primary" icon={<CalendarOutlined />} onClick={() => router.push(`/${locale}/appointments/new?doctorId=${doctor.id}`)}>{copy.book}</Button>
+                      <Button onClick={() => router.push(`/doctors/${doctor.id}`)}>{copy.profile}</Button>
+                      <Button type="primary" icon={<CalendarOutlined />} onClick={() => router.push(`/appointments/new?doctorId=${doctor.id}`)}>{copy.book}</Button>
                     </div>
                   </Card>
                 </Col>

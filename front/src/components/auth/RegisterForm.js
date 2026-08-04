@@ -56,9 +56,9 @@ export default function RegisterForm() {
 
         // ✅ هدایت به صفحه تأیید یا صفحه اصلی
         if (data.data?.requires_verification) {
-          router.push(`/${locale}/verify`);
+          router.push(`/verify`);
         } else {
-          router.push(`/${locale}`);
+          router.push(`/`);
         }
       } else {
         appMessage.error(data.message || (locale === 'fa' ? '❌ خطا در ثبت‌نام' :

@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Avatar, Button, Card, Col, Input, Row, Skeleton, Tag, Typography } from 'antd';
-import {
+
+import { useLanguage } from '@/lib/context/LanguageContext';
   CalendarOutlined,
   CustomerServiceOutlined,
   ExperimentOutlined,
@@ -69,7 +70,8 @@ function normalizePharmacy(pharmacy) {
   };
 }
 
-export default function PlatformHome({ locale = 'fa' }) {
+export default function PlatformHome() {
+  const { locale } = useLanguage();
   const router = useRouter();
   const copy = useMemo(() => getPlatformContent(locale), [locale]);
   const [query, setQuery] = useState('');
@@ -97,7 +99,7 @@ export default function PlatformHome({ locale = 'fa' }) {
   const submitSearch = () => {
     const value = query.trim();
     if (!value) return;
-    router.push(`/${locale}/search?q=${encodeURIComponent(value)}`);
+    router.push(`/search?q=${encodeURIComponent(value)}`);
   };
 
   return (
@@ -111,10 +113,10 @@ export default function PlatformHome({ locale = 'fa' }) {
               <Title level={1}>{copy.heroTitle}</Title>
               <Paragraph>{copy.heroText}</Paragraph>
               <div className="medikal-hero__actions">
-                <Button type="primary" size="large" icon={<CalendarOutlined />} onClick={() => router.push(`/${locale}/doctors`)}>
+                <Button type="primary" size="large" icon={<CalendarOutlined />} onClick={() => router.push(`/doctors`)}>
                   {copy.primaryAction}
                 </Button>
-                <Button size="large" icon={<RobotOutlined />} onClick={() => router.push(`/${locale}/ai-chat`)}>
+                <Button size="large" icon={<RobotOutlined />} onClick={() => router.push(`/ai-chat`)}>
                   {copy.secondaryAction}
                 </Button>
               </div>
@@ -152,7 +154,7 @@ export default function PlatformHome({ locale = 'fa' }) {
               const Icon = serviceIcons[key];
               const [background, color] = serviceColors[key];
               return (
-                <Link href={`/${locale}/${key}`} key={key} className="medikal-service-card">
+                <Link href={`/${key}`} key={key} className="medikal-service-card">
                   <span className="medikal-service-card__icon" style={{ background, color }}><Icon /></span>
                   <strong>{title}</strong>
                   <span>{description}</span>
@@ -165,7 +167,7 @@ export default function PlatformHome({ locale = 'fa' }) {
         <section className="medikal-shell medikal-section">
           <div className="medikal-section__heading">
             <Title level={2}>{copy.sections.doctors}</Title>
-            <Link href={`/${locale}/doctors`}>{copy.viewAll}</Link>
+            <Link href={`/doctors`}>{copy.viewAll}</Link>
           </div>
           <Row gutter={[16, 16]}>
             {loading ? [1, 2, 3, 4].map((item) => <Col xs={12} md={6} key={item}><Card><Skeleton active avatar paragraph={{ rows: 2 }} /></Card></Col>) : null}
@@ -173,7 +175,7 @@ export default function PlatformHome({ locale = 'fa' }) {
               <Col span={24}><div className="medikal-inline-state">{copy.unavailable}</div></Col>
             ) : doctors.map((doctor) => (
               <Col xs={12} md={6} key={doctor.id}>
-                <Card className="medikal-doctor-mini" hoverable onClick={() => router.push(`/${locale}/doctors/${doctor.id}`)}>
+                <Card className="medikal-doctor-mini" hoverable onClick={() => router.push(`/doctors/${doctor.id}`)}>
                   <Avatar size={68} src={doctor.image} icon={<UserOutlined />} />
                   <strong>{doctor.name}</strong>
                   <span>{doctor.specialty}</span>
@@ -187,12 +189,12 @@ export default function PlatformHome({ locale = 'fa' }) {
         <section className="medikal-shell medikal-section">
           <div className="medikal-section__heading">
             <Title level={2}>{copy.sections.pharmacies}</Title>
-            <Link href={`/${locale}/pharmacy`}>{copy.viewAll}</Link>
+            <Link href={`/pharmacy`}>{copy.viewAll}</Link>
           </div>
           <div className="medikal-pharmacy-strip">
             {loading ? [1, 2, 3, 4].map((item) => <Card key={item}><Skeleton active avatar paragraph={{ rows: 1 }} /></Card>) : null}
             {!loading && pharmacies.length === 0 ? <div className="medikal-inline-state">{copy.unavailable}</div> : pharmacies.map((pharmacy) => (
-              <Link href={`/${locale}/pharmacy/${pharmacy.id}`} className="medikal-pharmacy-mini" key={pharmacy.id}>
+              <Link href={`/pharmacy/${pharmacy.id}`} className="medikal-pharmacy-mini" key={pharmacy.id}>
                 <Avatar size={54} src={pharmacy.logo} icon={<ShopOutlined />} />
                 <div><strong>{pharmacy.name}</strong><span>{pharmacy.address}</span></div>
                 <Tag color={pharmacy.online ? 'green' : 'default'}>{pharmacy.online ? 'Online' : 'Offline'}</Tag>

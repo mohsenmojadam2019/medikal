@@ -236,8 +236,8 @@ export default function NotificationBell() {
                   }
                   if (notification.data?.order_id || notification.data?.appointment_id) {
                     const path = notification.data?.order_id
-                        ? `/${locale}/profile/pharmacy-orders`
-                        : `/${locale}/appointments`;
+                        ? `/profile/pharmacy-orders`
+                        : `/appointments`;
                     router.push(path);
                   }
                 }}
@@ -270,7 +270,7 @@ export default function NotificationBell() {
               <Button
                   type="link"
                   size="small"
-                  onClick={() => router.push(`/${locale}/notifications`)}
+                  onClick={() => router.push(`/notifications`)}
               >
                 مشاهده همه اعلان‌ها
               </Button>

@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    router.push('/fa/login');
+    router.push('/login');
   };
 
   const value = {

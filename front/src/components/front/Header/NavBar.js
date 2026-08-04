@@ -47,7 +47,7 @@ const NavBar = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    router.push(`/${locale}/login`);
+    router.push(`/login`);
   };
 
   const showContactModal = () => {
@@ -56,19 +56,19 @@ const NavBar = () => {
 
   // ✅ اصلاح: نوبت‌دهی به لیست پزشکان هدایت می‌شود
   const navItems = [
-    { key: 'home', label: 'صفحه اصلی', href: `/${locale}` },
-    { key: 'doctors', label: 'پزشکان', href: `/${locale}/doctors` },
-    { key: 'appointments', label: 'نوبت‌دهی', href: `/${locale}/doctors` }, // ✅ تغییر به لیست پزشکان
-    { key: 'pharmacy', label: 'داروخانه', href: `/${locale}/pharmacy` },
-    { key: 'lab', label: 'آزمایشگاه', href: `/${locale}/lab` },
-    { key: 'imaging', label: 'تصویربرداری', href: `/${locale}/imaging` },
-    { key: 'ai-chat', label: 'هوش مصنوعی', href: `/${locale}/ai-chat` },
-    { key: 'about', label: 'درباره ما', href: `/${locale}/about` },
+    { key: 'home', label: 'صفحه اصلی', href: `/` },
+    { key: 'doctors', label: 'پزشکان', href: `/doctors` },
+    { key: 'appointments', label: 'نوبت‌دهی', href: `/doctors` }, // ✅ تغییر به لیست پزشکان
+    { key: 'pharmacy', label: 'داروخانه', href: `/pharmacy` },
+    { key: 'lab', label: 'آزمایشگاه', href: `/lab` },
+    { key: 'imaging', label: 'تصویربرداری', href: `/imaging` },
+    { key: 'ai-chat', label: 'هوش مصنوعی', href: `/ai-chat` },
+    { key: 'about', label: 'درباره ما', href: `/about` },
     { key: 'contact', label: 'تماس با ما', isContact: true },
   ];
 
   const isActive = (href) => {
-    if (href === `/${locale}`) {
+    if (href === `/`) {
       return pathname === href;
     }
     return pathname.startsWith(href);
@@ -83,7 +83,7 @@ const NavBar = () => {
                 return (
                     <button
                         key={item.key}
-                        className={`nav-link ${pathname === `/${locale}/contact` ? 'active' : ''}`}
+                        className={`nav-link ${pathname === `/contact` ? 'active' : ''}`}
                         onClick={showContactModal}
                     >
                       {item.label}
@@ -130,10 +130,10 @@ const NavBar = () => {
               </div>
           ) : (
               <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <Link href={`/${locale}/login`}>
+                <Link href={`/login`}>
                   <Button type="primary" block>ورود</Button>
                 </Link>
-                <Link href={`/${locale}/register`}>
+                <Link href={`/register`}>
                   <Button block>ثبت نام</Button>
                 </Link>
               </div>
@@ -174,7 +174,7 @@ const NavBar = () => {
               <>
                 <Divider />
                 <div style={{ display: 'flex', flexDirection: 'column', padding: '8px 0' }}>
-                  <Link href={`/${locale}/profile`} className="mobile-nav-item">
+                  <Link href={`/profile`} className="mobile-nav-item">
                     پروفایل
                   </Link>
                   <button className="mobile-nav-item" onClick={handleLogout} style={{ color: '#ef4444' }}>

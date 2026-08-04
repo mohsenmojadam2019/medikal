@@ -71,6 +71,16 @@ const AUTH_PATHS = ['/login', '/register', '/verify', '/forgot-password', '/rese
 export function proxy(request) {
   const { pathname } = request.nextUrl;
 
+  // DOCTORWEB_SINGLE_ROUTE_REDIRECT
+  // Keep old shared links working, but expose only clean URLs.
+  const localeMatch = pathname.match(/^\/(fa|en|ar)(?=\/|$)/);
+  if (localeMatch) {
+    const cleanPath = pathname.replace(/^\/(fa|en|ar)(?=\/|$)/, '') || '/';
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = cleanPath;
+    return NextResponse.redirect(redirectUrl, 308);
+  }
+
   if (STATIC_PATHS.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }

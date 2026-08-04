@@ -8,6 +8,7 @@ import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
 import { apiFetch, getApiErrorMessage, getStoredToken } from '@/lib/api/client';
 
+import { useLanguage } from '@/lib/context/LanguageContext';
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
@@ -35,7 +36,8 @@ const copyMap = {
   },
 };
 
-export default function AIChatPage({ locale = 'fa' }) {
+export default function AIChatPage() {
+  const { locale } = useLanguage();
   const copy = copyMap[locale] || copyMap.fa;
   const [token, setToken] = useState(null);
   const [session, setSession] = useState(null);
@@ -106,7 +108,7 @@ export default function AIChatPage({ locale = 'fa' }) {
           <Card className="medikal-login-card">
             <RobotOutlined className="medikal-login-card__icon" />
             <Title level={3}>{copy.loginTitle}</Title><Paragraph>{copy.loginText}</Paragraph>
-            <Link href={`/${locale}/login`}><Button type="primary" size="large" icon={<LoginOutlined />}>{copy.login}</Button></Link>
+            <Link href={`/login`}><Button type="primary" size="large" icon={<LoginOutlined />}>{copy.login}</Button></Link>
           </Card>
         ) : (
           <Card className="medikal-chat-card">

@@ -5,6 +5,7 @@ import { AuthProvider } from '@/lib/context/AuthContext';
 import { LanguageProvider, useLanguage } from '@/lib/context/LanguageContext';
 import { ThemeProvider } from '@/lib/context/ThemeContext';
 import MobileBottomNav from './MobileBottomNav';
+import AutoTranslate from '@/components/i18n/AutoTranslate';
 
 function DirectionalProviders({ children }) {
   const { direction } = useLanguage();
@@ -33,6 +34,7 @@ function DirectionalProviders({ children }) {
         <ThemeProvider>
           <AuthProvider>
             {children}
+            <AutoTranslate />
             <MobileBottomNav />
           </AuthProvider>
         </ThemeProvider>

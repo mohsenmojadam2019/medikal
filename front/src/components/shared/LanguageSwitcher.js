@@ -1,47 +1,34 @@
 'use client';
 
-import { Dropdown, Button } from 'antd';
+import { Button, Dropdown } from 'antd';
 import { GlobalOutlined } from '@ant-design/icons';
 import { useLanguage } from '@/lib/context/LanguageContext';
+
+const languages = {
+  fa: { label: 'فارسی', flag: '🇮🇷' },
+  en: { label: 'English', flag: '🇬🇧' },
+  ar: { label: 'العربية', flag: '🇸🇦' },
+};
 
 export default function LanguageSwitcher() {
   const { locale, changeLanguage } = useLanguage();
 
-  const languages = {
-    fa: { label: 'فارسی', flag: '🇮🇷' },
-    en: { label: 'English', flag: '🇬🇧' },
-    ar: { label: 'العربية', flag: '🇸🇦' },
-  };
-
-  const items = [
-    {
-      key: 'fa',
-      label: (
-        <span onClick={() => changeLanguage('fa')}>
-          {languages.fa.flag} {languages.fa.label}
-        </span>
-      ),
-    },
-    {
-      key: 'en',
-      label: (
-        <span onClick={() => changeLanguage('en')}>
-          {languages.en.flag} {languages.en.label}
-        </span>
-      ),
-    },
-    {
-      key: 'ar',
-      label: (
-        <span onClick={() => changeLanguage('ar')}>
-          {languages.ar.flag} {languages.ar.label}
-        </span>
-      ),
-    },
-  ];
+  const items = Object.entries(languages).map(([key, item]) => ({
+    key,
+    label: `${item.flag} ${item.label}`,
+  }));
 
   return (
-    <Dropdown menu={{ items }} placement="bottomRight">
+    <Dropdown
+      trigger={['click']}
+      placement={locale === 'en' ? 'bottomLeft' : 'bottomRight'}
+      menu={{
+        items,
+        selectable: true,
+        selectedKeys: [locale],
+        onClick: ({ key }) => changeLanguage(key),
+      }}
+    >
       <Button type="text" icon={<GlobalOutlined />}>
         {languages[locale]?.flag} {languages[locale]?.label}
       </Button>

@@ -9,6 +9,7 @@ import Footer from '@/components/front/Footer/Footer';
 import ServiceState from '@/components/platform/ServiceState';
 import { apiFetch, extractCollection, extractPagination, getApiErrorMessage } from '@/lib/api/client';
 
+import { useLanguage } from '@/lib/context/LanguageContext';
 const { Title, Text } = Typography;
 
 const copyMap = {
@@ -17,7 +18,8 @@ const copyMap = {
   ar: { title: 'الصيدلية الإلكترونية', subtitle: 'اعثر على الصيدليات المتاحة وتصفح المنتجات', search: 'اسم الصيدلية أو العنوان', results: 'صيدلية', open: 'عرض الصيدلية', online: 'متصلة', empty: 'لم يتم العثور على صيدليات', error: 'تعذر تحميل الصيدليات', retry: 'إعادة المحاولة' },
 };
 
-export default function PharmacyDirectoryPage({ locale = 'fa' }) {
+export default function PharmacyDirectoryPage() {
+  const { locale } = useLanguage();
   const copy = copyMap[locale] || copyMap.fa;
   const [pharmacies, setPharmacies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,7 @@ export default function PharmacyDirectoryPage({ locale = 'fa' }) {
                     <Title level={4}>{pharmacy.name || '—'}</Title>
                     <div className="medikal-card-location"><EnvironmentOutlined /> {pharmacy.address || pharmacy.city?.name || '—'}</div>
                     {pharmacy.phone ? <div className="medikal-card-location"><PhoneOutlined /> {pharmacy.phone}</div> : null}
-                    <Link href={`/${locale}/pharmacy/${pharmacy.id}`}><Button type="primary" block>{copy.open}</Button></Link>
+                    <Link href={`/pharmacy/${pharmacy.id}`}><Button type="primary" block>{copy.open}</Button></Link>
                   </Card>
                 </Col>
               ))}

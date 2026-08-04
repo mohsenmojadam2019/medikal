@@ -102,7 +102,7 @@ export default function LoginForm() {
             locale === 'en' ? '✅ Login successful' :
                 '✅ تم تسجيل الدخول بنجاح');
 
-        const redirect = new URLSearchParams(window.location.search).get('redirect') || `/${locale}`;
+        const redirect = new URLSearchParams(window.location.search).get('redirect') || `/`;
         router.push(redirect);
       } else {
         appMessage.error(data.message || (locale === 'fa' ? '❌ کد تایید نامعتبر است' :
@@ -142,7 +142,7 @@ export default function LoginForm() {
             locale === 'en' ? '✅ Login successful' :
                 '✅ تم تسجيل الدخول بنجاح');
 
-        const redirect = new URLSearchParams(window.location.search).get('redirect') || `/${locale}`;
+        const redirect = new URLSearchParams(window.location.search).get('redirect') || `/`;
         router.push(redirect);
       } else {
         appMessage.error(data.message || (locale === 'fa' ? '❌ ایمیل یا رمز عبور اشتباه است' :

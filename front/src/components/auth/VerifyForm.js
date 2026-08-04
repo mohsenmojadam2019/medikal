@@ -52,7 +52,7 @@ export default function VerifyForm() {
         appMessage.success(locale === 'fa' ? '✅ حساب کاربری شما با موفقیت تایید شد' :
             locale === 'en' ? '✅ Your account has been verified' :
                 '✅ تم التحقق من حسابك بنجاح');
-        router.push(`/${locale}`);
+        router.push(`/`);
       } else {
         appMessage.error(data.message || (locale === 'fa' ? '❌ کد تایید نامعتبر است' :
             locale === 'en' ? '❌ Invalid verification code' :
@@ -138,7 +138,7 @@ export default function VerifyForm() {
           <br />
           <Button
               type="link"
-              onClick={() => router.push(`/${locale}/login`)}
+              onClick={() => router.push(`/login`)}
           >
             {locale === 'fa' ? 'بازگشت به صفحه ورود' :
                 locale === 'en' ? 'Back to login' :

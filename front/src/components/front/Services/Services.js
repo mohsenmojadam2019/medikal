@@ -9,22 +9,22 @@ export default function Services() {
     const services = [
         {
             id: 1,
-            link: `/${locale}/appointments/new`,
+            link: `/appointments/new`,
             image: '/image/services/moshavere.png',
         },
         {
             id: 2,
-            link: `/${locale}/pharmacy`,
+            link: `/pharmacy`,
             image: '/image/services/daroo.png',
         },
         {
             id: 3,
-            link: `/${locale}/lab`,
+            link: `/lab`,
             image: '/image/services/azmayeshgah.png',
         },
         {
             id: 4,
-            link: `/${locale}/ai-chat`,
+            link: `/ai-chat`,
             image: '/image/services/ai.png',
         }
     ];

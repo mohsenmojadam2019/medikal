@@ -41,18 +41,18 @@ export default function Header() {
     localStorage.removeItem('user');
     setUser(null);
     message.success('✅ با موفقیت خارج شدید');
-    router.push(`/${locale}/login`);
+    router.push(`/login`);
   };
 
   const userMenu = {
     items: [
       {
         key: 'profile',
-        label: <Link href={`/${locale}/profile`}>👤 {t('profile.title')}</Link>,
+        label: <Link href={`/profile`}>👤 {t('profile.title')}</Link>,
       },
       {
         key: 'appointments',
-        label: <Link href={`/${locale}/profile/appointments`}>📅 {t('profile.appointmentsList')}</Link>,
+        label: <Link href={`/profile/appointments`}>📅 {t('profile.appointmentsList')}</Link>,
       },
       { type: 'divider' },
       {
@@ -80,7 +80,7 @@ export default function Header() {
         <div className="container">
           <Row align="middle" gutter={[16, 16]}>
             <Col xs={6} sm={6} md={4}>
-              <Link href={`/${locale}`} className="logo">
+              <Link href={`/`} className="logo">
                 <div className="logo-icon">
                   <i className="fas fa-user-md" />
                 </div>
@@ -114,10 +114,10 @@ export default function Header() {
                   </Dropdown>
                 ) : (
                   <Space>
-                    <Link href={`/${locale}/login`}>
+                    <Link href={`/login`}>
                       <Button>{t('auth.login')}</Button>
                     </Link>
-                    <Link href={`/${locale}/register`}>
+                    <Link href={`/register`}>
                       <Button type="primary">{t('auth.register')}</Button>
                     </Link>
                   </Space>

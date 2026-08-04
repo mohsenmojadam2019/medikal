@@ -12,7 +12,7 @@ export default function Footer() {
         <div className="footer-grid">
           {/* بخش برند */}
           <div className="footer-brand">
-            <Link href={`/${locale}`} className="logo" style={{ marginBottom: '8px' }}>
+            <Link href={`/`} className="logo" style={{ marginBottom: '8px' }}>
               <div className="logo-icon">
                 <i className="fas fa-user-md" />
               </div>
@@ -35,11 +35,11 @@ export default function Footer() {
           <div className="footer-col">
             <h4>{t('footer.services')}</h4>
             <ul>
-              <li><Link href={`/${locale}/appointments`}>نوبت‌دهی آنلاین</Link></li>
-              <li><Link href={`/${locale}/doctors`}>پزشکان</Link></li>
-              <li><Link href={`/${locale}/specialties`}>تخصص‌ها</Link></li>
-              <li><Link href={`/${locale}/lab`}>آزمایشگاه</Link></li>
-              <li><Link href={`/${locale}/pharmacy`}>داروخانه</Link></li>
+              <li><Link href={`/appointments`}>نوبت‌دهی آنلاین</Link></li>
+              <li><Link href={`/doctors`}>پزشکان</Link></li>
+              <li><Link href={`/specialties`}>تخصص‌ها</Link></li>
+              <li><Link href={`/lab`}>آزمایشگاه</Link></li>
+              <li><Link href={`/pharmacy`}>داروخانه</Link></li>
             </ul>
           </div>
 
@@ -47,11 +47,11 @@ export default function Footer() {
           <div className="footer-col">
             <h4>{t('footer.info')}</h4>
             <ul>
-              <li><Link href={`/${locale}/about`}>درباره ما</Link></li>
-              <li><Link href={`/${locale}/contact`}>تماس با ما</Link></li>
-              <li><Link href={`/${locale}/terms`}>قوانین و مقررات</Link></li>
-              <li><Link href={`/${locale}/privacy`}>حریم خصوصی</Link></li>
-              <li><Link href={`/${locale}/faq`}>سوالات متداول</Link></li>
+              <li><Link href={`/about`}>درباره ما</Link></li>
+              <li><Link href={`/contact`}>تماس با ما</Link></li>
+              <li><Link href={`/terms`}>قوانین و مقررات</Link></li>
+              <li><Link href={`/privacy`}>حریم خصوصی</Link></li>
+              <li><Link href={`/faq`}>سوالات متداول</Link></li>
             </ul>
           </div>
 
@@ -59,11 +59,11 @@ export default function Footer() {
           <div className="footer-col">
             <h4>{t('footer.support')}</h4>
             <ul>
-              <li><Link href={`/${locale}/help`}>راهنما</Link></li>
-              <li><Link href={`/${locale}/report`}>گزارش تخلف</Link></li>
-              <li><Link href={`/${locale}/suggestions`}>پیشنهادات</Link></li>
-              <li><Link href={`/${locale}/collaborate`}>همکاری با ما</Link></li>
-              <li><Link href={`/${locale}/blog`}>بلاگ</Link></li>
+              <li><Link href={`/help`}>راهنما</Link></li>
+              <li><Link href={`/report`}>گزارش تخلف</Link></li>
+              <li><Link href={`/suggestions`}>پیشنهادات</Link></li>
+              <li><Link href={`/collaborate`}>همکاری با ما</Link></li>
+              <li><Link href={`/blog`}>بلاگ</Link></li>
             </ul>
           </div>
 

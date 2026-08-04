@@ -54,7 +54,7 @@ export default function Hero() {
                         gap: '12px',
                     }}
                 >
-                    <Link href="/fa/appointments/new" style={{ textDecoration: 'none' }}>
+                    <Link href="/appointments/new" style={{ textDecoration: 'none' }}>
                         <div
                             style={{
                                 background: 'rgba(255,255,255,0.12)',
@@ -89,7 +89,7 @@ export default function Hero() {
                         </div>
                     </Link>
 
-                    <Link href="/fa/lab" style={{ textDecoration: 'none' }}>
+                    <Link href="/lab" style={{ textDecoration: 'none' }}>
                         <div
                             style={{
                                 background: 'rgba(255,255,255,0.12)',
@@ -124,7 +124,7 @@ export default function Hero() {
                         </div>
                     </Link>
 
-                    <Link href="/fa/imaging" style={{ textDecoration: 'none' }}>
+                    <Link href="/imaging" style={{ textDecoration: 'none' }}>
                         <div
                             style={{
                                 background: 'rgba(255,255,255,0.12)',
@@ -159,7 +159,7 @@ export default function Hero() {
                         </div>
                     </Link>
 
-                    <Link href="/fa/pharmacy" style={{ textDecoration: 'none' }}>
+                    <Link href="/pharmacy" style={{ textDecoration: 'none' }}>
                         <div
                             style={{
                                 background: 'rgba(255,255,255,0.12)',
@@ -194,7 +194,7 @@ export default function Hero() {
                         </div>
                     </Link>
 
-                    <Link href="/fa/ai-chat" style={{ textDecoration: 'none' }}>
+                    <Link href="/ai-chat" style={{ textDecoration: 'none' }}>
                         <div
                             style={{
                                 background: 'rgba(255,255,255,0.12)',
