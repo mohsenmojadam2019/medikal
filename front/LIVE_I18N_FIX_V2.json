@@ -1,0 +1,19 @@
+{
+  "installed_at": "20260803-000117",
+  "backup": "/home/god/Videos/medikal/front-live-i18n-backup-20260803-000117",
+  "changed_files": [
+    "src/app/privacy/page.js",
+    "src/components/i18n/AutoTranslate.js",
+    "src/components/i18n/dictionary.js",
+    "src/components/pages/AIChatPage.js",
+    "src/components/pages/DoctorsDirectoryPage.js",
+    "src/components/pages/ImagingHubPage.js",
+    "src/components/pages/PharmacyDetailPage.js",
+    "src/components/pages/PharmacyDirectoryPage.js",
+    "src/components/pages/PrivacyPage.js",
+    "src/components/pages/SearchResultsPage.js",
+    "src/components/platform/PlatformHome.js",
+    "src/components/shared/LanguageSwitcher.js"
+  ],
+  "reason": "Shared page components were receiving locale='fa' as a fixed prop, so LanguageContext changes could not update their copy."
+}

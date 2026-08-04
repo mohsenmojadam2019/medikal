@@ -1,0 +1,9 @@
+{
+  "installed_at": "20260802-235626",
+  "backup": "/home/god/Videos/medikal/front-translation-backup-20260802-235626",
+  "files": [
+    "src/components/i18n/AutoTranslate.js",
+    "src/components/i18n/dictionary.js",
+    "src/components/platform/AppProviders.js"
+  ]
+}
