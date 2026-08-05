@@ -31,13 +31,12 @@ import dynamic from 'next/dynamic';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-const ReactQuill = dynamic(() => import('react-quill'), {
+const ReactQuill = dynamic(() => import('react-quill-new'), {
   ssr: false,
   loading: () => <div style={{ height: 200, background: '#f8fafc', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>در حال بارگذاری...</div>,
 });
 
-import 'react-quill/dist/quill.snow.css';
-
+import 'react-quill-new/dist/quill.snow.css';
 export default function EditPostPage() {
   const router = useRouter();
   const params = useParams();
