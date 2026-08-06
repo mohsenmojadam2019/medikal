@@ -1,0 +1,305 @@
+.section {
+    width: 100%;
+    padding: 34px 0 26px;
+}
+
+.sectionHeading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 22px;
+}
+
+.headingText {
+    min-width: 0;
+}
+
+.sectionEyebrow {
+    display: inline-block;
+    margin-bottom: 8px;
+    color: #0878e8;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.sectionHeading h2 {
+    margin: 0;
+    color: #12304d;
+    font-size: clamp(24px, 2.2vw, 34px);
+    font-weight: 900;
+    line-height: 1.35;
+}
+
+.sectionHeading p {
+    margin: 7px 0 0;
+    color: #7a8b9c;
+    font-size: 14px;
+    line-height: 1.9;
+}
+
+.headingActions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+}
+
+.registerLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 15px;
+    border: 1px solid #d7e7f7;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #0878e8;
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+    transition:
+            border-color 0.2s ease,
+            background-color 0.2s ease,
+            transform 0.2s ease;
+}
+
+.registerLink:hover {
+    border-color: #87bff3;
+    background: #f4faff;
+    transform: translateY(-1px);
+}
+
+.sliderControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sliderButton {
+    display: inline-flex;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d8e7f5;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #1369b7;
+    cursor: pointer;
+    font-size: 17px;
+    transition:
+            border-color 0.2s ease,
+            background-color 0.2s ease,
+            color 0.2s ease,
+            transform 0.2s ease;
+}
+
+.sliderButton:hover {
+    border-color: #1689ed;
+    background: #1689ed;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.slider {
+    display: flex;
+    width: 100%;
+    gap: 18px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 3px 2px 15px;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    scrollbar-color: #b9d6ef #edf6fd;
+    scrollbar-width: thin;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.slider::-webkit-scrollbar {
+    height: 7px;
+}
+
+.slider::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: #edf6fd;
+}
+
+.slider::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #b9d6ef;
+}
+
+.slider::-webkit-scrollbar-thumb:hover {
+    background: #7db9e8;
+}
+
+.card {
+    flex: 0 0 clamp(310px, 31vw, 400px);
+    min-width: 310px;
+    overflow: hidden;
+    border: 1px solid #e1edf7;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(40, 91, 131, 0.09);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    transition:
+            box-shadow 0.22s ease,
+            transform 0.22s ease;
+}
+
+.card:hover {
+    box-shadow: 0 16px 38px rgba(40, 91, 131, 0.14);
+    transform: translateY(-2px);
+}
+
+.bannerLink {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 400 / 228;
+    overflow: hidden;
+    background: #eef7ff;
+    text-decoration: none;
+}
+
+.bannerLink img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.35s ease;
+}
+
+.card:hover .bannerLink img {
+    transform: scale(1.02);
+}
+
+.actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 13px;
+    background: #ffffff;
+}
+
+.consultButton,
+.videoButton {
+    display: inline-flex;
+    min-width: 0;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.4;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+            border-color 0.2s ease,
+            background-color 0.2s ease,
+            color 0.2s ease,
+            transform 0.2s ease;
+}
+
+.consultButton {
+    border: 1px solid #1689ed;
+    background: #1689ed;
+    color: #ffffff;
+}
+
+.consultButton:hover {
+    border-color: #066fc9;
+    background: #066fc9;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.videoButton {
+    border: 1px solid #cddfed;
+    background: #ffffff;
+    color: #315b7a;
+}
+
+.videoButton:hover {
+    border-color: #8bbce2;
+    background: #f3f9fe;
+    color: #0878e8;
+    transform: translateY(-1px);
+}
+
+.consultButton :global(.anticon),
+.videoButton :global(.anticon) {
+    flex: 0 0 auto;
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .section {
+        padding: 28px 0 22px;
+    }
+
+    .sectionHeading {
+        align-items: flex-start;
+        margin-bottom: 17px;
+    }
+
+    .headingActions {
+        gap: 7px;
+    }
+
+    .registerLink {
+        display: none;
+    }
+
+    .sliderButton {
+        width: 38px;
+        height: 38px;
+        border-radius: 11px;
+    }
+
+    .card {
+        flex-basis: min(86vw, 360px);
+        min-width: min(86vw, 360px);
+        border-radius: 17px;
+    }
+
+    .actions {
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .consultButton,
+    .videoButton {
+        min-height: 42px;
+        padding: 7px 8px;
+        border-radius: 11px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sectionHeading h2 {
+        font-size: 22px;
+    }
+
+    .sectionHeading p {
+        font-size: 12px;
+    }
+
+    .sliderControls {
+        display: none;
+    }
+
+    .card {
+        flex-basis: 88vw;
+        min-width: 88vw;
+    }
+}

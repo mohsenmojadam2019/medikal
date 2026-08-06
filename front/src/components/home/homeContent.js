@@ -95,6 +95,12 @@ export const HOME_CONTENT = {
         description: 'راهنمای هوشمند خدمات سلامت',
         href: '/ai-chat',
       },
+      {
+        key: 'blog',
+        title: 'مجله پزشکی',
+        description: 'مطالب آموزشی و تازه‌های سلامت',
+        href: '/blog',
+      },
     ],
 
     megaMenu: [
@@ -313,6 +319,7 @@ export const HOME_CONTENT = {
       { key: 'map', title: 'Medical map', description: 'View registered centers', href: '/map' },
       { key: 'tourism', title: 'Medical tourism', description: 'International patient services', href: '/medical-tourism' },
       { key: 'ai', title: 'Medical AI', description: 'Intelligent health guidance', href: '/ai-chat' },
+      { key: 'blog', title: 'Medical magazine', description: 'Health education and latest articles', href: '/blog' },
     ],
 
     megaMenu: [],
@@ -415,3 +422,4 @@ export const HOME_CONTENT = {
 export function getHomeContent(locale) {
   return HOME_CONTENT[locale] || HOME_CONTENT.fa;
 }
+

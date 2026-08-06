@@ -42,6 +42,29 @@ const ICONS = {
   ai: RobotOutlined,
 };
 
+
+const SERVICE_IMAGES = {
+  doctors: '/image/services/doctors.png',
+  homeDoctor: '/image/services/home-doctor.png',
+
+  pharmacy: '/image/services/pharmacy.png',
+  lab: '/image/services/azmayesh.png',
+  imaging: '/image/services/tasvirbardari.png',
+  map: '/image/services/maps.png',
+  tourism: '/image/services/tourism.png',
+  ai: '/image/services/ai.png',
+  blog: '/image/services/blog.png',
+};
+
+const SERVICE_IMAGE_STYLE = {
+  display: 'block',
+  width: '100%',
+  aspectRatio: '400 / 228',
+  objectFit: 'cover',
+  borderRadius: '14px',
+  marginBottom: '14px',
+};
+
 const FALLBACK_DOCTORS = [
   {
     id: 1,
@@ -249,6 +272,7 @@ export default function DoctorWebHome() {
                 const Icon =
                   ICONS[service.key] ||
                   MedicineBoxOutlined;
+                const image = SERVICE_IMAGES[service.key];
 
                 return (
                   <Link
@@ -256,9 +280,21 @@ export default function DoctorWebHome() {
                     href={service.href}
                     className={styles.serviceCard}
                   >
-                    <span className={styles.serviceIcon}>
-                      <Icon />
-                    </span>
+                    {image ? (
+                      <img
+                        src={image}
+                        alt={service.title}
+                        width={400}
+                        height={228}
+                        loading="lazy"
+                        decoding="async"
+                        style={SERVICE_IMAGE_STYLE}
+                      />
+                    ) : (
+                      <span className={styles.serviceIcon}>
+                        <Icon />
+                      </span>
+                    )}
 
                     <strong>{service.title}</strong>
                     <p>{service.description}</p>
@@ -489,3 +525,4 @@ export default function DoctorWebHome() {
     </div>
   );
 }
+

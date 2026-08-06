@@ -1,15 +1,18 @@
 'use client';
 
+import { useRef } from 'react';
 import Link from 'next/link';
 import {
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
   PlayCircleOutlined,
-  SafetyCertificateOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 
 import { useLanguage } from '@/lib/context/LanguageContext';
 import { getHomeContent } from './homeContent';
 
-import styles from './DoctorWebHome.module.css';
+import styles from './AdvertisingSection.module.css';
 
 async function trackAdvertisement(campaignId, eventType) {
   try {
@@ -26,82 +29,183 @@ async function trackAdvertisement(campaignId, eventType) {
       keepalive: true,
     });
   } catch {
-    // سیستم تبلیغات بعداً به بک‌اند متصل می‌شود.
+    // در صورت قطع بودن API، نمایش بنرها متوقف نمی‌شود.
   }
 }
 
 export default function AdvertisingSection() {
-  const { locale = 'fa' } = useLanguage();
+  const sliderRef = useRef(null);
+
+  const {
+    locale = 'fa',
+    direction = 'rtl',
+  } = useLanguage();
+
   const copy = getHomeContent(locale);
 
   const ads = copy.ads?.length
-    ? copy.ads
-    : getHomeContent('fa').ads;
+      ? copy.ads
+      : getHomeContent('fa').ads;
+
+  const scrollSlider = (side) => {
+    const slider = sliderRef.current;
+
+    if (!slider) {
+      return;
+    }
+
+    const distance = Math.min(
+        Math.max(slider.clientWidth * 0.8, 300),
+        430,
+    );
+
+    const multiplier = side === 'next' ? 1 : -1;
+
+    slider.scrollBy({
+      left:
+          direction === 'rtl'
+              ? distance * multiplier * -1
+              : distance * multiplier,
+      behavior: 'smooth',
+    });
+  };
 
   return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeading}>
-        <div>
+      <section
+          className={styles.section}
+          aria-labelledby="medical-advertising-title"
+      >
+        <div className={styles.sectionHeading}>
+          <div className={styles.headingText}>
           <span className={styles.sectionEyebrow}>
             تبلیغات پزشکی
           </span>
 
-          <h2>{copy.section.ads}</h2>
-          <p>{copy.section.adsDescription}</p>
+            <h2 id="medical-advertising-title">
+              {copy.section.ads}
+            </h2>
+
+            <p>{copy.section.adsDescription}</p>
+          </div>
+
+          <div className={styles.headingActions}>
+            <Link
+                href="/advertising"
+                className={styles.registerLink}
+            >
+              ثبت تبلیغ مرکز درمانی
+            </Link>
+
+            <div
+                className={styles.sliderControls}
+                aria-label="کنترل اسلایدر تبلیغات"
+            >
+              <button
+                  type="button"
+                  className={styles.sliderButton}
+                  onClick={() => scrollSlider('previous')}
+                  aria-label="بنر قبلی"
+              >
+                {direction === 'rtl' ? (
+                    <ArrowRightOutlined />
+                ) : (
+                    <ArrowLeftOutlined />
+                )}
+              </button>
+
+              <button
+                  type="button"
+                  className={styles.sliderButton}
+                  onClick={() => scrollSlider('next')}
+                  aria-label="بنر بعدی"
+              >
+                {direction === 'rtl' ? (
+                    <ArrowLeftOutlined />
+                ) : (
+                    <ArrowRightOutlined />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
-        <Link href="/advertising">
-          ثبت تبلیغ مرکز درمانی
-        </Link>
-      </div>
+        <div
+            ref={sliderRef}
+            className={styles.slider}
+            dir={direction}
+        >
+          {ads.map((ad) => {
+            const videoHref =
+                ad.videoHref ||
+                `/advertising?campaign=${encodeURIComponent(
+                    ad.campaignId,
+                )}&action=video`;
 
-      <div className={styles.adsGrid}>
-        {ads.map((ad) => (
-          <article
-            key={ad.campaignId}
-            className={`${styles.adCard} ${
-              styles[`adTheme${ad.theme}`]
-            }`}
-            onMouseEnter={() =>
-              trackAdvertisement(ad.campaignId, 'impression')
-            }
-          >
-            <img src={ad.image} alt={ad.title} />
-
-            <div className={styles.adOverlay} />
-
-            <div className={styles.adContent}>
-              <div className={styles.adMeta}>
-                <span>{ad.badge}</span>
-
-                <small>
-                  <SafetyCertificateOutlined />
-                  {ad.sponsor}
-                </small>
-              </div>
-
-              <h3>{ad.title}</h3>
-              <p>{ad.description}</p>
-
-              <div className={styles.adActions}>
-                <Link
-                  href={ad.href}
-                  onClick={() =>
-                    trackAdvertisement(ad.campaignId, 'click')
-                  }
+            return (
+                <article
+                    key={ad.campaignId}
+                    className={styles.card}
+                    onMouseEnter={() =>
+                        trackAdvertisement(
+                            ad.campaignId,
+                            'impression',
+                        )
+                    }
                 >
-                  {ad.button}
-                </Link>
+                  <Link
+                      href={ad.href}
+                      className={styles.bannerLink}
+                      onClick={() =>
+                          trackAdvertisement(
+                              ad.campaignId,
+                              'banner_click',
+                          )
+                      }
+                      aria-label={ad.title}
+                  >
+                    <img
+                        src={ad.image}
+                        alt={ad.title}
+                        width="400"
+                        height="228"
+                        loading="lazy"
+                        decoding="async"
+                    />
+                  </Link>
 
-                <button type="button">
-                  <PlayCircleOutlined />
-                  کلیپ معرفی
-                </button>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
+                  <div className={styles.actions}>
+                    <Link
+                        href={ad.href}
+                        className={styles.consultButton}
+                        onClick={() =>
+                            trackAdvertisement(
+                                ad.campaignId,
+                                'consultation_click',
+                            )
+                        }
+                    >
+                      <MessageOutlined />
+                      دریافت مشاوره
+                    </Link>
+
+                    <Link
+                        href={videoHref}
+                        className={styles.videoButton}
+                        onClick={() =>
+                            trackAdvertisement(
+                                ad.campaignId,
+                                'video_click',
+                            )
+                        }
+                    >
+                      <PlayCircleOutlined />
+                      کلیپ معرفی
+                    </Link>
+                  </div>
+                </article>
+            );
+          })}
+        </div>
+      </section>
   );
 }
