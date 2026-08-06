@@ -1,248 +1,566 @@
-// /home/god/Videos/medikal/front/src/app/fa/doctors/page.js
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Button, Typography, Spin, Tag, Input, Select, Empty, App, Avatar, Rate, Space, Divider } from 'antd';
-import { SearchOutlined, CalendarOutlined, StarOutlined, EnvironmentOutlined, PhoneOutlined, HeartOutlined, HeartFilled, FilterOutlined, SortAscendingOutlined } from '@ant-design/icons';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+
+import {
+  App,
+  Avatar,
+  Button,
+  Card,
+  Col,
+  Divider,
+  Empty,
+  Input,
+  Rate,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+} from 'antd';
+
+import {
+  CalendarOutlined,
+  EnvironmentOutlined,
+  FilterOutlined,
+  HeartFilled,
+  HeartOutlined,
+  SearchOutlined,
+  SortAscendingOutlined,
+} from '@ant-design/icons';
+
 import { useRouter } from 'next/navigation';
+
 import { useLanguage } from '@/lib/context/LanguageContext';
-import Header from '@/components/front/Header/Header';
-import Footer from '@/components/front/Footer/Footer';
+
+import HomeHeader from '@/components/home/HomeHeader';
+import HomeFooter from '@/components/home/HomeFooter';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-const API_URL = '';
+function extractCollection(payload) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.data?.data)) {
+    return payload.data.data;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload?.results)) {
+    return payload.results;
+  }
+
+  return [];
+}
+
+function getDoctorName(doctor) {
+  return (
+    doctor?.user?.name ||
+    doctor?.full_name ||
+    doctor?.name ||
+    'پزشک'
+  );
+}
+
+function getSpecialtyName(doctor) {
+  return (
+    doctor?.specialty?.name ||
+    doctor?.specialty_name ||
+    'پزشک عمومی'
+  );
+}
+
+function getDoctorImage(doctor) {
+  return (
+    doctor?.profile_image ||
+    doctor?.avatar_url ||
+    doctor?.user?.avatar_url ||
+    null
+  );
+}
 
 export default function DoctorsPage() {
   const router = useRouter();
-  const { locale } = useLanguage();
-  const { message: appMessage } = App.useApp();
+
+  const {
+    direction = 'rtl',
+  } = useLanguage();
+
+  const {
+    message: appMessage,
+  } = App.useApp();
 
   const [doctors, setDoctors] = useState([]);
+  const [specialties, setSpecialties] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [specialtyFilter, setSpecialtyFilter] = useState(null);
-  const [specialties, setSpecialties] = useState([]);
-  const [favorites, setFavorites] = useState([]);
   const [sortBy, setSortBy] = useState('rating');
-
 
   const fetchDoctors = useCallback(async () => {
     setLoading(true);
-    try {
-      const url = '/api/doctors';
-      const res = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await res.json();
 
-      if (data.success) {
-        let doctorsData = data.data?.data || [];
-        
-        if (specialtyFilter) {
-          doctorsData = doctorsData.filter(d => d.specialty_id === specialtyFilter);
-        }
-        
-        if (searchTerm) {
-          doctorsData = doctorsData.filter(d => 
-            d.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            d.specialty?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            d.clinic_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    try {
+      const response = await fetch(
+        '/backend-api/api/doctors?per_page=100',
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+          cache: 'no-store',
+        },
+      );
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.message ||
+          'خطا در دریافت لیست پزشکان',
+        );
+      }
+
+      if (payload?.success === false) {
+        throw new Error(
+          payload?.message ||
+          'خطا در دریافت لیست پزشکان',
+        );
+      }
+
+      let doctorsData = extractCollection(payload);
+
+      if (specialtyFilter) {
+        doctorsData = doctorsData.filter((doctor) => {
+          const doctorSpecialtyId =
+            doctor?.specialty_id ||
+            doctor?.specialty?.id;
+
+          return String(doctorSpecialtyId) ===
+            String(specialtyFilter);
+        });
+      }
+
+      const normalizedSearch = searchTerm
+        .trim()
+        .toLocaleLowerCase('fa');
+
+      if (normalizedSearch) {
+        doctorsData = doctorsData.filter((doctor) => {
+          const searchableText = [
+            getDoctorName(doctor),
+            getSpecialtyName(doctor),
+            doctor?.clinic_name,
+            doctor?.address,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLocaleLowerCase('fa');
+
+          return searchableText.includes(normalizedSearch);
+        });
+      }
+
+      doctorsData.sort((firstDoctor, secondDoctor) => {
+        if (sortBy === 'rating') {
+          return (
+            Number(secondDoctor?.rating || 0) -
+            Number(firstDoctor?.rating || 0)
           );
         }
-        
-        doctorsData.sort((a, b) => {
-          if (sortBy === 'rating') return (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0);
-          if (sortBy === 'fee') return (parseFloat(a.consultation_fee) || 0) - (parseFloat(b.consultation_fee) || 0);
-          if (sortBy === 'experience') return (b.experience || 0) - (a.experience || 0);
-          return 0;
-        });
-        
-        setDoctors(doctorsData);
-      } else {
-        appMessage.error(data.message || 'خطا در دریافت لیست پزشکان');
-        setDoctors([]);
-      }
+
+        if (sortBy === 'fee') {
+          return (
+            Number(firstDoctor?.consultation_fee || 0) -
+            Number(secondDoctor?.consultation_fee || 0)
+          );
+        }
+
+        if (sortBy === 'experience') {
+          return (
+            Number(secondDoctor?.experience || 0) -
+            Number(firstDoctor?.experience || 0)
+          );
+        }
+
+        return 0;
+      });
+
+      setDoctors(doctorsData);
     } catch (error) {
-      console.error('❌ Fetch error:', error);
-      appMessage.error('خطا در ارتباط با سرور');
+      console.error('Doctors request failed:', error);
+
+      appMessage.error(
+        error?.message ||
+        'خطا در ارتباط با سرور',
+      );
+
       setDoctors([]);
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, specialtyFilter, sortBy, API_URL, appMessage]);
+  }, [
+    appMessage,
+    searchTerm,
+    sortBy,
+    specialtyFilter,
+  ]);
 
-  const fetchSpecialties = async () => {
+  const fetchSpecialties = useCallback(async () => {
     try {
-      const res = await fetch('/api/specialties', {
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        '/backend-api/api/specialties?per_page=200',
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+          cache: 'no-store',
         },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSpecialties(Array.isArray(data.data) ? data.data : []);
-      }
-    } catch (error) {
-      console.error('Error fetching specialties:', error);
-    }
-  };
+      );
 
-  useEffect(() => {
-    fetchDoctors();
-    fetchSpecialties();
-    const savedFavorites = JSON.parse(localStorage.getItem('favoriteDoctors') || '[]');
-    setFavorites(savedFavorites);
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || payload?.success === false) {
+        throw new Error(
+          payload?.message ||
+          'خطا در دریافت تخصص‌ها',
+        );
+      }
+
+      setSpecialties(extractCollection(payload));
+    } catch (error) {
+      console.error(
+        'Specialties request failed:',
+        error,
+      );
+
+      setSpecialties([]);
+    }
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    fetchSpecialties();
+
+    try {
+      const storedFavorites = JSON.parse(
+        localStorage.getItem('favoriteDoctors') ||
+        '[]',
+      );
+
+      setFavorites(
+        Array.isArray(storedFavorites)
+          ? storedFavorites.map(String)
+          : [],
+      );
+    } catch {
+      setFavorites([]);
+    }
+  }, [fetchSpecialties]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
       fetchDoctors();
     }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm, specialtyFilter, sortBy, fetchDoctors]);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [fetchDoctors]);
 
   const toggleFavorite = (doctorId) => {
-    let newFavorites;
-    if (favorites.includes(doctorId)) {
-      newFavorites = favorites.filter(id => id !== doctorId);
-    } else {
-      newFavorites = [...favorites, doctorId];
-    }
-    setFavorites(newFavorites);
-    localStorage.setItem('favoriteDoctors', JSON.stringify(newFavorites));
+    const normalizedId = String(doctorId);
+
+    setFavorites((currentFavorites) => {
+      const updatedFavorites =
+        currentFavorites.includes(normalizedId)
+          ? currentFavorites.filter(
+              (item) => item !== normalizedId,
+            )
+          : [
+              ...currentFavorites,
+              normalizedId,
+            ];
+
+      localStorage.setItem(
+        'favoriteDoctors',
+        JSON.stringify(updatedFavorites),
+      );
+
+      return updatedFavorites;
+    });
   };
 
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-  };
-
-  const handleSpecialtyChange = (value) => {
-    setSpecialtyFilter(value);
-  };
-
-  const handleSortChange = (value) => {
-    setSortBy(value);
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSpecialtyFilter(null);
+    setSortBy('rating');
   };
 
   const handleBookAppointment = (doctorId) => {
     if (!doctorId) {
-      appMessage.error('شناسه پزشک نامعتبر است');
+      appMessage.error(
+        'شناسه پزشک نامعتبر است',
+      );
+
       return;
     }
-    localStorage.setItem('selectedDoctorId', String(doctorId));
-    router.push(`/appointments/new?doctorId=${doctorId}`);
+
+    localStorage.setItem(
+      'selectedDoctorId',
+      String(doctorId),
+    );
+
+    router.push(
+      `/appointments/new?doctorId=${doctorId}`,
+    );
   };
 
   if (loading) {
     return (
-      <>
-        <Header />
-        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <Spin size="large" />
-          <p style={{ marginTop: '16px', color: '#94a3b8' }}>در حال بارگذاری پزشکان...</p>
-        </div>
-        <Footer />
-      </>
+      <div dir={direction}>
+        <HomeHeader />
+
+        <main
+          style={{
+            minHeight: '60vh',
+            display: 'grid',
+            placeItems: 'center',
+            background: '#f5f8fc',
+            padding: '60px 20px',
+          }}
+        >
+          <div
+            style={{
+              textAlign: 'center',
+            }}
+          >
+            <Spin size="large" />
+
+            <p
+              style={{
+                marginTop: '16px',
+                color: '#64748b',
+              }}
+            >
+              در حال بارگذاری پزشکان...
+            </p>
+          </div>
+        </main>
+
+        <HomeFooter />
+      </div>
     );
   }
 
   return (
-    <>
-      <Header />
-      <main style={{ 
-        backgroundImage: "url('/image/bac-1.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-        minHeight: 'calc(100vh - 200px)',
-        position: 'relative'
-      }}>
-        {/* اوورلی نیمه شفاف برای خوانایی بهتر */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(255,255,255,0.85)',
-          zIndex: 0
-        }} />
-        
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 20px', position: 'relative', zIndex: 1 }}>
+    <div dir={direction}>
+      <HomeHeader />
+
+      <main
+        style={{
+          minHeight: 'calc(100vh - 200px)',
+          position: 'relative',
+          backgroundImage:
+            "url('/image/bac-1.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 0,
+            background:
+              'rgba(248, 251, 255, 0.9)',
+          }}
+        />
+
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '1200px',
+            margin: '0 auto',
+            padding: '30px 20px 60px',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
           <Breadcrumb />
 
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <Title level={2} style={{ marginBottom: '4px', fontSize: '32px' }}>
-              👨‍⚕️ پزشکان متخصص
+          <div
+            style={{
+              marginBottom: '32px',
+              textAlign: 'center',
+            }}
+          >
+            <Title
+              level={2}
+              style={{
+                marginBottom: '6px',
+                fontSize: '32px',
+                color: '#102a43',
+              }}
+            >
+              پزشکان متخصص
             </Title>
-            <Text type="secondary" style={{ fontSize: '16px' }}>
-              بهترین پزشکان را بر اساس تخصص و امتیاز انتخاب کنید
+
+            <Text
+              type="secondary"
+              style={{
+                fontSize: '16px',
+              }}
+            >
+              بهترین پزشکان را بر اساس تخصص و
+              امتیاز انتخاب کنید
             </Text>
           </div>
 
-          {/* فیلترها */}
-          <Card style={{ 
-            borderRadius: '16px', 
-            marginBottom: '24px', 
-            border: 'none', 
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            background: 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <Row gutter={[16, 16]} align="middle">
-              <Col xs={24} md={8}>
+          <Card
+            style={{
+              marginBottom: '24px',
+              border: '1px solid #e8eef6',
+              borderRadius: '18px',
+              background:
+                'rgba(255,255,255,0.96)',
+              boxShadow:
+                '0 10px 35px rgba(20, 56, 95, 0.06)',
+              backdropFilter: 'blur(12px)',
+            }}
+          >
+            <Row
+              gutter={[
+                16,
+                16,
+              ]}
+              align="middle"
+            >
+              <Col
+                xs={24}
+                md={8}
+              >
                 <Search
-                  placeholder="جستجوی پزشک، تخصص، مطب..."
+                  placeholder="جستجوی پزشک، تخصص یا مطب"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onSearch={handleSearch}
+                  onChange={(event) =>
+                    setSearchTerm(
+                      event.target.value,
+                    )
+                  }
+                  onSearch={(value) =>
+                    setSearchTerm(value)
+                  }
                   size="large"
-                  enterButton={<Button type="primary" icon={<SearchOutlined />}>جستجو</Button>}
-                  style={{ borderRadius: '12px' }}
                   allowClear
+                  enterButton={
+                    <Button
+                      type="primary"
+                      icon={
+                        <SearchOutlined />
+                      }
+                    >
+                      جستجو
+                    </Button>
+                  }
                 />
               </Col>
-              <Col xs={12} md={5}>
+
+              <Col
+                xs={12}
+                md={5}
+              >
                 <Select
                   placeholder="انتخاب تخصص"
-                  style={{ width: '100%' }}
+                  style={{
+                    width: '100%',
+                  }}
                   allowClear
                   value={specialtyFilter}
-                  onChange={handleSpecialtyChange}
+                  onChange={setSpecialtyFilter}
                   size="large"
-                  suffixIcon={<FilterOutlined />}
-                >
-                  <Select.Option value={null}>همه تخصص‌ها</Select.Option>
-                  {specialties.map((item) => (
-                    <Select.Option key={item.id} value={item.id}>
-                      {item.name}
-                    </Select.Option>
-                  ))}
-                </Select>
+                  suffixIcon={
+                    <FilterOutlined />
+                  }
+                  options={[
+                    {
+                      label: 'همه تخصص‌ها',
+                      value: null,
+                    },
+                    ...specialties.map(
+                      (specialty) => ({
+                        label:
+                          specialty?.name ||
+                          'تخصص',
+                        value:
+                          specialty?.id,
+                      }),
+                    ),
+                  ]}
+                />
               </Col>
-              <Col xs={12} md={5}>
+
+              <Col
+                xs={12}
+                md={5}
+              >
                 <Select
                   placeholder="مرتب‌سازی"
-                  style={{ width: '100%' }}
+                  style={{
+                    width: '100%',
+                  }}
                   value={sortBy}
-                  onChange={handleSortChange}
+                  onChange={setSortBy}
                   size="large"
-                  suffixIcon={<SortAscendingOutlined />}
-                >
-                  <Select.Option value="rating">⭐ بیشترین امتیاز</Select.Option>
-                  <Select.Option value="fee">💰 کمترین هزینه</Select.Option>
-                  <Select.Option value="experience">👨‍⚕️ بیشترین سابقه</Select.Option>
-                </Select>
+                  suffixIcon={
+                    <SortAscendingOutlined />
+                  }
+                  options={[
+                    {
+                      label:
+                        'بیشترین امتیاز',
+                      value: 'rating',
+                    },
+                    {
+                      label:
+                        'کمترین هزینه',
+                      value: 'fee',
+                    },
+                    {
+                      label:
+                        'بیشترین سابقه',
+                      value: 'experience',
+                    },
+                  ]}
+                />
               </Col>
-              <Col xs={24} md={6}>
-                <Button 
-                  onClick={fetchDoctors} 
-                  size="large" 
+
+              <Col
+                xs={24}
+                md={6}
+              >
+                <Button
+                  onClick={fetchDoctors}
+                  size="large"
                   block
-                  style={{ borderRadius: '12px', height: '44px' }}
+                  style={{
+                    height: '44px',
+                    borderRadius: '12px',
+                  }}
                 >
                   بروزرسانی لیست
                 </Button>
@@ -250,27 +568,53 @@ export default function DoctorsPage() {
             </Row>
           </Card>
 
-          {/* تعداد نتایج */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent:
+                'space-between',
+            }}
+          >
             <Text type="secondary">
-              <strong style={{ color: '#0f172a', fontSize: '18px' }}>{doctors.length}</strong> پزشک یافت شد
+              <strong
+                style={{
+                  color: '#0f172a',
+                  fontSize: '18px',
+                }}
+              >
+                {doctors.length}
+              </strong>{' '}
+              پزشک یافت شد
             </Text>
           </div>
 
-          {/* لیست پزشکان */}
-          <Row gutter={[24, 24]}>
+          <Row
+            gutter={[
+              24,
+              24,
+            ]}
+          >
             {doctors.length === 0 ? (
               <Col span={24}>
-                <Card style={{ borderRadius: '16px', background: 'rgba(255,255,255,0.92)' }}>
-                  <Empty 
-                    description="هیچ پزشکی یافت نشد" 
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                <Card
+                  style={{
+                    borderRadius: '18px',
+                    background:
+                      'rgba(255,255,255,0.96)',
+                  }}
+                >
+                  <Empty
+                    description="هیچ پزشکی یافت نشد"
+                    image={
+                      Empty.PRESENTED_IMAGE_SIMPLE
+                    }
                   >
-                    <Button type="primary" onClick={() => {
-                      setSearchTerm('');
-                      setSpecialtyFilter(null);
-                      fetchDoctors();
-                    }}>
+                    <Button
+                      type="primary"
+                      onClick={resetFilters}
+                    >
                       بازنشانی فیلترها
                     </Button>
                   </Empty>
@@ -278,198 +622,504 @@ export default function DoctorsPage() {
               </Col>
             ) : (
               doctors.map((doctor) => {
-                const isFavorite = favorites.includes(doctor.id);
-                const rating = parseFloat(doctor.rating) || 0;
-                const fee = parseFloat(doctor.consultation_fee) || 0;
-                const isAvailable = doctor.is_available !== false;
+                const doctorId =
+                  doctor?.id;
+
+                const isFavorite =
+                  favorites.includes(
+                    String(doctorId),
+                  );
+
+                const rating = Number(
+                  doctor?.rating ||
+                  doctor?.average_rating ||
+                  0,
+                );
+
+                const fee = Number(
+                  doctor?.consultation_fee ||
+                  doctor?.fee ||
+                  0,
+                );
+
+                const isAvailable =
+                  doctor?.is_available !==
+                  false;
+
+                const doctorName =
+                  getDoctorName(doctor);
+
+                const specialtyName =
+                  getSpecialtyName(doctor);
 
                 return (
-                  <Col xs={24} md={12} lg={8} xl={6} key={doctor.id}>
+                  <Col
+                    xs={24}
+                    md={12}
+                    lg={8}
+                    xl={6}
+                    key={doctorId}
+                  >
                     <Card
                       hoverable
                       className="doctor-card-modern"
                       style={{
-                        borderRadius: '20px',
                         height: '100%',
-                        border: 'none',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-                        transition: 'all 0.3s ease',
                         overflow: 'hidden',
                         position: 'relative',
-                        background: 'rgba(255,255,255,0.95)',
-                        backdropFilter: 'blur(10px)'
+                        border:
+                          '1px solid #e8eef6',
+                        borderRadius: '20px',
+                        background:
+                          'rgba(255,255,255,0.97)',
+                        boxShadow:
+                          '0 8px 30px rgba(20, 56, 95, 0.06)',
+                        backdropFilter:
+                          'blur(10px)',
                       }}
-                      bodyStyle={{ padding: '20px' }}
+                      styles={{
+                        body: {
+                          padding: '20px',
+                        },
+                      }}
                     >
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavorite(doctor.id);
+                        type="button"
+                        aria-label={
+                          isFavorite
+                            ? 'حذف از علاقه‌مندی‌ها'
+                            : 'افزودن به علاقه‌مندی‌ها'
+                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+
+                          toggleFavorite(
+                            doctorId,
+                          );
                         }}
                         style={{
-                          position: 'absolute',
-                          top: '12px',
-                          right: '12px',
-                          zIndex: 10,
-                          background: 'rgba(255,255,255,0.9)',
-                          border: 'none',
-                          borderRadius: '50%',
                           width: '36px',
                           height: '36px',
+                          position:
+                            'absolute',
+                          zIndex: 10,
+                          top: '12px',
+                          right: '12px',
                           display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          alignItems:
+                            'center',
+                          justifyContent:
+                            'center',
+                          border: 'none',
+                          borderRadius:
+                            '50%',
+                          background:
+                            'rgba(255,255,255,0.94)',
+                          boxShadow:
+                            '0 2px 10px rgba(0,0,0,0.08)',
                           cursor: 'pointer',
-                          backdropFilter: 'blur(10px)',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                         }}
                       >
                         {isFavorite ? (
-                          <HeartFilled style={{ color: '#ef4444', fontSize: '18px' }} />
+                          <HeartFilled
+                            style={{
+                              color:
+                                '#ef4444',
+                              fontSize:
+                                '18px',
+                            }}
+                          />
                         ) : (
-                          <HeartOutlined style={{ color: '#94a3b8', fontSize: '18px' }} />
+                          <HeartOutlined
+                            style={{
+                              color:
+                                '#94a3b8',
+                              fontSize:
+                                '18px',
+                            }}
+                          />
                         )}
                       </button>
 
                       {rating >= 4.8 && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '12px',
-                          left: '12px',
-                          zIndex: 10,
-                          background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                          color: '#78350f',
-                          padding: '3px 12px',
-                          borderRadius: '50px',
-                          fontSize: '10px',
-                          fontWeight: '700',
-                          boxShadow: '0 4px 12px rgba(245,158,11,0.3)'
-                        }}>
-                          ⭐ ویژه
+                        <div
+                          style={{
+                            position:
+                              'absolute',
+                            zIndex: 10,
+                            top: '12px',
+                            left: '12px',
+                            padding:
+                              '4px 11px',
+                            borderRadius:
+                              '50px',
+                            background:
+                              '#fff4d6',
+                            color:
+                              '#9a6500',
+                            fontSize:
+                              '10px',
+                            fontWeight:
+                              '700',
+                          }}
+                        >
+                          ویژه
                         </div>
                       )}
 
-                      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                        <div style={{
-                          position: 'relative',
-                          display: 'inline-block'
-                        }}>
+                      <div
+                        style={{
+                          marginBottom:
+                            '16px',
+                          textAlign:
+                            'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            position:
+                              'relative',
+                            display:
+                              'inline-block',
+                          }}
+                        >
                           <Avatar
-                            size={80}
-                            src={doctor.profile_image}
+                            size={88}
+                            src={getDoctorImage(
+                              doctor,
+                            )}
                             style={{
-                              background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
-                              fontSize: '32px',
-                              border: '3px solid #fff',
-                              boxShadow: '0 4px 16px rgba(37,99,235,0.15)'
+                              border:
+                                '4px solid #fff',
+                              background:
+                                'linear-gradient(135deg, #1597d4, #36c3be)',
+                              boxShadow:
+                                '0 6px 20px rgba(18,100,160,0.16)',
+                              fontSize:
+                                '32px',
                             }}
                           >
-                            {doctor.user?.name?.charAt(0) || 'د'}
+                            {doctorName
+                              ?.charAt(0)}
                           </Avatar>
-                          <div style={{
-                            position: 'absolute',
-                            bottom: '2px',
-                            right: '2px',
-                            width: '16px',
-                            height: '16px',
-                            borderRadius: '50%',
-                            background: isAvailable ? '#10b981' : '#ef4444',
-                            border: '2px solid #fff',
-                            boxShadow: isAvailable ? '0 0 0 3px rgba(16,185,129,0.2)' : '0 0 0 3px rgba(239,68,68,0.2)'
-                          }} />
+
+                          <div
+                            title={
+                              isAvailable
+                                ? 'فعال'
+                                : 'غیرفعال'
+                            }
+                            style={{
+                              width:
+                                '17px',
+                              height:
+                                '17px',
+                              position:
+                                'absolute',
+                              right: '2px',
+                              bottom: '3px',
+                              border:
+                                '3px solid #fff',
+                              borderRadius:
+                                '50%',
+                              background:
+                                isAvailable
+                                  ? '#10b981'
+                                  : '#ef4444',
+                            }}
+                          />
                         </div>
                       </div>
 
-                      <div style={{ textAlign: 'center' }}>
-                        <h3 style={{
-                          fontSize: '18px',
-                          fontWeight: '700',
-                          color: '#0f172a',
-                          margin: '0 0 4px 0'
-                        }}>
-                          {doctor.user?.name || 'پزشک'}
+                      <div
+                        style={{
+                          textAlign:
+                            'center',
+                        }}
+                      >
+                        <h3
+                          style={{
+                            margin:
+                              '0 0 5px',
+                            color:
+                              '#102a43',
+                            fontSize:
+                              '17px',
+                            fontWeight:
+                              '800',
+                          }}
+                        >
+                          {doctorName}
                         </h3>
-                        <Text type="secondary" style={{ fontSize: '14px', color: '#2563eb', fontWeight: '500' }}>
-                          {doctor.specialty?.name || 'عمومی'}
+
+                        <Text
+                          style={{
+                            color:
+                              '#168ec4',
+                            fontSize:
+                              '14px',
+                            fontWeight:
+                              '600',
+                          }}
+                        >
+                          {specialtyName}
                         </Text>
-                        
-                        {doctor.clinic_name && (
-                          <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                            <EnvironmentOutlined style={{ fontSize: '12px', color: '#94a3b8' }} />
-                            <Text type="secondary" style={{ fontSize: '13px' }}>
-                              {doctor.clinic_name}
+
+                        {doctor?.clinic_name && (
+                          <div
+                            style={{
+                              marginTop:
+                                '7px',
+                              display:
+                                'flex',
+                              alignItems:
+                                'center',
+                              justifyContent:
+                                'center',
+                              gap: '5px',
+                            }}
+                          >
+                            <EnvironmentOutlined
+                              style={{
+                                color:
+                                  '#94a3b8',
+                                fontSize:
+                                  '12px',
+                              }}
+                            />
+
+                            <Text
+                              type="secondary"
+                              style={{
+                                fontSize:
+                                  '12px',
+                              }}
+                            >
+                              {
+                                doctor.clinic_name
+                              }
                             </Text>
                           </div>
                         )}
                       </div>
 
-                      <Divider style={{ margin: '12px 0' }} />
+                      <Divider
+                        style={{
+                          margin:
+                            '14px 0',
+                        }}
+                      />
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        <Space size="small">
-                          <Rate disabled defaultValue={rating} allowHalf style={{ fontSize: '14px', color: '#f59e0b' }} />
-                          <Text strong style={{ fontSize: '14px', color: '#0f172a' }}>{rating.toFixed(1)}</Text>
+                      <div
+                        style={{
+                          marginBottom:
+                            '12px',
+                          display:
+                            'flex',
+                          alignItems:
+                            'center',
+                          justifyContent:
+                            'space-between',
+                          gap: '8px',
+                        }}
+                      >
+                        <Space size={5}>
+                          <Rate
+                            disabled
+                            value={rating}
+                            allowHalf
+                            style={{
+                              color:
+                                '#f59e0b',
+                              fontSize:
+                                '13px',
+                            }}
+                          />
+
+                          <Text
+                            strong
+                            style={{
+                              fontSize:
+                                '13px',
+                            }}
+                          >
+                            {rating.toFixed(
+                              1,
+                            )}
+                          </Text>
                         </Space>
-                        <Text type="secondary" style={{ fontSize: '13px' }}>
-                          <i className="fas fa-comment" style={{ marginLeft: '4px' }} />
-                          {doctor.total_reviews || 0} نظر
+
+                        <Text
+                          type="secondary"
+                          style={{
+                            fontSize:
+                              '12px',
+                          }}
+                        >
+                          {doctor?.total_reviews ||
+                            0}{' '}
+                          نظر
                         </Text>
                       </div>
 
-                      <div style={{
-                        background: '#f8fafc',
-                        borderRadius: '12px',
-                        padding: '8px 16px',
-                        textAlign: 'center',
-                        marginBottom: '12px'
-                      }}>
-                        <Text strong style={{ fontSize: '20px', color: '#2563eb' }}>
-                          {fee.toLocaleString()}
-                        </Text>
-                        <Text type="secondary" style={{ fontSize: '14px' }}> تومان</Text>
+                      <div
+                        style={{
+                          marginBottom:
+                            '13px',
+                          padding:
+                            '10px 14px',
+                          borderRadius:
+                            '12px',
+                          background:
+                            '#f5f9fd',
+                          textAlign:
+                            'center',
+                        }}
+                      >
+                        {fee > 0 ? (
+                          <>
+                            <Text
+                              strong
+                              style={{
+                                color:
+                                  '#168ec4',
+                                fontSize:
+                                  '19px',
+                              }}
+                            >
+                              {fee.toLocaleString(
+                                'fa-IR',
+                              )}
+                            </Text>
+
+                            <Text
+                              type="secondary"
+                              style={{
+                                fontSize:
+                                  '13px',
+                              }}
+                            >
+                              {' '}
+                              تومان
+                            </Text>
+                          </>
+                        ) : (
+                          <Text
+                            type="secondary"
+                            style={{
+                              fontSize:
+                                '13px',
+                            }}
+                          >
+                            هزینه با مرکز هماهنگ
+                            می‌شود
+                          </Text>
+                        )}
                       </div>
 
-                      <Space direction="vertical" style={{ width: '100%' }} size="small">
+                      <Space
+                        direction="vertical"
+                        size="small"
+                        style={{
+                          width: '100%',
+                        }}
+                      >
                         <Button
                           type="primary"
                           size="large"
-                          icon={<CalendarOutlined />}
-                          onClick={() => handleBookAppointment(doctor.id)}
+                          icon={
+                            <CalendarOutlined />
+                          }
+                          onClick={() =>
+                            handleBookAppointment(
+                              doctorId,
+                            )
+                          }
                           style={{
-                            borderRadius: '12px',
+                            width: '100%',
                             height: '44px',
-                            fontWeight: '600',
-                            background: 'linear-gradient(135deg, #2563eb, #3b82f6)',
                             border: 'none',
-                            width: '100%'
+                            borderRadius:
+                              '12px',
+                            background:
+                              'linear-gradient(135deg, #158ec8, #17aaa3)',
+                            fontWeight:
+                              '700',
                           }}
                         >
                           رزرو نوبت
                         </Button>
+
                         <Button
                           size="large"
-                          onClick={() => router.push(`/doctors/${doctor.id}`)}
+                          onClick={() =>
+                            router.push(
+                              `/doctors/${doctorId}`,
+                            )
+                          }
                           style={{
-                            borderRadius: '12px',
+                            width: '100%',
                             height: '40px',
-                            borderColor: '#e2e8f0',
-                            color: '#475569',
-                            width: '100%'
+                            borderColor:
+                              '#dce6f0',
+                            borderRadius:
+                              '12px',
+                            color:
+                              '#475569',
                           }}
                         >
                           مشاهده پروفایل
                         </Button>
                       </Space>
 
-                      <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                        {doctor.is_available !== undefined && (
-                          <Tag color={isAvailable ? 'green' : 'red'} style={{ borderRadius: '50px', fontSize: '11px' }}>
-                            {isAvailable ? '🟢 فعال' : '🔴 غیرفعال'}
-                          </Tag>
-                        )}
-                        {doctor.experience && doctor.experience > 10 && (
-                          <Tag color="blue" style={{ borderRadius: '50px', fontSize: '11px' }}>
-                            👨‍⚕️ {doctor.experience} سال سابقه
+                      <div
+                        style={{
+                          marginTop:
+                            '10px',
+                          display: 'flex',
+                          justifyContent:
+                            'center',
+                          gap: '5px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <Tag
+                          color={
+                            isAvailable
+                              ? 'green'
+                              : 'red'
+                          }
+                          style={{
+                            margin: 0,
+                            borderRadius:
+                              '50px',
+                            fontSize:
+                              '10px',
+                          }}
+                        >
+                          {isAvailable
+                            ? 'فعال'
+                            : 'غیرفعال'}
+                        </Tag>
+
+                        {Number(
+                          doctor?.experience ||
+                            0,
+                        ) > 0 && (
+                          <Tag
+                            color="blue"
+                            style={{
+                              margin: 0,
+                              borderRadius:
+                                '50px',
+                              fontSize:
+                                '10px',
+                            }}
+                          >
+                            {
+                              doctor.experience
+                            }{' '}
+                            سال سابقه
                           </Tag>
                         )}
                       </div>
@@ -481,46 +1131,49 @@ export default function DoctorsPage() {
           </Row>
 
           {doctors.length > 0 && (
-            <div style={{ textAlign: 'center', marginTop: '48px', padding: '20px' }}>
+            <div
+              style={{
+                marginTop: '45px',
+                padding: '20px',
+                textAlign: 'center',
+              }}
+            >
               <Text type="secondary">
-                {doctors.length} پزشک متخصص آماده ارائه خدمت به شما هستند
+                {doctors.length} پزشک متخصص
+                آماده ارائه خدمت هستند
               </Text>
             </div>
           )}
         </div>
       </main>
-      <Footer />
 
-      <style jsx>{`
-    .doctor-card-modern {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
+      <HomeFooter />
 
-.doctor-card-modern:hover {
-  transform: translateY(-8px) scale(1.01) !important;
-  box-shadow: 0 20px 60px rgba(37, 99, 235, 0.12) !important;
-}
+      <style jsx global>{`
+        .doctor-card-modern {
+          transition:
+            transform 0.25s ease,
+            box-shadow 0.25s ease,
+            border-color 0.25s ease !important;
+        }
 
-.doctor-card-modern .ant-card-body {
-  padding: 20px !important;
-}
+        .doctor-card-modern:hover {
+          transform: translateY(-6px);
+          border-color: #afdbea !important;
+          box-shadow: 0 18px 50px rgba(20, 100, 145, 0.13) !important;
+        }
 
-.doctor-card-modern .ant-btn-primary {
-  background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
-  border: none !important;
-}
+        .doctor-card-modern .ant-btn-primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 22px rgba(18, 142, 180, 0.24);
+        }
 
-.doctor-card-modern .ant-btn-primary:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3) !important;
-}
-
-@media (max-width: 768px) {
-.doctor-card-modern .ant-card-body {
-    padding: 16px !important;
-  }
-}
-`}</style>
-    </>
+        @media (max-width: 768px) {
+          .doctor-card-modern .ant-card-body {
+            padding: 16px !important;
+          }
+        }
+      `}</style>
+    </div>
   );
 }
