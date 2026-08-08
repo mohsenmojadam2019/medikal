@@ -1,0 +1,4 @@
+import {doctorSlug,productSlug,siteUrl} from '@/lib/publicRoutes';
+const api=process.env.NEXT_PUBLIC_API_URL||'http://localhost:8210';
+async function list(path){try{const r=await fetch(api+path,{next:{revalidate:3600}});const j=await r.json();return j?.data?.data||j?.data||[]}catch{return[]}}
+export default async function sitemap(){const [d,p]=await Promise.all([list('/api/doctors?per_page=100'),list('/api/products?per_page=100')]);const now=new Date();return['','/doctors','/pharmacy','/pharmacy/drugs','/specialties','/blog','/about','/contact'].map((x,i)=>({url:siteUrl(x||'/'),lastModified:now,changeFrequency:i<4?'daily':'weekly',priority:i?0.8:1})).concat(d.map(x=>({url:siteUrl('/doctors/'+doctorSlug(x)),lastModified:x.updated_at||now,changeFrequency:'weekly',priority:.8})),p.map(x=>({url:siteUrl('/pharmacy/drugs/'+productSlug(x)),lastModified:x.updated_at||now,changeFrequency:'daily',priority:.7})))}
