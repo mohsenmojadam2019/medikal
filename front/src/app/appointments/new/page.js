@@ -66,6 +66,9 @@ function NewAppointmentPage() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [loadingBook, setLoadingBook] = useState(false);
+  const [serviceType, setServiceType] = useState('in_person');
+  const serviceOptions = doctor ? [{key:'in_person',label:'حضوری',enabled:doctor.offers_in_person_consultation !== false,fee:doctor.in_person_fee ?? doctor.consultation_fee},{key:'text',label:'متنی',enabled:doctor.offers_text_consultation,fee:doctor.text_consultation_fee},{key:'video',label:'تصویری',enabled:doctor.offers_video_consultation,fee:doctor.video_consultation_fee},{key:'home_visit',label:'در منزل',enabled:doctor.offers_home_visit,fee:doctor.home_visit_fee}].filter(x => x.enabled) : [];
+  const selectedService = serviceOptions.find(x => x.key === serviceType) || serviceOptions[0];
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8210';
 
@@ -225,6 +228,7 @@ function NewAppointmentPage() {
         date: dateStr,
         start_time: timeStr,
         notes: '',
+        service_type: selectedService?.key || serviceType,
       };
 
       const res = await fetch(`${API_URL}/api/appointments`, {
@@ -245,7 +249,8 @@ function NewAppointmentPage() {
           doctorSpecialty: doctor?.specialty?.name || 'عمومی',
           date: dateStr,
           time: timeStr,
-          doctorFee: parseFloat(doctor?.consultation_fee) || 0,
+          doctorFee: parseFloat(selectedService?.fee) || 0,
+          serviceType: selectedService?.key || serviceType,
           appointmentId: appointment.id,
           status: appointment.status,
         };
@@ -483,6 +488,17 @@ function NewAppointmentPage() {
                     style={{ borderRadius: '16px' }}
                     styles={{ body: { padding: '20px' } }}
                 >
+                  <div style={{ marginBottom: '20px' }}>
+                    <Text strong>نوع ویزیت</Text>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 10, marginTop: 10 }}>
+                      {serviceOptions.map(service => (
+                        <Button key={service.key} type={serviceType === service.key ? 'primary' : 'default'} onClick={() => setServiceType(service.key)} style={{ height: 64 }}>
+                          <span>{service.label}<small style={{ display: 'block' }}>{Number(service.fee || 0).toLocaleString()} تومان</small></span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <Divider />
                   <div style={{ marginBottom: '20px' }}>
                     <Text strong>تاریخ مورد نظر (شمسی)</Text>
                     <div style={{ marginTop: '8px' }}>

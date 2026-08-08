@@ -14,3 +14,8 @@ Broadcast::channel('chat.presence.{roomId}', function ($user, $roomId) {
         'name' => $user->name,
     ];
 });
+
+Broadcast::channel('support.{conversationId}', function ($user, $conversationId) {
+    $conversation = \App\Models\SupportConversation::find($conversationId);
+    return $conversation && ($conversation->user_id === $user->id || $user->isAdmin());
+});

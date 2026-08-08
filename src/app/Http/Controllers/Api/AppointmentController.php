@@ -181,6 +181,7 @@ class AppointmentController extends Controller
             'date' => 'required|date|after_or_equal:today',
             'start_time' => 'required|date_format:H:i',
             'notes' => 'nullable|string|max:500',
+            'service_type' => 'required|in:in_person,text,video,home_visit',
         ], [
             'doctor_id.required' => 'شناسه پزشک الزامی است',
             'doctor_id.exists' => 'پزشک مورد نظر یافت نشد',
@@ -292,7 +293,7 @@ class AppointmentController extends Controller
         }
 
         // ✅ دریافت هزینه از تنظیمات پزشک
-        $fee = $doctor->getFeeForAppointment();
+        $fee = (float) ($doctor->{$feeField} ?? 0);
 
         // ایجاد نوبت
         $appointment = new Appointment();
@@ -303,9 +304,16 @@ class AppointmentController extends Controller
         $appointment->start_time = $startTime->format('H:i:s');
         $appointment->end_time = $endTime->format('H:i:s');
         $appointment->status = 'pending';
+        $appointment->type = in_array($service, ['text','video']) ? 'online' : ($service === 'home_visit' ? 'home_visit' : 'in_person');
+        $appointment->fee = $fee;
+        $appointment->final_price = $fee;
+        $appointment->payment_status = $fee > 0 ? 'pending' : 'paid';
+        $appointment->metadata = ['service_type' => $service];
         $appointment->notes = $request->notes;
         $appointment->save();
-
+        $notify = app(\App\Services\Notification\ClinicNotificationDispatcher::class);
+        $notify->send($doctor->clinic_id, 'appointment.created', $user, ['code'=>$appointment->code], 'نوبت جدید', 'نوبت شما با کد {code} ثبت شد.');
+        if ($doctor->user) $notify->send($doctor->clinic_id, 'appointment.doctor_created', $doctor->user, ['code'=>$appointment->code], 'نوبت جدید پزشک', 'نوبت جدید با کد {code} ثبت شد.');
         // ایجاد فاکتور با هزینه تنظیم شده
         $invoice = new Invoice();
         $invoice->tenant_id = session('tenant_id', 1);

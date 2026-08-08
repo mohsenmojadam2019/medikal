@@ -72,7 +72,7 @@ function SearchPage() {
             <main style={{ background: '#f8fafc', minHeight: 'calc(100vh - 200px)' }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 20px' }}>
                     <Title level={2}>
-                        نتایج جستجو برای: "{query}"
+                        نتایج جستجو برای: «{query}»
                     </Title>
                     <Text type="secondary">{results.length} نتیجه یافت شد</Text>
 

@@ -306,6 +306,9 @@ export default function PharmacyOrdersPage() {
                         مشاهده
                     </Button>
 
+                    {['paid','processing','preparing','ready','shipped','delivered'].includes(record.status) && (
+                        <Button size="small" icon={<TruckOutlined />} onClick={() => router.push('/profile/pharmacy-orders/' + record.order_number + '/tracking')}>رهگیری</Button>
+                    )}
                     {/* ✅ دکمه پرداخت برای کاربر (فقط در انتظار پرداخت) */}
                     {record.status === 'payment_pending' && (
                         <Button

@@ -60,6 +60,8 @@ class Clinic extends Model implements HasMedia
 
     // ========== Media Library ==========
 
+    public function notificationSettings() { return $this->hasMany(ClinicNotificationSetting::class); }
+
     public function registerMediaCollections(): void
     {
         // ✅ کالکشن لوگو

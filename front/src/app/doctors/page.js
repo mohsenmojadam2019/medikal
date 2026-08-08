@@ -111,6 +111,8 @@ export default function DoctorsPage() {
   const [specialtyFilter, setSpecialtyFilter] = useState(null);
   const [sortBy, setSortBy] = useState('rating');
 
+  useEffect(() => { const value = new URLSearchParams(window.location.search).get('specialty'); if (value) setSearchTerm(value); }, []);
+
   const fetchDoctors = useCallback(async () => {
     setLoading(true);
 

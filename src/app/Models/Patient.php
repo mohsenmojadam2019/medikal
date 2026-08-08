@@ -82,6 +82,8 @@ class Patient extends Model
         return $this->hasMany(PharmacyOrder::class);
     }
 
+    public function homeVisitRequests() { return $this->hasMany(HomeVisitRequest::class); }
+
     public function payments()
     {
         return $this->hasMany(Payment::class);

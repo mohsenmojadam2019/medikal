@@ -461,7 +461,7 @@ export default function DoctorWebHome() {
               {copy.specialties.map((specialty) => (
                 <Link
                   key={specialty}
-                  href={`/search?q=${encodeURIComponent(
+                  href={`/doctors?specialty=${encodeURIComponent(
                     specialty,
                   )}`}
                 >

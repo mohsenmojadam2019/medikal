@@ -419,7 +419,14 @@ export const HOME_CONTENT = {
   },
 };
 
-export function getHomeContent(locale) {
-  return HOME_CONTENT[locale] || HOME_CONTENT.fa;
+const UI_DEFAULTS = {
+  fa: { supportLine: 'پشتیبانی شبانه‌روزی دکتر وب', searchButton: 'جستجو', languageNames: { fa: 'فارسی', en: 'English', ar: 'العربية' }, footer: { secure: 'اطلاعات امن', alwaysOn: 'پشتیبانی ۲۴ ساعته', location: 'تهران، ایران' } },
+  en: { supportLine: '24/7 Doctor Web support', searchButton: 'Search', languageNames: { fa: 'فارسی', en: 'English', ar: 'العربية' }, footer: { secure: 'Secure information', alwaysOn: '24/7 support', location: 'Tehran, Iran' } },
+  ar: { supportLine: 'دعم دكتور ويب على مدار الساعة', searchButton: 'بحث', languageNames: { fa: 'فارسی', en: 'English', ar: 'العربية' }, footer: { secure: 'معلومات آمنة', alwaysOn: 'دعم على مدار الساعة', location: 'طهران، إيران' } },
+};
+export function getHomeContent(locale = 'fa') {
+  const key = HOME_CONTENT[locale] ? locale : 'fa';
+  const content = HOME_CONTENT[key];
+  const defaults = UI_DEFAULTS[key];
+  return { ...defaults, ...content, languageNames: { ...defaults.languageNames, ...(content.languageNames || {}) }, footer: { ...defaults.footer, ...(content.footer || {}) } };
 }
-

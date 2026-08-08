@@ -47,6 +47,7 @@ class PharmacyOrder extends Model
         'prescription_approved_at',
         'prescription_rejected_at',
         'prescription_approved_by',
+        'courier_name', 'courier_phone', 'courier_latitude', 'courier_longitude', 'delivery_latitude', 'delivery_longitude', 'last_location_at',
     ];
 
     protected $casts = [
@@ -67,6 +68,7 @@ class PharmacyOrder extends Model
         'unavailable_items' => 'array',
         'prescription_approved_at' => 'datetime',
         'prescription_rejected_at' => 'datetime',
+        'courier_latitude' => 'float', 'courier_longitude' => 'float', 'delivery_latitude' => 'float', 'delivery_longitude' => 'float', 'last_location_at' => 'datetime',
     ];
 
     protected $appends = [

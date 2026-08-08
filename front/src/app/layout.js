@@ -3,6 +3,7 @@ import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { AuthProvider } from '@/lib/context/AuthContext';
 import { LanguageProvider } from '@/lib/context/LanguageContext';
 import { ThemeProvider } from '@/lib/context/ThemeContext';
+import SupportChatWidget from '@/components/support/SupportChatWidget';
 import './globals.css';
 
 export const metadata = {
@@ -57,6 +58,7 @@ export default function RootLayout({ children }) {
               <ThemeProvider>
                 <AuthProvider>
                   {children}
+                  <SupportChatWidget />
                 </AuthProvider>
               </ThemeProvider>
             </LanguageProvider>

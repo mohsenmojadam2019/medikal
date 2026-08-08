@@ -33,6 +33,12 @@ use App\Http\Controllers\Api\LabController;
 use App\Http\Controllers\Api\QueueController;
 use App\Http\Controllers\Api\PublicInquiryController;
 use App\Http\Controllers\Api\AdvertisingEventController;
+use App\Http\Controllers\Api\DeliveryTrackingController;
+use App\Http\Controllers\Api\HomeVisitController;
+use App\Http\Controllers\Api\SupportChatController;
+use App\Http\Controllers\Api\TelemedicineController;
+use App\Http\Controllers\Api\DoctorServiceSettingsController;
+use App\Http\Controllers\Admin\ClinicNotificationSettingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -415,6 +421,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/send', [App\Http\Controllers\Api\AiChat\ChatController::class, 'send']);
         Route::get('/history', [App\Http\Controllers\Api\AiChat\ChatController::class, 'history']);
         Route::post('/feedback', [App\Http\Controllers\Api\AiChat\ChatController::class, 'feedback']);
+        Route::get('/providers', [App\Http\Controllers\Api\AiChat\ChatController::class, 'providers']);
+        Route::put('/preference', [App\Http\Controllers\Api\AiChat\ChatController::class, 'preference']);
+        Route::get('/sessions', [App\Http\Controllers\Api\AiChat\ChatController::class, 'sessions']);
 
         Route::prefix('medical')->group(function () {
             Route::post('/ask', [App\Http\Controllers\Api\AiChat\MedicalChatController::class, 'ask']);
@@ -454,6 +463,40 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/history', [EmergencyController::class, 'history']);
     });
 
+
+    Route::get('/pharmacy/orders/{number}/tracking', [DeliveryTrackingController::class, 'show']);
+    Route::put('/pharmacy/orders/{number}/tracking', [DeliveryTrackingController::class, 'update']);
+
+    Route::prefix('home-visits')->group(function () {
+        Route::get('/', [HomeVisitController::class, 'index']);
+        Route::post('/', [HomeVisitController::class, 'store']);
+        Route::get('/{number}', [HomeVisitController::class, 'show']);
+        Route::put('/{number}/location', [HomeVisitController::class, 'updateLocation']);
+    });
+
+    Route::prefix('telemedicine')->group(function () {
+        Route::post('/sessions', [TelemedicineController::class, 'createSession']);
+        Route::get('/sessions', [TelemedicineController::class, 'listSessions']);
+        Route::get('/sessions/{id}', [TelemedicineController::class, 'getSession']);
+        Route::post('/sessions/{id}/join', [TelemedicineController::class, 'joinSession']);
+        Route::post('/sessions/{id}/start', [TelemedicineController::class, 'startSession']);
+        Route::post('/sessions/{id}/complete', [TelemedicineController::class, 'completeSession']);
+        Route::get('/sessions/{sessionId}/messages', [TelemedicineController::class, 'getMessages']);
+        Route::post('/messages', [TelemedicineController::class, 'sendMessage']);
+        Route::post('/files', [TelemedicineController::class, 'uploadFile']);
+        Route::get('/sessions/{sessionId}/files', [TelemedicineController::class, 'getFiles']);
+    });
+
+    Route::get('/doctor/service-settings', [DoctorServiceSettingsController::class, 'show']);
+    Route::put('/doctor/service-settings', [DoctorServiceSettingsController::class, 'update']);
+
+    Route::prefix('support-chat')->group(function () {
+        Route::get('/current', [SupportChatController::class, 'current']);
+        Route::get('/conversations', [SupportChatController::class, 'index']);
+        Route::get('/messages/{id?}', [SupportChatController::class, 'messages']);
+        Route::post('/messages/{id?}', [SupportChatController::class, 'send']);
+        Route::post('/conversations/{id}/close', [SupportChatController::class, 'close']);
+    });
 }); // End auth:sanctum
 
 // ============================================================
@@ -516,6 +559,9 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
         // ============================================================
         // 7.3 PHARMACY MANAGEMENT
         // ============================================================
+        Route::get('/clinics/{clinic}/notification-settings', [ClinicNotificationSettingController::class, 'index']);
+        Route::put('/clinics/{clinic}/notification-settings', [ClinicNotificationSettingController::class, 'update']);
+
         Route::prefix('pharmacies')->group(function () {
             Route::get('/', [PharmacyManagementController::class, 'index']);
             Route::post('/', [PharmacyManagementController::class, 'store']);
@@ -596,6 +642,8 @@ Route::middleware(['auth:sanctum', 'role:admin|super_admin'])
 // ============================================================
 // 8. FALLBACK (مسیرهای پیدا نشد)
 // ============================================================
+require __DIR__.'/admin-ai.php';
+
 Route::fallback(function () {
     return response()->json([
         'success' => false,

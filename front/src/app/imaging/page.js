@@ -371,7 +371,7 @@ export default function ImagingPage() {
                             </div>
                           }
                           actions={[
-                            <Button 
+                            <Button key="view"
                               type="text" 
                               icon={<EyeOutlined />}
                               onClick={() => {
@@ -379,12 +379,12 @@ export default function ImagingPage() {
                                 setModalVisible(true);
                               }}
                             />,
-                            <Button 
+                            <Button key="download"
                               type="text" 
                               icon={<DownloadOutlined />}
                               onClick={() => message.info('در حال دانلود...')}
                             />,
-                            <Button 
+                            <Button key="delete"
                               type="text" 
                               danger
                               icon={<DeleteOutlined />}

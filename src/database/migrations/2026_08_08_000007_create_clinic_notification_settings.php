@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\Schema;
+return new class extends Migration{public function up():void{Schema::create('clinic_notification_settings',function(Blueprint $t){$t->id();$t->foreignId('clinic_id')->constrained()->cascadeOnDelete();$t->string('event_key');$t->boolean('panel_enabled')->default(true);$t->boolean('sms_enabled')->default(false);$t->string('panel_title')->nullable();$t->text('panel_template')->nullable();$t->text('sms_template')->nullable();$t->timestamps();$t->unique(['clinic_id','event_key']);});}public function down():void{Schema::dropIfExists('clinic_notification_settings');}};

@@ -28,7 +28,7 @@ class ProductController extends Controller
     {
         $query = Product::where('is_active', true)
             ->where('stock', '>', 0)
-            ->with(['brand', 'categories', 'tags', 'pharmacy']);
+            ->with(['brand', 'categories', 'tags', 'pharmacy.city', 'pharmacy.province']);
 
         // فیلتر بر اساس دسته‌بندی
         if ($request->has('category_id') && $request->category_id) {
@@ -180,7 +180,7 @@ class ProductController extends Controller
                 ->whereHas('categories', function ($q) use ($categoryIds) {
                     $q->whereIn('category_id', $categoryIds);
                 })
-                ->with(['brand', 'tags', 'pharmacy']);
+                ->with(['brand', 'tags', 'pharmacy.city', 'pharmacy.province']);
 
             // فیلترها
             if ($request->has('brand_id')) {
@@ -258,7 +258,7 @@ class ProductController extends Controller
             $query = Product::where('brand_id', $brand->id)
                 ->where('is_active', true)
                 ->where('stock', '>', 0)
-                ->with(['categories', 'tags', 'pharmacy']);
+                ->with(['categories', 'tags', 'pharmacy.city', 'pharmacy.province']);
 
             // فیلترها
             if ($request->has('category_id')) {
@@ -474,6 +474,12 @@ class ProductController extends Controller
                     'color' => $tag->color,
                 ];
             }) : [],
+            'pharmacy' => $product->pharmacy ? [
+                'id' => $product->pharmacy->id, 'name' => $product->pharmacy->name,
+                'address' => $product->pharmacy->address, 'city' => $product->pharmacy->city?->name,
+                'province' => $product->pharmacy->province?->name,
+                'district' => $product->pharmacy->metadata['district'] ?? null,
+            ] : null,
             'price' => $product->display_price,
             'stock' => $product->stock,
             'stock_status' => $product->stock_status,
@@ -521,33 +527,18 @@ class ProductController extends Controller
      */
     private function getSimilarProducts($product, $limit = 10)
     {
-        $categoryIds = $product->categories->pluck('id')->toArray();
-
-        if (empty($categoryIds)) {
-            return [];
-        }
-
-        $products = Product::where('is_active', true)
-            ->where('stock', '>', 0)
-            ->where('id', '!=', $product->id)
-            ->whereHas('categories', function ($query) use ($categoryIds) {
-                $query->whereIn('category_id', $categoryIds);
-            })
-            ->with(['brand', 'categories'])
-            ->limit($limit)
-            ->get();
-
-        return $products->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'name' => $item->name,
-                'slug' => $item->slug,
-                'brand' => $item->brand?->name,
-                'price' => $item->display_price,
-                'image' => $item->image_url ?? null,
-                'rating' => $item->avg_rating ?? 0,
-            ];
-        });
+        $tagIds = $product->tags->pluck('id')->all();
+        $categoryIds = $product->categories->pluck('id')->all();
+        return Product::where('is_active', true)->where('stock', '>', 0)->whereKeyNot($product->id)
+            ->where(function ($query) use ($tagIds, $categoryIds) {
+                if ($tagIds) $query->whereHas('tags', fn ($q) => $q->whereIn('product_tags.id', $tagIds));
+                if ($categoryIds) $query->orWhereHas('categories', fn ($q) => $q->whereIn('product_categories.id', $categoryIds));
+            })->with(['brand','categories','tags','pharmacy.city','pharmacy.province'])->limit($limit)->get()
+            ->sortByDesc(fn ($item) => $item->tags->pluck('id')->intersect($tagIds)->count())->values()
+            ->map(fn ($item) => ['id'=>$item->id,'name'=>$item->name,'slug'=>$item->slug,'brand'=>$item->brand?->name,
+                'price'=>$item->display_price,'image'=>$item->image_url ?? null,'rating'=>$item->avg_rating ?? 0,
+                'matched_tags'=>$item->tags->whereIn('id',$tagIds)->pluck('name')->values(),
+                'pharmacy'=>['name'=>$item->pharmacy?->name,'city'=>$item->pharmacy?->city?->name,'province'=>$item->pharmacy?->province?->name,'district'=>$item->pharmacy?->metadata['district'] ?? null]]);
     }
 
     /**

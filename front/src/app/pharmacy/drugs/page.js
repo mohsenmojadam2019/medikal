@@ -8,9 +8,10 @@ import {
 } from 'antd';
 import {
     SearchOutlined, MedicineBoxOutlined,
-    ShoppingCartOutlined, PlusOutlined, MinusOutlined, DeleteOutlined
+    ShoppingCartOutlined, PlusOutlined, MinusOutlined, DeleteOutlined, EyeOutlined
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Header from '@/components/front/Header/Header';
 import Footer from '@/components/front/Footer/Footer';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
@@ -231,7 +232,7 @@ export default function ProductsPage() {
                     {/* مسیر راهنما */}
                     <div style={{ marginBottom: 8 }}>
                         <Text type="secondary">
-                            <a href="/pharmacy" style={{ color: '#2563eb' }}>داروخانه</a>
+                            <Link href="/pharmacy" style={{ color: '#2563eb' }}>داروخانه</Link>
                             {selectedPharmacy !== 'all' && <span> / {pharmacyName || 'داروخانه مورد نظر'}</span>}
                             <span> / داروها</span>
                         </Text>
@@ -396,6 +397,11 @@ export default function ProductsPage() {
                                                 موجودی: {product.stock > 0 ? `${product.stock} عدد` : 'ناموجود'}
                                             </Text>
 
+                                            <div style={{ padding: '8px 0', borderTop: '1px solid #f0f0f0', marginTop: 8 }}>
+                                                <Text strong style={{ display: 'block' }}>🏥 {product.pharmacy?.name || 'داروخانه نامشخص'}</Text>
+                                                <Text type="secondary" style={{ fontSize: 11 }}>📍 {[product.pharmacy?.province, product.pharmacy?.city, product.pharmacy?.district].filter(Boolean).join('، ') || product.pharmacy?.address || 'موقعیت ثبت نشده'}</Text>
+                                                <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => router.push('/pharmacy/drugs/' + (product.slug || product.id))}>جزئیات و داروهای مرتبط</Button>
+                                            </div>
                                             {/* ✅ دکمه‌های جداگانه برای داروهای با/بدون نسخه */}
                                             <div style={{ marginTop: 8 }}>
                                                 {product.requires_prescription ? (
