@@ -43,7 +43,7 @@ export default function HomeHeader() {
       <div className={styles.topBar}>
         <div className={styles.container}>
           <div className={styles.topBarInner}>
-            <span>پشتیبانی ۲۴ ساعته دکتر وب</span>
+            <span>{copy.supportLine}</span>
 
             <Link href="/advertising">{copy.advertise}</Link>
           </div>
@@ -76,7 +76,7 @@ export default function HomeHeader() {
                 placeholder={copy.search}
               />
 
-              <button type="submit">جستجو</button>
+              <button type="submit">{copy.searchButton}</button>
             </form>
 
             <div className={styles.headerActions}>
@@ -89,9 +89,9 @@ export default function HomeHeader() {
                     changeLanguage(event.target.value)
                   }
                 >
-                  <option value="fa">فارسی</option>
-                  <option value="en">English</option>
-                  <option value="ar">العربية</option>
+                  <option value="fa">{copy.languageNames.fa}</option>
+                  <option value="en">{copy.languageNames.en}</option>
+                  <option value="ar">{copy.languageNames.ar}</option>
                 </select>
               </label>
 

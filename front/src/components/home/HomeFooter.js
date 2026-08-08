@@ -26,7 +26,7 @@ export default function HomeFooter() {
         <div className={styles.footerGrid}>
           <div className={styles.footerBrand}>
             <Link href="/" className={styles.footerLogo}>
-              دکتر وب
+              {copy.brand}
             </Link>
 
             <p>{copy.footer.description}</p>
@@ -34,36 +34,36 @@ export default function HomeFooter() {
             <div className={styles.footerTrust}>
               <span>
                 <SafetyCertificateOutlined />
-                اطلاعات امن
+                {copy.footer.secure}
               </span>
 
-              <span>پشتیبانی شبانه‌روزی</span>
+              <span>{copy.footer.alwaysOn}</span>
             </div>
           </div>
 
           <div className={styles.footerColumn}>
             <h3>{copy.footer.services}</h3>
-            <Link href="/doctors">پزشکان</Link>
-            <Link href="/home-doctor">پزشک در منزل</Link>
-            <Link href="/pharmacy">داروخانه آنلاین</Link>
-            <Link href="/medical-tourism">توریست درمانی</Link>
-            <Link href="/map">نقشه مراکز</Link>
+            <Link href="/doctors">{copy.nav.doctors}</Link>
+            <Link href="/home-doctor">{copy.nav.homeDoctor}</Link>
+            <Link href="/pharmacy">{copy.nav.pharmacy}</Link>
+            <Link href="/medical-tourism">{copy.nav.tourism}</Link>
+            <Link href="/map">{copy.nav.map}</Link>
           </div>
 
           <div className={styles.footerColumn}>
             <h3>{copy.footer.company}</h3>
-            <Link href="/about">درباره ما</Link>
-            <Link href="/contact">تماس با ما</Link>
-            <Link href="/cooperation">همکاری با ما</Link>
-            <Link href="/advertising">تبلیغات در دکتر وب</Link>
+            <Link href="/about">{locale === 'en' ? 'About us' : locale === 'ar' ? 'من نحن' : 'درباره ما'}</Link>
+            <Link href="/contact">{locale === 'en' ? 'Contact us' : locale === 'ar' ? 'اتصل بنا' : 'تماس با ما'}</Link>
+            <Link href="/cooperation">{locale === 'en' ? 'Work with us' : locale === 'ar' ? 'تعاون معنا' : 'همکاری با ما'}</Link>
+            <Link href="/advertising">{copy.advertise}</Link>
           </div>
 
           <div className={styles.footerColumn}>
             <h3>{copy.footer.support}</h3>
-            <Link href="/faq">سؤالات متداول</Link>
-            <Link href="/help">راهنمای استفاده</Link>
-            <Link href="/privacy">حریم خصوصی</Link>
-            <Link href="/terms">قوانین و مقررات</Link>
+            <Link href="/faq">{locale === 'en' ? 'FAQ' : locale === 'ar' ? 'الأسئلة الشائعة' : 'سؤالات متداول'}</Link>
+            <Link href="/help">{locale === 'en' ? 'User guide' : locale === 'ar' ? 'دليل الاستخدام' : 'راهنمای استفاده'}</Link>
+            <Link href="/privacy">{locale === 'en' ? 'Privacy' : locale === 'ar' ? 'الخصوصية' : 'حریم خصوصی'}</Link>
+            <Link href="/terms">{locale === 'en' ? 'Terms' : locale === 'ar' ? 'الشروط والأحكام' : 'قوانین و مقررات'}</Link>
           </div>
 
           <div className={styles.footerColumn}>
@@ -79,7 +79,7 @@ export default function HomeFooter() {
               info@doctorweb.ir
             </a>
 
-            <span>تهران، ایران</span>
+            <span>{copy.footer.location}</span>
 
             <div className={styles.socialLinks}>
               <a href="#" aria-label="Instagram">
@@ -105,8 +105,8 @@ export default function HomeFooter() {
           <span>{copy.footer.copyright}</span>
 
           <div>
-            <Link href="/privacy">حریم خصوصی</Link>
-            <Link href="/terms">قوانین</Link>
+            <Link href="/privacy">{locale === 'en' ? 'Privacy' : locale === 'ar' ? 'الخصوصية' : 'حریم خصوصی'}</Link>
+            <Link href="/terms">{locale === 'en' ? 'Terms' : locale === 'ar' ? 'الشروط' : 'قوانین'}</Link>
           </div>
         </div>
       </div>

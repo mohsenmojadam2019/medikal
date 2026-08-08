@@ -31,6 +31,8 @@ use App\Http\Controllers\Api\ClinicController;
 use App\Http\Controllers\Api\MedicalNoteController;
 use App\Http\Controllers\Api\LabController;
 use App\Http\Controllers\Api\QueueController;
+use App\Http\Controllers\Api\PublicInquiryController;
+use App\Http\Controllers\Api\AdvertisingEventController;
 
 /*
 |--------------------------------------------------------------------------
@@ -74,6 +76,8 @@ Route::middleware(['auth:sanctum', 'role:receptionist|admin'])->prefix('waiting'
 // ============================================================
 // 3. PUBLIC ROUTES (بدون احراز هویت)
 // ============================================================
+Route::post('/public-inquiries', [PublicInquiryController::class, 'store'])->middleware('throttle:10,1');
+Route::post('/advertising/events', [AdvertisingEventController::class, 'store'])->middleware('throttle:120,1');
 
 // ============================================================
 // 3.1 AUTH

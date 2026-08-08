@@ -126,6 +126,11 @@ export default function DoctorWebHome() {
   } = useLanguage();
 
   const copy = getHomeContent(locale);
+  const ui = {
+    fa: { search: 'جستجو', quick: 'دسترسی سریع', treatment: 'پزشکان و درمان', profile: 'مشاهده پروفایل', verified: 'پزشکان معتبر', verifiedSub: 'تأیید اطلاعات حرفه‌ای', tehran: 'فعلاً ویژه تهران', homeText: 'نوع پزشک، آدرس، زمان مراجعه و توضیحات بیمار را ثبت کنید تا درخواست شما بررسی شود.', homeItems: ['انتخاب پزشک و زمان مراجعه', 'ثبت آدرس و موقعیت', 'بارگذاری مدارک پزشکی', 'پیگیری وضعیت درخواست'], homeCta: 'ثبت درخواست پزشک در منزل', emergency: 'این سرویس برای شرایط اورژانسی نیست.', mapEyebrow: 'جست‌وجوی مراکز', mapText: 'ابتدا شهر یا موقعیت خود را انتخاب کنید و سپس کلینیک‌ها، داروخانه‌ها، آزمایشگاه‌ها و مراکز تصویربرداری را مشاهده کنید.', mapCta: 'ورود به نقشه مراکز', international: 'بیماران بین‌المللی', tourismText: 'اطلاعات تماس، مدارک پزشکی و برنامه سفر خود را ثبت کنید تا کارشناس دکتر وب با شما تماس بگیرد.', tourismItems: ['ثبت مدارک پزشکی', 'انتخاب زبان ارتباطی', 'پیگیری توسط کارشناس', 'هماهنگی خدمات سفر'], tourismCta: 'ثبت درخواست درمان', popular: 'انتخاب سریع' },
+    en: { search: 'Search', quick: 'Quick access', treatment: 'Doctors & care', profile: 'View profile', verified: 'Verified doctors', verifiedSub: 'Professional credentials checked', tehran: 'Currently available in Tehran', homeText: 'Provide the required specialist, address, preferred time, and patient details so we can review your request.', homeItems: ['Choose doctor and time', 'Provide address and location', 'Upload medical records', 'Track your request'], homeCta: 'Request a doctor at home', emergency: 'This service is not for emergencies.', mapEyebrow: 'Find healthcare centers', mapText: 'Choose your city or location to discover clinics, pharmacies, laboratories, and imaging centers.', mapCta: 'Open healthcare map', international: 'International patients', tourismText: 'Submit your contact details, medical records, and travel plan so a Doctor Web coordinator can contact you.', tourismItems: ['Upload medical records', 'Choose communication language', 'Coordinator follow-up', 'Travel service coordination'], tourismCta: 'Submit treatment request', popular: 'Quick selection' },
+    ar: { search: 'بحث', quick: 'وصول سريع', treatment: 'الأطباء والعلاج', profile: 'عرض الملف', verified: 'أطباء موثقون', verifiedSub: 'تم التحقق من المؤهلات', tehran: 'متاح حالياً في طهران', homeText: 'أدخل تخصص الطبيب والعنوان والموعد ومعلومات المريض لمراجعة طلبك.', homeItems: ['اختيار الطبيب والموعد', 'إدخال العنوان والموقع', 'رفع التقارير الطبية', 'متابعة الطلب'], homeCta: 'طلب طبيب في المنزل', emergency: 'هذه الخدمة ليست للحالات الطارئة.', mapEyebrow: 'البحث عن المراكز', mapText: 'اختر مدينتك أو موقعك لعرض العيادات والصيدليات والمختبرات ومراكز التصوير.', mapCta: 'فتح خريطة المراكز', international: 'المرضى الدوليون', tourismText: 'أرسل معلومات الاتصال والتقارير الطبية وخطة السفر ليتواصل معك منسق دكتور ويب.', tourismItems: ['رفع التقارير الطبية', 'اختيار لغة التواصل', 'متابعة المنسق', 'تنسيق خدمات السفر'], tourismCta: 'إرسال طلب العلاج', popular: 'اختيار سريع' },
+  }[locale] || {};
   const [query, setQuery] = useState('');
   const [doctors, setDoctors] = useState(FALLBACK_DOCTORS);
 
@@ -201,7 +206,7 @@ export default function DoctorWebHome() {
                     placeholder={copy.search}
                   />
 
-                  <button type="submit">جستجو</button>
+                  <button type="submit">{ui.search}</button>
                 </form>
 
                 <div className={styles.heroButtons}>
@@ -245,8 +250,8 @@ export default function DoctorWebHome() {
                   <CheckCircleFilled />
 
                   <span>
-                    پزشکان معتبر
-                    <small>تأیید اطلاعات حرفه‌ای</small>
+                    {ui.verified}
+                    <small>{ui.verifiedSub}</small>
                   </span>
                 </div>
               </div>
@@ -259,7 +264,7 @@ export default function DoctorWebHome() {
             <div className={styles.sectionHeading}>
               <div>
                 <span className={styles.sectionEyebrow}>
-                  دسترسی سریع
+                  {ui.quick}
                 </span>
 
                 <h2>{copy.section.services}</h2>
@@ -312,7 +317,7 @@ export default function DoctorWebHome() {
             <div className={styles.sectionHeading}>
               <div>
                 <span className={styles.sectionEyebrow}>
-                  پزشکان و درمان
+                  {ui.treatment}
                 </span>
 
                 <h2>{copy.section.doctors}</h2>
@@ -347,7 +352,7 @@ export default function DoctorWebHome() {
                   </div>
 
                   <Link href={`/doctors/${doctor.id}`}>
-                    مشاهده پروفایل
+                    {ui.profile}
                   </Link>
                 </article>
               ))}
@@ -357,44 +362,21 @@ export default function DoctorWebHome() {
           <section className={styles.homeDoctorBanner}>
             <div>
               <span className={styles.bannerLabel}>
-                فعلاً ویژه تهران
+                {ui.tehran}
               </span>
 
               <h2>{copy.section.homeDoctor}</h2>
 
-              <p>
-                نوع پزشک، آدرس، زمان مراجعه و توضیحات بیمار
-                را ثبت کنید تا درخواست شما بررسی شود.
-              </p>
+              <p>{ui.homeText}</p>
 
-              <ul>
-                <li>
-                  <CheckCircleFilled />
-                  انتخاب پزشک و زمان مراجعه
-                </li>
-
-                <li>
-                  <CheckCircleFilled />
-                  ثبت آدرس و موقعیت
-                </li>
-
-                <li>
-                  <CheckCircleFilled />
-                  بارگذاری مدارک پزشکی
-                </li>
-
-                <li>
-                  <CheckCircleFilled />
-                  پیگیری وضعیت درخواست
-                </li>
-              </ul>
+              <ul>{ui.homeItems.map((item) => <li key={item}><CheckCircleFilled />{item}</li>)}</ul>
 
               <Link href="/home-doctor">
-                ثبت درخواست پزشک در منزل
+                {ui.homeCta}
               </Link>
 
               <small>
-                این سرویس برای شرایط اورژانسی نیست.
+                {ui.emergency}
               </small>
             </div>
 
@@ -411,20 +393,16 @@ export default function DoctorWebHome() {
           <section className={styles.mapBanner}>
             <div>
               <span className={styles.sectionEyebrow}>
-                صفحه مستقل نقشه
+                {ui.mapEyebrow}
               </span>
 
               <h2>{copy.section.map}</h2>
 
-              <p>
-                ابتدا شهر یا موقعیت خود را انتخاب کنید و سپس
-                کلینیک‌ها، داروخانه‌ها، آزمایشگاه‌ها و مراکز
-                تصویربرداری را مشاهده کنید.
-              </p>
+              <p>{ui.mapText}</p>
 
               <Link href="/map">
                 <EnvironmentOutlined />
-                ورود به نقشه مراکز
+                {ui.mapCta}
               </Link>
             </div>
 
@@ -453,41 +431,17 @@ export default function DoctorWebHome() {
 
             <div>
               <span className={styles.sectionEyebrow}>
-                بیماران بین‌المللی
+                {ui.international}
               </span>
 
               <h2>{copy.section.tourism}</h2>
 
-              <p>
-                اطلاعات هویتی، تماس، مدارک پزشکی و برنامه سفر
-                خود را ثبت کنید تا کارشناس دکتر وب با شما تماس
-                بگیرد.
-              </p>
+              <p>{ui.tourismText}</p>
 
-              <div className={styles.tourismFeatures}>
-                <span>
-                  <CheckCircleFilled />
-                  ثبت مدارک پزشکی
-                </span>
-
-                <span>
-                  <CheckCircleFilled />
-                  انتخاب زبان ارتباطی
-                </span>
-
-                <span>
-                  <CheckCircleFilled />
-                  پیگیری توسط کارشناس
-                </span>
-
-                <span>
-                  <CheckCircleFilled />
-                  خدمات اقامت به‌زودی
-                </span>
-              </div>
+              <div className={styles.tourismFeatures}>{ui.tourismItems.map((item) => <span key={item}><CheckCircleFilled />{item}</span>)}</div>
 
               <Link href="/medical-tourism">
-                ثبت درخواست درمان
+                {ui.tourismCta}
               </Link>
             </div>
           </section>
@@ -496,7 +450,7 @@ export default function DoctorWebHome() {
             <div className={styles.sectionHeading}>
               <div>
                 <span className={styles.sectionEyebrow}>
-                  انتخاب سریع
+                  {ui.popular}
                 </span>
 
                 <h2>{copy.section.specialties}</h2>

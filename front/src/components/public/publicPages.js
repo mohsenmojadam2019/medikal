@@ -1,0 +1,51 @@
+export const PUBLIC_PAGES = {
+  'home-doctor': {
+    type: 'home_doctor', icon: 'home',
+    fa: ['پزشک در منزل', 'مراقبت پزشکی مطمئن در خانه شما', 'درخواست خود را ثبت کنید تا کارشناسان ما برای هماهنگی نوع پزشک، زمان و آدرس با شما تماس بگیرند.', ['انتخاب پزشک مناسب', 'زمان‌بندی منعطف', 'پیگیری درخواست']],
+    en: ['Doctor at home', 'Trusted medical care at your home', 'Submit your request and our team will coordinate the doctor, time, and address with you.', ['The right specialist', 'Flexible scheduling', 'Request tracking']],
+    ar: ['طبيب في المنزل', 'رعاية طبية موثوقة في منزلك', 'سجّل طلبك وسيتواصل فريقنا لتنسيق الطبيب والموعد والعنوان.', ['اختيار الطبيب المناسب', 'مواعيد مرنة', 'متابعة الطلب']],
+    form: true,
+  },
+  'medical-tourism': {
+    type: 'medical_tourism', icon: 'global',
+    fa: ['توریست درمانی', 'درمان باکیفیت، سفر برنامه‌ریزی‌شده', 'از بررسی مدارک پزشکی تا انتخاب پزشک، مترجم، اقامت و پیگیری درمان در کنار شما هستیم.', ['بررسی تخصصی مدارک', 'هماهنگی پزشک و مرکز', 'پشتیبانی چندزبانه']],
+    en: ['Medical tourism', 'Quality treatment, a well-planned journey', 'From reviewing records to choosing a doctor, interpreter, stay, and follow-up, we support you.', ['Medical record review', 'Doctor coordination', 'Multilingual support']],
+    ar: ['السياحة العلاجية', 'علاج عالي الجودة ورحلة منظمة', 'نرافقك من مراجعة التقارير واختيار الطبيب إلى الترجمة والإقامة والمتابعة.', ['مراجعة التقارير الطبية', 'تنسيق الطبيب والمركز', 'دعم متعدد اللغات']],
+    form: true,
+  },
+  advertising: {
+    type: 'advertising', icon: 'notification',
+    fa: ['تبلیغات در دکتر وب', 'برند درمانی خود را هدفمند معرفی کنید', 'کمپین‌های شفاف برای پزشکان، کلینیک‌ها، آزمایشگاه‌ها و برندهای معتبر حوزه سلامت.', ['نمایش هدفمند', 'گزارش عملکرد', 'جایگاه‌های متنوع']],
+    en: ['Advertise on Doctor Web', 'Promote your healthcare brand effectively', 'Transparent campaigns for doctors, clinics, laboratories, and trusted health brands.', ['Targeted reach', 'Performance reports', 'Flexible placements']],
+    ar: ['الإعلان في دكتور ويب', 'عرّف بعلامتك الصحية بفعالية', 'حملات واضحة للأطباء والعيادات والمختبرات والعلامات الصحية الموثوقة.', ['وصول مستهدف', 'تقارير الأداء', 'مساحات متنوعة']],
+    form: true,
+  },
+  cooperation: {
+    type: 'cooperation', icon: 'team',
+    fa: ['همکاری با ما', 'آینده سلامت دیجیتال را با هم بسازیم', 'پزشکان، مراکز درمانی، داروخانه‌ها و متخصصان فناوری می‌توانند به شبکه دکتر وب بپیوندند.', ['شبکه حرفه‌ای', 'زیرساخت یکپارچه', 'رشد مشترک']],
+    en: ['Work with us', 'Build the future of digital health together', 'Doctors, healthcare centers, pharmacies, and technology experts can join Doctor Web.', ['Professional network', 'Integrated platform', 'Shared growth']],
+    ar: ['تعاون معنا', 'لنبنِ مستقبل الصحة الرقمية معاً', 'يمكن للأطباء والمراكز والصيدليات وخبراء التقنية الانضمام إلى شبكة دكتور ويب.', ['شبكة مهنية', 'منصة متكاملة', 'نمو مشترك']],
+    form: true,
+  },
+  map: {
+    type: 'map_feedback', icon: 'environment',
+    fa: ['نقشه مراکز درمانی', 'خدمات سلامت نزدیک خود را پیدا کنید', 'پزشکان، داروخانه‌ها، آزمایشگاه‌ها و مراکز تصویربرداری را بر اساس شهر و نوع خدمت جست‌وجو کنید.', ['مراکز تأییدشده', 'فیلتر بر اساس خدمت', 'اطلاعات تماس و مسیر']],
+    en: ['Healthcare map', 'Find healthcare services near you', 'Search doctors, pharmacies, laboratories, and imaging centers by city and service.', ['Verified centers', 'Service filters', 'Contact and directions']],
+    ar: ['خريطة المراكز الصحية', 'اعثر على الخدمات الصحية القريبة', 'ابحث عن الأطباء والصيدليات والمختبرات ومراكز التصوير حسب المدينة والخدمة.', ['مراكز موثقة', 'تصفية حسب الخدمة', 'الاتصال والاتجاهات']],
+    form: false,
+  },
+  help: {
+    type: 'help', icon: 'question',
+    fa: ['راهنمای استفاده', 'دسترسی ساده به خدمات دکتر وب', 'خدمت موردنظر را انتخاب کنید، اطلاعات لازم را وارد کنید و وضعیت درخواست را از حساب کاربری پیگیری کنید.', ['انتخاب خدمت', 'ثبت یا ورود به حساب', 'ثبت و پیگیری درخواست']],
+    en: ['User guide', 'Easy access to Doctor Web services', 'Choose a service, provide the required details, and track the request from your account.', ['Choose a service', 'Sign in or register', 'Submit and track']],
+    ar: ['دليل الاستخدام', 'وصول سهل إلى خدمات دكتور ويب', 'اختر الخدمة وأدخل المعلومات المطلوبة ثم تابع الطلب من حسابك.', ['اختر الخدمة', 'سجّل الدخول أو أنشئ حساباً', 'أرسل الطلب وتابعه']],
+    form: false,
+  },
+  terms: {
+    type: 'terms', icon: 'safety',
+    fa: ['قوانین و مقررات', 'چارچوب استفاده امن از دکتر وب', 'استفاده از خدمات به معنی پذیرش قوانین حریم خصوصی، صحت اطلاعات ثبت‌شده و شرایط هر ارائه‌دهنده خدمت است.', ['مسئولیت اطلاعات', 'حفظ حریم خصوصی', 'شرایط ارائه خدمات']],
+    en: ['Terms and conditions', 'A framework for safe use of Doctor Web', 'Using the platform means accepting its privacy rules, information accuracy requirements, and provider terms.', ['Information accuracy', 'Privacy protection', 'Service conditions']],
+    ar: ['الشروط والأحكام', 'إطار الاستخدام الآمن لدكتور ويب', 'استخدام المنصة يعني قبول سياسة الخصوصية ومتطلبات صحة المعلومات وشروط مقدمي الخدمة.', ['صحة المعلومات', 'حماية الخصوصية', 'شروط الخدمة']],
+    form: false,
+  },
+};
